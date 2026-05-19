@@ -47,6 +47,36 @@
 | 平台 | WSL2（Flask 需 `host="0.0.0.0"`，瀏覽器用 WSL2 IP:5000） |
 | 字型 | Google Fonts：Orbitron（數字/分數/計時/距離）、Noto Sans TC（中文介面） |
 
+### 2026-05-19 game.html 建築物碰撞 & 地圖修復（最新）
+
+**白屏根本原因：`let astarBudget` 重複宣告**
+- 第 1763 與 1842 行各宣告一次，瀏覽器拋 `SyntaxError: Identifier already declared`，整個 `<script>` 停止執行 → Leaflet 地圖從未初始化 → 白屏
+- 修正：刪除第二個重複宣告
+
+**地圖 tile 來源換為 CartoDB**
+- 從 `tile.openstreetmap.org` 改為 `basemaps.cartocdn.com/rastertiles/voyager`（Fastly 全球 CDN，台灣載入速度更快）
+- tile 失敗時自動 fallback 回 OSM
+- `#map` 加 `background: #e8edf4` 防止 tile 未載入時純白
+
+**Leaflet 載入失敗偵測**
+- 主 script 最前方加 `typeof L === 'undefined'` 檢查
+- 若 Leaflet 未載入：overlay 顯示錯誤 + retry 按鈕，且不會被 10 秒 failsafe 強制關掉
+- `_showErr()` 修改為同時恢復 overlay 顯示，防止錯誤被隱藏
+
+**建築物碰撞覆蓋：整個遊玩邊界**
+- Overpass 查詢從「焦點點小圓」改為「`BOUNDS` 正方形 bbox」一次抓全區
+  ```
+  way["building"](s,w,n,e)
+  ```
+  maxsize 提升至 128MB，timeout 25s
+- 遊戲開始時在地圖上繪製藍色虛線邊界矩形（`L.rectangle`），讓玩家看到遊玩範圍
+- 快取 key 升至 `bld3_*` 使舊的局部快取失效
+- 修正 `fetchBuildingsDirect` 內 `const n` / `var n` 變數遮蔽 bug
+
+**排行榜**：無 `setInterval`/`setTimeout`/`<meta refresh>`，純靜態渲染，不自動刷新。
+
+---
+
 ### 2026-05-19 app.py 關鍵 bug 修復（最新）
 
 **Nominatim 429 錯誤 → 遊戲永遠卡在 loading**

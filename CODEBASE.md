@@ -47,6 +47,23 @@
 | 平台 | WSL2（Flask 需 `host="0.0.0.0"`，瀏覽器用 WSL2 IP:5000） |
 | 字型 | Google Fonts：Orbitron（數字/分數/計時/距離）、Noto Sans TC（中文介面） |
 
+### 2026-05-19 app.py 關鍵 bug 修復（最新）
+
+**Nominatim 429 錯誤 → 遊戲永遠卡在 loading**
+- 根本原因：Nominatim 免費 API 有嚴格速率限制；多次請求 Taipei 等熱門城市觸發 429
+- 修正：新增 `_KNOWN_CITIES` dict，內含 28 個常用城市（台北/東京/首爾/香港/新加坡等）的精確座標
+- 邏輯：`_bg_prepare` 先查 `_known_cities`，命中則完全跳過 Nominatim；未知城市才呼叫 Nominatim
+
+**`make_response` 未 import → Cache-Control 無法生效**
+- `/game` 路由使用 `make_response()` 添加 `Cache-Control: no-store` 頭，但 import 漏了 `make_response`
+- 修正：在 Flask import 行加入 `make_response`
+
+**Cache-Control 頭（防止瀏覽器快取舊 HTML）**
+- `/game` 路由回應加入 `Cache-Control: no-store, no-cache, must-revalidate` 和 `Pragma: no-cache`
+- 防止瀏覽器快取含舊「🔌 連線中…」文字的 game.html
+
+---
+
 ### 2026-05-19 建築物載入修復（最新）
 
 **根本原因修復：`catch{}` 語法錯誤導致整個 script 無法執行**

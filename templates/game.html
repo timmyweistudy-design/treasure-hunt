@@ -444,13 +444,23 @@
 
     <div id="loading-overlay">
         <div class="ld-card">
-            <div class="ld-title">🏙️ 載入 {{ city }}</div>
-            <div class="ld-spin"></div>
-            <div class="ld-step" id="ld-step">🔌 連線中…</div>
-            <div class="ld-sub"  id="ld-sub">取得建築物輪廓，確保路線與碰撞正確</div>
-            <button class="ld-retry" id="retry-btn" onclick="retryLoading()">⚠️ 重試</button>
+            <div class="ld-title">🏙️ {{ city }}</div>
+            <div class="ld-spin" id="ld-spin"></div>
+            <div class="ld-step" id="ld-step">🗺️ 準備中…</div>
+            <div class="ld-sub"  id="ld-sub"></div>
+            <button class="ld-retry" id="retry-btn" onclick="location.href='/'">← 回首頁</button>
         </div>
     </div>
+    <!-- 強制保險：10 秒後無論如何關閉 overlay，獨立 script 不受主腳本影響 -->
+    <script>
+    setTimeout(function(){
+        var ov=document.getElementById('loading-overlay');
+        if(ov&&ov.style.display!=='none'){
+            ov.style.display='none';
+            if(typeof gameReady!=='undefined') gameReady=true;
+        }
+    }, 10000);
+    </script>
 
     <div id="sprint-glow"></div>
     <div id="vignette"></div>
@@ -463,16 +473,17 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ── 全域錯誤捕捉（JS crash → 顯示在 loading overlay）──────
-window.onerror = function(msg, src, line) {
-    const st = document.getElementById('ld-step');
-    const sb = document.getElementById('ld-sub');
-    const rb = document.getElementById('retry-btn');
-    if(st) st.textContent = '⚠️ 程式載入失敗';
-    if(sb) sb.textContent = msg + (line ? ' (L'+line+')' : '');
-    if(rb){ rb.textContent='← 回首頁'; rb.style.display='block'; rb.onclick=()=>location.href='/'; }
-    return false;
-};
+// ── 全域錯誤捕捉 ──────────────────────────────────────────
+function _showErr(msg){
+    const st=document.getElementById('ld-step');
+    const sb=document.getElementById('ld-sub');
+    const rb=document.getElementById('retry-btn');
+    if(st) st.textContent='⚠️ 程式錯誤';
+    if(sb) sb.textContent=msg;
+    if(rb){ rb.style.display='block'; }
+}
+window.onerror=function(msg,src,line){ _showErr(msg+(line?' (L'+line+')':'')); return false; };
+window.addEventListener('unhandledrejection',function(e){ _showErr(e.reason?.message||String(e.reason)); });
 
 // ── 常數 ──────────────────────────────────────────────────
 const TREASURES    = {{ treasures_json | safe }};
@@ -2088,11 +2099,6 @@ async function startCountdown(){
     showToast('🚶 WASD 移動 · Shift 衝刺 · Space 收集！',3500);
 }
 
-function retryLoading(){
-    document.getElementById('retry-btn').style.display='none';
-    doLoad();
-}
-
 // ── 直接從 Overpass 取得建築物（繞過伺服器）────────────────
 const OVERPASS_MIRRORS=[
     'https://overpass.kumi.systems/api/interpreter',
@@ -2192,31 +2198,17 @@ async function loadBuildingsBackground(){
     } catch(e){}
 }
 
-// ── 地圖概覽 → 倒數（建築物背景載入，不卡住遊戲）───────────
-async function doLoad(){
+// ── 遊戲啟動（建築物背景載入，不阻擋倒數）──────────────────
+function doLoad(){
     try{
-        document.getElementById('ld-step').textContent='🗺️ 初始化地圖…';
-        document.getElementById('ld-sub').textContent='';
-
-        const allPts=[START,...TREASURES.map(t=>[t.lat,t.lon])];
-        map.fitBounds(L.latLngBounds(allPts),{padding:[40,40],animate:true,duration:0.6});
-        await new Promise(r=>setTimeout(r,900));
-        map.setView([pLat,pLon],17,{animate:true,duration:0.5});
-        await new Promise(r=>setTimeout(r,550));
-
-        document.getElementById('ld-sub').textContent='準備開始…';
-        await new Promise(r=>setTimeout(r,150));
-
-        // 啟動遊戲倒數，同時在背景抓建築物（不互相等待）
         startCountdown();
         loadBuildingsBackground();
     } catch(e){
-        document.getElementById('ld-step').textContent='⚠️ 載入失敗，請重試';
-        document.getElementById('ld-sub').textContent=e.message||'網路連線錯誤';
+        document.getElementById('ld-step').textContent='⚠️ '+e.message;
         document.getElementById('retry-btn').style.display='block';
     }
 }
-(async function init(){ await doLoad(); })();
+doLoad();
 </script>
 </body>
 </html>

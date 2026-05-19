@@ -49,15 +49,19 @@
 
 ### 2026-05-19 game.html 玩家邊界 & 飄移修復（最新）
 
-**玩家不可走出 BOUNDS 邊界**
-- `tryMove()` 加入 `clampToBounds(lat, lon)`，每次移動前先將目標座標夾在 `BOUNDS.s/n/w/e` 內
-- 對角線滑牆時兩軸各自 clamp，不讓任一軸超出邊界
+**玩家不可走出 BOUNDS 邊界（多層）**
+- `tryMove()` 加入 `clampToBounds(lat, lon)`，每次移動前夾在 `BOUNDS.s/n/w/e` 內
+- `ensureOutsideBuilding()` 候選位置也先 clamp 再使用，堵住無敵結束後的逃脫路徑
+- 主迴圈每幀硬夾 `pLat/pLon`：任何程式路徑都無法讓玩家超出邊界
 
 **幽靈按鍵飄移（其他玩家）**
 - `keydown` 最前方加 `if(!gameReady) return`：倒數期間完全不記錄按鍵
 - `keydown` 加 `if(e.isComposing||e.key==='Process') return`：攔截中文輸入法（IME）假事件
 - `startCountdown()` 在 `gameReady=true` 前呼叫 `clearAllKeys()`：清除倒數累積的殘留按鍵
-- 主迴圈每幀掃描：移動鍵超過 3 秒未收到 `keyup` 強制清除（`keyDownAt` 時間戳追蹤）
+- 主迴圈每幀掃描移動鍵：超過 **500ms** 無 keydown 重整即視為放開（原 3000ms 太慢）
+  - keydown repeat 約每 33ms 觸發，500ms ≈ 15 次重整，ghost key 在 <0.5s 內消失
+- `keyDownAt[key]` 每次 keydown（含 repeat）都更新，確保合法持鍵不被誤清
+- 伺服器延遲 **不會** 導致飄移；移動邏輯 100% 在前端 JS 執行
 
 ---
 

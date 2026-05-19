@@ -2105,19 +2105,30 @@ function _parseOSMBuildings(data){
     }
     return buildings;
 }
-async function fetchBuildingsDirect(pts){
-    const R=0.0020; // 220m 半徑，6 點足夠覆蓋遊戲範圍
+function fetchBuildingsDirect(pts){
+    const R=0.0013;
     const clauses=pts.map(([la,lo])=>
         `way["building"](${(la-R).toFixed(5)},${(lo-R).toFixed(5)},${(la+R).toFixed(5)},${(lo+R).toFixed(5)});`
     ).join('');
-    const query=`[out:json][timeout:18][maxsize:67108864];(${clauses});(._;>;);out body;`;
+    const query=`[out:json][timeout:16][maxsize:67108864];(${clauses});(._;>;);out body;`;
     const body=new URLSearchParams({data:query});
-    const attempts=OVERPASS_MIRRORS.map(url=>
-        fetch(url,{method:'POST',body})
-            .then(r=>{if(!r.ok)throw r.status;return r.json();})
-            .then(j=>_parseOSMBuildings(j))
-    );
-    try{ return await Promise.any(attempts); }catch{ return []; }
+    return new Promise(function(resolve){
+        var done=false, failed=0, n=OVERPASS_MIRRORS.length;
+        var ctrls=OVERPASS_MIRRORS.map(function(){return new AbortController();});
+        var tid=setTimeout(function(){
+            if(!done){done=true;ctrls.forEach(function(c){c.abort();});resolve([]);}
+        },17000);
+        OVERPASS_MIRRORS.forEach(function(url,i){
+            fetch(url,{method:'POST',body:body,signal:ctrls[i].signal})
+                .then(function(r){if(!r.ok)throw r.status;return r.json();})
+                .then(function(j){
+                    if(!done){done=true;clearTimeout(tid);ctrls.forEach(function(c){c.abort();});resolve(_parseOSMBuildings(j));}
+                })
+                .catch(function(){
+                    if(++failed===n&&!done){done=true;clearTimeout(tid);resolve([]);}
+                });
+        });
+    });
 }
 // ── localStorage 快取（24 小時有效）──────────────────────────
 const _BLD_KEY=`bld_${Math.round(BOUNDS.s*40)}_${Math.round(BOUNDS.n*40)}_${Math.round(BOUNDS.w*40)}_${Math.round(BOUNDS.e*40)}`;
@@ -2143,45 +2154,15 @@ async function fetchBuildingsCached(pts){
     return blds;
 }
 
-// ── 載入建築物 → 地圖概覽 → 倒數 ─────────────────────────
-async function doLoad(){
+// ── 建築物背景載入（不阻擋遊戲開始）────────────────────────
+async function loadBuildingsBackground(){
     try{
-        document.getElementById('ld-step').textContent='🌐 取得建築物輪廓…';
-        let elapsed=0;
-        const timer=setInterval(()=>{
-            elapsed++;
-            document.getElementById('ld-sub').textContent=`直連地圖資料庫中… ${elapsed}s`;
-        },1000);
-        document.getElementById('ld-sub').textContent='直連地圖資料庫中… 0s';
-
-        // 優先：瀏覽器直連 Overpass（出發點＋5寶藏，220m 半徑，有快取）
-        let raw=await fetchBuildingsCached(FOCUS_POINTS.slice(0,6));
-
-        // 備援：若直連失敗，改走伺服器
-        if(raw.length===0){
-            document.getElementById('ld-sub').textContent='改由伺服器載入…';
-            try{
-                const ptsParam=encodeURIComponent(JSON.stringify(FOCUS_POINTS));
-                const res=await fetch(`/roads?pts=${ptsParam}`);
-                const data=await res.json();
-                raw=data.buildings||[];
-            }catch(e2){}
-        }
-        clearInterval(timer);
-        document.getElementById('ld-step').textContent='⚙️ 建立碰撞資料…';
-        document.getElementById('ld-sub').textContent='計算建築多邊形與導航格…';
-        if(raw.length===0){
-            document.getElementById('ld-step').textContent='⚠️ 此城市建築物資料不足';
-            document.getElementById('ld-sub').textContent='無法正確計算碰撞，請換一個城市';
-            document.getElementById('retry-btn').textContent='← 回首頁';
-            document.getElementById('retry-btn').style.display='block';
-            document.getElementById('retry-btn').onclick=()=>location.href='/';
-            return;
-        }
+        // 先試快取（瞬間），再試 Overpass（最多 17s）
+        const raw=await fetchBuildingsCached(FOCUS_POINTS.slice(0,6));
+        if(raw.length===0) return;
         loadBuildings(raw);
         routeGrid=buildRouteGrid();
         rebuildOptimalRouteAstar();
-
         L.geoJSON({
             type:'FeatureCollection',
             features:raw.map(coords=>({
@@ -2191,23 +2172,31 @@ async function doLoad(){
             }))
         },{style:{color:'#e65100',weight:1,opacity:.45,fillColor:'#ff6d00',fillOpacity:.09}}
         ).addTo(map);
-
         ensureOutsideBuilding();
         pMarker.setLatLng([pLat,pLon]);
         pCircle.setLatLng([pLat,pLon]);
         updateDistances();
+    } catch(e){}
+}
 
-        document.getElementById('ld-step').textContent=`✅ ${raw.length} 棟建築物就緒`;
-        document.getElementById('ld-sub').textContent='🗺️ 查看地圖概覽…';
+// ── 地圖概覽 → 倒數（建築物背景載入，不卡住遊戲）───────────
+async function doLoad(){
+    try{
+        document.getElementById('ld-step').textContent='🗺️ 初始化地圖…';
+        document.getElementById('ld-sub').textContent='';
+
         const allPts=[START,...TREASURES.map(t=>[t.lat,t.lon])];
-        map.fitBounds(L.latLngBounds(allPts),{padding:[40,40],animate:true,duration:0.8});
-        await new Promise(r=>setTimeout(r,1400));
-        map.setView([pLat,pLon],17,{animate:true,duration:0.6});
-        await new Promise(r=>setTimeout(r,700));
+        map.fitBounds(L.latLngBounds(allPts),{padding:[40,40],animate:true,duration:0.6});
+        await new Promise(r=>setTimeout(r,900));
+        map.setView([pLat,pLon],17,{animate:true,duration:0.5});
+        await new Promise(r=>setTimeout(r,550));
 
         document.getElementById('ld-sub').textContent='準備開始…';
-        await new Promise(r=>setTimeout(r,200));
+        await new Promise(r=>setTimeout(r,150));
+
+        // 啟動遊戲倒數，同時在背景抓建築物（不互相等待）
         startCountdown();
+        loadBuildingsBackground();
     } catch(e){
         document.getElementById('ld-step').textContent='⚠️ 載入失敗，請重試';
         document.getElementById('ld-sub').textContent=e.message||'網路連線錯誤';

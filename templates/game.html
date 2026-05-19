@@ -88,7 +88,7 @@
 
         /* ── Layout ── */
         .wrap { flex: 1; display: flex; overflow: hidden; position: relative; }
-        #map  { flex: 1; }
+        #map  { flex: 1; background: #e8edf4; }
 
         /* ── Sidebar ── */
         .sb { width: 268px; background: #f8f9fa; border-left: 1px solid #ddd;
@@ -451,13 +451,17 @@
             <button class="ld-retry" id="retry-btn" onclick="location.href='/'">← 回首頁</button>
         </div>
     </div>
-    <!-- 強制保險：10 秒後無論如何關閉 overlay，獨立 script 不受主腳本影響 -->
+    <!-- 強制保險：10 秒後若地圖已初始化則關閉 overlay；未初始化則保留錯誤訊息 -->
     <script>
     setTimeout(function(){
         var ov=document.getElementById('loading-overlay');
         if(ov&&ov.style.display!=='none'){
-            ov.style.display='none';
-            if(typeof gameReady!=='undefined') gameReady=true;
+            var mapOk=(typeof map!=='undefined'&&map!==null);
+            if(mapOk){
+                ov.style.display='none';
+                if(typeof gameReady!=='undefined') gameReady=true;
+            }
+            // map 未初始化（Leaflet 未載入）→ 保持 overlay 顯示錯誤，讓使用者點「回首頁」
         }
     }, 10000);
     </script>
@@ -478,12 +482,22 @@ function _showErr(msg){
     const st=document.getElementById('ld-step');
     const sb=document.getElementById('ld-sub');
     const rb=document.getElementById('retry-btn');
+    const sp=document.getElementById('ld-spin');
     if(st) st.textContent='⚠️ 程式錯誤';
-    if(sb) sb.textContent=msg;
-    if(rb){ rb.style.display='block'; }
+    if(sb) sb.textContent=msg.slice(0,120);
+    if(rb) rb.style.display='block';
+    if(sp) sp.style.display='none';
+    // 確保 overlay 可見（錯誤不應被隱藏）
+    const ov=document.getElementById('loading-overlay');
+    if(ov) ov.style.display='flex';
 }
 window.onerror=function(msg,src,line){ _showErr(msg+(line?' (L'+line+')':'')); return false; };
 window.addEventListener('unhandledrejection',function(e){ _showErr(e.reason?.message||String(e.reason)); });
+
+// Leaflet 載入確認
+if(typeof L==='undefined'){
+    _showErr('Leaflet 地圖庫載入失敗，請重新整理頁面（F5）或換個網路');
+}
 
 // ── 常數 ──────────────────────────────────────────────────
 const TREASURES    = {{ treasures_json | safe }};
@@ -770,9 +784,21 @@ function spawnParticles(tLat, tLon) {
 
 // ── 主地圖 ────────────────────────────────────────────────
 const map = L.map('map', { keyboard: false }).setView(START, 17);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>', maxZoom: 19
+// CartoDB Voyager（全球 CDN，比直連 OSM 更穩定）
+const _mainTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> © <a href="https://carto.com">CARTO</a>',
+    subdomains: 'abcd', maxZoom: 19
 }).addTo(map);
+// tile 載入失敗時自動回退 OSM
+let _osmFallback = false;
+_mainTile.on('tileerror', function(){
+    if(!_osmFallback){
+        _osmFallback=true;
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+            attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:19
+        }).addTo(map);
+    }
+});
 
 const pIcon = L.divIcon({
     html: '<div class="player-dot" id="pdot">🏃</div>',
@@ -824,7 +850,9 @@ const miniMap = L.map('mini-map', {
     dragging:false, keyboard:false,
     scrollWheelZoom:false, touchZoom:false, doubleClickZoom:false
 }).setView(START, 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(miniMap);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    subdomains:'abcd', maxZoom:19
+}).addTo(miniMap);
 if (ROUTE_COORDS.length > 0)
     miniRouteLine = L.polyline(ROUTE_COORDS.map(c=>[c[1],c[0]]),
         {color:'#e53935', weight:1.5, opacity:.5, dashArray:'4 3'}).addTo(miniMap);

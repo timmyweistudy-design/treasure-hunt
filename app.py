@@ -1,9 +1,11 @@
 import os
 import json
 import time
+import uuid
+import random
 import threading
 from flask import Flask, render_template, request, session, jsonify, redirect, url_for
-from game.models import Player, Scoreboard
+from game.models import Player, Scoreboard, Treasure
 from game.map_api import MapAPI
 from game.pathfinder import solve_tsp_exact, calculate_total_distance, haversine
 from config import GAME_CONFIG
@@ -12,12 +14,18 @@ app = Flask(__name__)
 app.secret_key = "treasure-hunt-fixed-key-2026"
 scoreboard = Scoreboard()
 
-# 建築物預先快取協調：防止 /start 背景 fetch 和 /roads 同時打 Overpass
+# ── 背景準備任務：req_id → {status, ...} ──────────────────────
+_pending: dict = {}
+# 準備好的遊戲資料（等 /game 路由來取）：game_key → render_args
+_game_data: dict = {}
+# city 快取：city_key → {lat, lon, treasures_list}
+_city_cache: dict = {}
+# 建築物預取協調
 _pf_lock = threading.Lock()
-_pf_events: dict = {}   # bbox_key → threading.Event（fetch 進行中時存在）
+_pf_events: dict = {}
+
 
 def _prefetch_buildings(focus_points: list):
-    """背景預取建築物（用 focus point 小 bbox 聯合查詢）。"""
     pts = focus_points[:14]
     key = "fp_" + "_".join(f"{round(p[0],3)},{round(p[1],3)}" for p in pts)
     with _pf_lock:
@@ -37,41 +45,27 @@ def _prefetch_buildings(focus_points: list):
     threading.Thread(target=_run, daemon=True).start()
 
 
-@app.route("/")
-def index():
-    return render_template("index.html", top10=scoreboard.get_top10())
-
-
-_city_cache: dict = {}   # city_key → {lat, lon, treasures_dict_list}
-
-@app.route("/start", methods=["POST"])
-def start_game():
-    player_name = request.form.get("player_name", "玩家").strip()
-    city = request.form.get("city", "Taipei").strip()
-
+def _bg_prepare(req_id: str, player_name: str, city: str):
+    """背景執行所有慢速 API 查詢，結果存入 _pending/_game_data。"""
     try:
         city_key = city.lower().strip()
         if city_key in _city_cache:
             cached = _city_cache[city_key]
             lat, lon = cached["lat"], cached["lon"]
-            import random as _random
-            from game.models import Treasure as _Treasure
-            all_t = [_Treasure(**d) for d in cached["treasures"]]
-            treasures = _random.sample(all_t, min(GAME_CONFIG["treasure_count"], len(all_t)))
+            all_t = [Treasure(**d) for d in cached["treasures"]]
+            treasures = random.sample(all_t, min(GAME_CONFIG["treasure_count"], len(all_t)))
         else:
             location = MapAPI.geocode(city)
             lat, lon = location["lat"], location["lon"]
             treasures = MapAPI.fetch_poi(lat, lon)
             if not treasures:
-                return render_template("index.html",
-                                       error="此城市找不到足夠的地點，請嘗試其他城市",
-                                       top10=scoreboard.get_top10())
+                _pending[req_id] = {"status": "error", "message": "此城市找不到足夠的地點，請嘗試其他城市"}
+                return
             _city_cache[city_key] = {
                 "lat": lat, "lon": lon,
                 "treasures": [t.to_dict() for t in treasures],
             }
 
-        # 依距離設定寶藏分數：越遠分越高（50~500分，四捨五入到10）
         for t in treasures:
             dist = haversine((lat, lon), (t.lat, t.lon))
             t.points = max(50, min(500, round((50 + dist * 0.3) / 10) * 10))
@@ -80,65 +74,173 @@ def start_game():
         optimal_route = solve_tsp_exact(player_coords, treasures)
         total_dist = calculate_total_distance(player_coords, optimal_route)
 
-        # 跳過 OSRM（client-side A* 自己畫路線），直接用寶藏座標當 focus_points
-        route_coords = []
-
-        # Bounding box covering start + all treasure locations (for building collision)
         all_lats = [lat] + [t.lat for t in treasures]
         all_lons = [lon] + [t.lon for t in treasures]
-        margin = 0.002  # ~220m padding around edges
+        margin = 0.002
         bounds = {
-            "s": min(all_lats) - margin,
-            "n": max(all_lats) + margin,
-            "w": min(all_lons) - margin,
-            "e": max(all_lons) + margin,
+            "s": min(all_lats) - margin, "n": max(all_lats) + margin,
+            "w": min(all_lons) - margin, "e": max(all_lons) + margin,
         }
-
         focus_points = [(lat, lon)] + [(t.lat, t.lon) for t in treasures]
-
-        # 背景預取建築物（用 focus point 小 bbox 聯合查詢）
         _prefetch_buildings(focus_points)
 
-        session["player"] = {
-            "name": player_name,
-            "lat": lat, "lon": lon,
-            "score": 0,
-            "found_treasures": [],
-            "start_time": time.time(),
-            "city": city
+        game_key = str(uuid.uuid4())
+        _game_data[game_key] = {
+            "player_name": player_name,
+            "player_lat": lat, "player_lon": lon,
+            "city": city,
+            "optimal_route": optimal_route,
+            "total_dist": round(total_dist),
+            "time_limit": GAME_CONFIG["time_limit"],
+            "collect_radius": GAME_CONFIG["collect_radius"],
+            "treasures_json": json.dumps([t.to_dict() for t in treasures]),
+            "optimal_order_json": json.dumps([t.id for t in optimal_route]),
+            "route_coords_json": "[]",
+            "bounds_json": json.dumps(bounds),
+            "focus_points_json": json.dumps(focus_points),
+            # session data
+            "session_player": {
+                "name": player_name, "lat": lat, "lon": lon,
+                "score": 0, "found_treasures": [],
+                "start_time": time.time(), "city": city,
+            },
+            "session_treasures": [t.to_dict() for t in treasures],
+            "session_optimal_order": [t.id for t in optimal_route],
         }
-        session["treasures"] = [t.to_dict() for t in treasures]
-        session["optimal_order"] = [t.id for t in optimal_route]
+        _pending[req_id] = {"status": "ready", "game_key": game_key}
 
-        return render_template("game.html",
-            player_name=player_name,
-            player_lat=lat,
-            player_lon=lon,
-            city=city,
-            optimal_route=optimal_route,
-            total_dist=round(total_dist),
-            time_limit=GAME_CONFIG["time_limit"],
-            collect_radius=GAME_CONFIG["collect_radius"],
-            treasures_json=json.dumps([t.to_dict() for t in treasures]),
-            optimal_order_json=json.dumps([t.id for t in optimal_route]),
-            route_coords_json=json.dumps(route_coords),
-            bounds_json=json.dumps(bounds),
-            focus_points_json=json.dumps(focus_points),
-        )
-
-    except ValueError as e:
-        return render_template("index.html", error=str(e), top10=scoreboard.get_top10())
     except Exception as e:
-        return render_template("index.html",
-                               error=f"發生錯誤: {str(e)}",
-                               top10=scoreboard.get_top10())
+        _pending[req_id] = {"status": "error", "message": str(e)}
+
+
+@app.route("/")
+def index():
+    return render_template("index.html", top10=scoreboard.get_top10())
+
+
+@app.route("/start", methods=["POST"])
+def start_game():
+    player_name = request.form.get("player_name", "玩家").strip()
+    city = request.form.get("city", "Taipei").strip()
+    req_id = str(uuid.uuid4())
+    _pending[req_id] = {"status": "loading"}
+    threading.Thread(target=_bg_prepare, args=(req_id, player_name, city), daemon=True).start()
+
+    # 立刻回傳 loading 頁，完全不等 API（解決 Render 30s timeout）
+    return f'''<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>準備中 - {city}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{background:#0d1117;display:flex;align-items:center;justify-content:center;
+     height:100vh;font-family:"Noto Sans TC",sans-serif;color:#fff}}
+.card{{text-align:center;padding:40px 50px;background:#1a2540;border-radius:18px;
+       box-shadow:0 16px 48px rgba(0,0,0,.65);max-width:340px;width:90%}}
+.spin{{width:52px;height:52px;border:4px solid rgba(255,255,255,.1);
+       border-top-color:#7ec8f8;border-radius:50%;
+       animation:spin .8s linear infinite;margin:0 auto 20px}}
+@keyframes spin{{to{{transform:rotate(360deg)}}}}
+.title{{font-size:17px;font-weight:bold;margin-bottom:18px;
+        background:linear-gradient(90deg,#7ec8f8,#34a853);
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}}
+.step{{font-size:14px;color:#90caf9;min-height:22px;margin-bottom:6px}}
+.sub{{font-size:12px;color:#546e7a;min-height:18px;margin-bottom:20px}}
+.err{{color:#ef5350;font-size:13px;display:none;margin-bottom:14px}}
+.btn{{padding:9px 24px;border:none;border-radius:20px;cursor:pointer;
+      font-size:13px;font-weight:bold;background:#e53935;color:#fff;display:none}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="title">🏙️ 準備 {city}</div>
+  <div class="spin" id="sp"></div>
+  <div class="step" id="st">🔍 搜尋附近景點…</div>
+  <div class="sub"  id="sb">連線地圖資料庫中</div>
+  <div class="err"  id="er"></div>
+  <button class="btn" id="bt" onclick="location.href='/'">← 回首頁</button>
+</div>
+<script>
+const ID='{req_id}';
+const STEPS=['🔍 搜尋附近景點…','📍 計算最佳路線…','🗺️ 整理地圖資料…','⚙️ 即將完成…'];
+let t=0;
+async function poll(){{
+  t++;
+  document.getElementById('st').textContent=STEPS[Math.min(t-1,STEPS.length-1)];
+  document.getElementById('sb').textContent='已等待 '+(t*2)+' 秒';
+  if(t>30){{showErr('等待逾時，請重試');return;}}
+  try{{
+    const r=await fetch('/start/poll?id='+ID);
+    const d=await r.json();
+    if(d.status==='ready'){{window.location.href='/game';return;}}
+    if(d.status==='error'){{showErr(d.message||'發生錯誤');return;}}
+  }}catch(e){{document.getElementById('sb').textContent='重新連線中…';}}
+  setTimeout(poll,2000);
+}}
+function showErr(msg){{
+  document.getElementById('sp').style.display='none';
+  document.getElementById('er').textContent=msg;
+  document.getElementById('er').style.display='block';
+  document.getElementById('bt').style.display='inline-block';
+}}
+setTimeout(poll,2000);
+</script>
+</body>
+</html>'''
+
+
+@app.route("/start/poll")
+def start_poll():
+    req_id = request.args.get("id", "")
+    entry = _pending.get(req_id)
+    if not entry:
+        return jsonify({"status": "error", "message": "逾時，請重新開始"})
+    if entry["status"] == "loading":
+        return jsonify({"status": "loading"})
+    if entry["status"] == "error":
+        _pending.pop(req_id, None)
+        return jsonify({"status": "error", "message": entry.get("message", "發生錯誤")})
+
+    # 準備好：把 session 寫入，存 game_key 讓 /game 路由取資料
+    game_key = entry["game_key"]
+    gd = _game_data.get(game_key, {})
+    session["player"] = gd.get("session_player", {})
+    session["treasures"] = gd.get("session_treasures", [])
+    session["optimal_order"] = gd.get("session_optimal_order", [])
+    session["game_key"] = game_key
+    _pending.pop(req_id, None)
+    return jsonify({"status": "ready"})
+
+
+@app.route("/game")
+def game():
+    game_key = session.get("game_key")
+    if not game_key or game_key not in _game_data:
+        return redirect("/")
+    gd = _game_data.pop(game_key)
+    session.pop("game_key", None)
+    return render_template("game.html",
+        player_name=gd["player_name"],
+        player_lat=gd["player_lat"],
+        player_lon=gd["player_lon"],
+        city=gd["city"],
+        optimal_route=gd["optimal_route"],
+        total_dist=gd["total_dist"],
+        time_limit=gd["time_limit"],
+        collect_radius=gd["collect_radius"],
+        treasures_json=gd["treasures_json"],
+        optimal_order_json=gd["optimal_order_json"],
+        route_coords_json=gd["route_coords_json"],
+        bounds_json=gd["bounds_json"],
+        focus_points_json=gd["focus_points_json"],
+    )
 
 
 @app.route("/roads")
 def get_roads():
     _empty = {"roads": {"type": "FeatureCollection", "features": []}, "buildings": []}
-
-    # 優先：focus points 聯合小 bbox 查詢
     pts_raw = request.args.get("pts")
     if pts_raw:
         try:
@@ -151,58 +253,44 @@ def get_roads():
             return jsonify(MapAPI.fetch_roads_focused(pts))
         except Exception:
             return jsonify(_empty)
-
-    # 備援：舊版全 bbox 查詢
     s = request.args.get("s", type=float)
     n = request.args.get("n", type=float)
     w = request.args.get("w", type=float)
     e = request.args.get("e", type=float)
     if None not in (s, n, w, e):
-        key = (round(s, 3), round(n, 3), round(w, 3), round(e, 3))
-        with _pf_lock:
-            evt = _pf_events.get(key)
-        if evt:
-            evt.wait(timeout=24)
         try:
             return jsonify(MapAPI.fetch_roads_bbox(s, n, w, e))
         except Exception:
             return jsonify(_empty)
-    # Fallback: single point + fixed radius
     lat = request.args.get("lat", type=float)
     lon = request.args.get("lon", type=float)
     if lat is None or lon is None:
-        return jsonify({"roads": {"type": "FeatureCollection", "features": []}, "buildings": []}), 400
+        return jsonify(_empty), 400
     try:
         return jsonify(MapAPI.fetch_roads(lat, lon))
     except Exception:
-        return jsonify({"roads": {"type": "FeatureCollection", "features": []}, "buildings": []})
+        return jsonify(_empty)
 
 
 @app.route("/collect/<treasure_id>", methods=["POST"])
 def collect_treasure(treasure_id):
     treasures_data = session.get("treasures", [])
     player_data = session.get("player", {})
-
     if not player_data:
         return jsonify({"status": "error", "msg": "session 過期"}), 400
-
     order_bonus = 0
     if request.is_json:
         order_bonus = int(request.get_json(silent=True).get("order_bonus", 0))
-
     for t in treasures_data:
         if t["id"] == treasure_id and not t["found"]:
             t["found"] = True
             player_data["score"] = player_data.get("score", 0) + t["points"] + order_bonus
             player_data.setdefault("found_treasures", []).append(treasure_id)
             break
-
     session["treasures"] = treasures_data
     session["player"] = player_data
-
     found_count = sum(1 for t in treasures_data if t["found"])
     total = len(treasures_data)
-
     status = "win" if found_count == total else "ok"
     return jsonify({"status": status, "score": player_data["score"],
                     "found": found_count, "total": total})
@@ -223,12 +311,9 @@ def apply_penalty():
 def finish_game():
     player_data = session.get("player", {})
     treasures_data = session.get("treasures", [])
-
     if not player_data:
         return redirect(url_for("index"))
-
     city = player_data.get("city", "")
-
     player = Player(
         name=player_data.get("name", "玩家"),
         lat=player_data.get("lat", 0),
@@ -237,22 +322,15 @@ def finish_game():
         found_treasures=player_data.get("found_treasures", []),
         start_time=player_data.get("start_time", time.time())
     )
-
-    # 時間獎勵：每剩 1 秒 +2 分（最多 600 分）
     elapsed = min(player.elapsed_time, GAME_CONFIG["time_limit"])
     time_bonus = max(0, int((GAME_CONFIG["time_limit"] - elapsed) * GAME_CONFIG["time_bonus_rate"]))
     player.score += time_bonus
-
     scoreboard.save_score(player, city)
-
     found = [t for t in treasures_data if t["found"]]
     return render_template("finish.html",
-                           player=player,
-                           city=city,
-                           found_count=len(found),
-                           total=len(treasures_data),
-                           time_bonus=time_bonus,
-                           top10=scoreboard.get_top10(city))
+                           player=player, city=city,
+                           found_count=len(found), total=len(treasures_data),
+                           time_bonus=time_bonus, top10=scoreboard.get_top10(city))
 
 
 @app.route("/health")

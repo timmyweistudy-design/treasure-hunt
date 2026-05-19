@@ -16,16 +16,18 @@ scoreboard = Scoreboard()
 _pf_lock = threading.Lock()
 _pf_events: dict = {}   # bbox_key → threading.Event（fetch 進行中時存在）
 
-def _prefetch_buildings(s, n, w, e):
-    key = (round(s, 3), round(n, 3), round(w, 3), round(e, 3))
+def _prefetch_buildings(focus_points: list):
+    """背景預取建築物（用 focus point 小 bbox 聯合查詢）。"""
+    pts = focus_points[:14]
+    key = "fp_" + "_".join(f"{round(p[0],3)},{round(p[1],3)}" for p in pts)
     with _pf_lock:
         if key in MapAPI._road_cache or key in _pf_events:
-            return  # 已快取或已在 fetch 中
+            return
         evt = threading.Event()
         _pf_events[key] = evt
     def _run():
         try:
-            MapAPI.fetch_roads_bbox(s, n, w, e)
+            MapAPI.fetch_roads_focused(pts)
         except Exception:
             pass
         finally:
@@ -78,8 +80,16 @@ def start_game():
             "e": max(all_lons) + margin,
         }
 
-        # 背景預取建築物（/roads 到來時直接從快取回傳，不重複打 Overpass）
-        _prefetch_buildings(bounds["s"], bounds["n"], bounds["w"], bounds["e"])
+        # 焦點點：出發點＋各寶藏＋路線取樣（最多 14 點）
+        focus_points = [(lat, lon)] + [(t.lat, t.lon) for t in treasures]
+        if route_coords:
+            step = max(1, len(route_coords) // 8)
+            for coord in route_coords[::step]:
+                focus_points.append((coord[1], coord[0]))  # [lon,lat]→[lat,lon]
+        focus_points = focus_points[:14]
+
+        # 背景預取建築物（用 focus point 小 bbox 聯合查詢）
+        _prefetch_buildings(focus_points)
 
         session["player"] = {
             "name": player_name,
@@ -105,6 +115,7 @@ def start_game():
             optimal_order_json=json.dumps([t.id for t in optimal_route]),
             route_coords_json=json.dumps(route_coords),
             bounds_json=json.dumps(bounds),
+            focus_points_json=json.dumps(focus_points),
         )
 
     except ValueError as e:
@@ -117,22 +128,37 @@ def start_game():
 
 @app.route("/roads")
 def get_roads():
-    # Preferred: explicit bounding box covering all treasure locations
+    _empty = {"roads": {"type": "FeatureCollection", "features": []}, "buildings": []}
+
+    # 優先：focus points 聯合小 bbox 查詢
+    pts_raw = request.args.get("pts")
+    if pts_raw:
+        try:
+            pts = json.loads(pts_raw)[:14]
+            key = "fp_" + "_".join(f"{round(p[0],3)},{round(p[1],3)}" for p in pts)
+            with _pf_lock:
+                evt = _pf_events.get(key)
+            if evt:
+                evt.wait(timeout=24)
+            return jsonify(MapAPI.fetch_roads_focused(pts))
+        except Exception:
+            return jsonify(_empty)
+
+    # 備援：舊版全 bbox 查詢
     s = request.args.get("s", type=float)
     n = request.args.get("n", type=float)
     w = request.args.get("w", type=float)
     e = request.args.get("e", type=float)
     if None not in (s, n, w, e):
-        # 若有背景 prefetch 正在進行，等它完成（避免同時打兩次 Overpass）
         key = (round(s, 3), round(n, 3), round(w, 3), round(e, 3))
         with _pf_lock:
             evt = _pf_events.get(key)
         if evt:
-            evt.wait(timeout=28)
+            evt.wait(timeout=24)
         try:
             return jsonify(MapAPI.fetch_roads_bbox(s, n, w, e))
         except Exception:
-            return jsonify({"roads": {"type": "FeatureCollection", "features": []}, "buildings": []})
+            return jsonify(_empty)
     # Fallback: single point + fixed radius
     lat = request.args.get("lat", type=float)
     lon = request.args.get("lon", type=float)

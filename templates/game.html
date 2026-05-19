@@ -470,6 +470,7 @@ const TIME_LIMIT   = {{ time_limit }};
 const CLCT_R       = {{ collect_radius }};
 const TOTAL        = TREASURES.length;
 const BOUNDS       = {{ bounds_json | safe }};
+const FOCUS_POINTS = {{ focus_points_json | safe }};
 
 const WALK_SPD    = 0.00025;
 const SPRINT_SPD  = 0.00050;
@@ -2090,7 +2091,8 @@ async function doLoad(){
         },1000);
         document.getElementById('ld-sub').textContent='下載建築物輪廓中… 0s';
 
-        const res=await fetch(`/roads?s=${BOUNDS.s}&n=${BOUNDS.n}&w=${BOUNDS.w}&e=${BOUNDS.e}`);
+        const ptsParam=encodeURIComponent(JSON.stringify(FOCUS_POINTS));
+        const res=await fetch(`/roads?pts=${ptsParam}`);
         clearInterval(timer);
         document.getElementById('ld-step').textContent='⚙️ 建立碰撞資料…';
         document.getElementById('ld-sub').textContent='計算建築多邊形與導航格…';

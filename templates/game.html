@@ -1140,8 +1140,6 @@ function tickChaser(ai,dt,s) {
         const dLa=tLat-ai.lat, dLo=tLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
         if(len>1e-6){ai.lat+=dLa/len*cs;ai.lon+=dLo/len*cs;}
     }
-    ai.marker.setLatLng([ai.lat,ai.lon]);
-    if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]);
     ai.attackCD=Math.max(0,ai.attackCD-dt);
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
     if(dToP<STUN_R&&stunCD===0&&stunTimer===0&&invincTimer===0){
@@ -1197,8 +1195,6 @@ function tickPatroller(ai,dt,s) {
     // FOV 多邊形：每 0.1s 更新一次（10fps），降低每幀 DOM 操作量
     ai.fovDrawTimer=Math.max(0,ai.fovDrawTimer-dt);
     if(ai.fovDrawTimer===0){updateFOVPoly(ai);ai.fovDrawTimer=0.1;}
-    ai.marker.setLatLng([ai.lat,ai.lon]);
-    if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]);
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
     // ⚡ 定身技能：距離夠近且冷卻好就定身玩家（AI 自身繼續移動）
     if(dToP<STUN_R&&stunCD===0&&stunTimer===0&&invincTimer===0){
@@ -1249,8 +1245,6 @@ function tickThief(ai,dt,s) {
     const mLat=ai.path.length>0?ai.path[0][0]:tgt.lat, mLon=ai.path.length>0?ai.path[0][1]:tgt.lon;
     const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
     if(len>1e-6){ai.lat+=dLa/len*s;ai.lon+=dLo/len*s;}
-    ai.marker.setLatLng([ai.lat,ai.lon]);
-    if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]);
     if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);
@@ -1307,79 +1301,92 @@ function tickAI(dt) {
         else                            dToP=tickThief(ai,dt,s);
         if(dToP<nearestDist) nearestDist=dToP;
     }
-    // ── 動態 chip 標籤（各型別數量 + 下波倒數）──────────
-    const cntEl=document.getElementById('ai-count-txt');
-    if(cntEl){
-        const nC=aiList.filter(a=>a.type==='chaser').length;
-        const nP=aiList.filter(a=>a.type==='patroller').length;
-        const nT=aiList.filter(a=>a.type==='thief').length;
-        let parts=[];
-        if(nP) parts.push(`👁️×${nP}`);
-        if(nC) parts.push(`👾×${nC}`);
-        if(nT) parts.push(nT>1?`🦹×${nT}`:`🦹`);
-        let txt=parts.join(' ');
-        if(chaserCount<CHASER_MAX)
-            txt+=` +👾${Math.ceil(chaserCount===0?chaserSpawnTimer:chaserWaveTimer)}s`;
-        if(thiefCount<THIEF_MAX)
-            txt+=` +🦹${Math.ceil(thiefCount===0?thiefSpawnTimer:thiefWaveTimer)}s`;
-        cntEl.textContent=txt;
+    // ── 動態 chip 標籤（15fps 足夠）──────────────────────
+    if(uiFrame){
+        const cntEl=document.getElementById('ai-count-txt');
+        if(cntEl){
+            const nC=aiList.filter(a=>a.type==='chaser').length;
+            const nP=aiList.filter(a=>a.type==='patroller').length;
+            const nT=aiList.filter(a=>a.type==='thief').length;
+            let parts=[];
+            if(nP) parts.push(`👁️×${nP}`);
+            if(nC) parts.push(`👾×${nC}`);
+            if(nT) parts.push(nT>1?`🦹×${nT}`:`🦹`);
+            let txt=parts.join(' ');
+            if(chaserCount<CHASER_MAX)
+                txt+=` +👾${Math.ceil(chaserCount===0?chaserSpawnTimer:chaserWaveTimer)}s`;
+            if(thiefCount<THIEF_MAX)
+                txt+=` +🦹${Math.ceil(thiefCount===0?thiefSpawnTimer:thiefWaveTimer)}s`;
+            cntEl.textContent=txt;
+        }
+        document.getElementById('ai-dist').textContent=nearestDist<Infinity?Math.round(nearestDist):'—';
+        document.getElementById('chip-ai').style.background=nearestDist<80?'rgba(198,40,40,.55)':'rgba(255,255,255,.2)';
     }
-    document.getElementById('ai-dist').textContent=nearestDist<Infinity?Math.round(nearestDist):'—';
-    document.getElementById('chip-ai').style.background=nearestDist<80?'rgba(198,40,40,.55)':'rgba(255,255,255,.2)';
 }
 
 // ── 效果計時器 ────────────────────────────────────────────
 function tickEffects(dt) {
+    // === 邏輯（60fps）===
     if(speedBoostTimer>0) speedBoostTimer=Math.max(0,speedBoostTimer-dt);
-    document.getElementById('chip-speed').style.display=speedBoostTimer>0?'inline-block':'none';
-    if(speedBoostTimer>0) document.getElementById('speed-t').textContent=Math.ceil(speedBoostTimer);
 
     const wasInvinc=invincTimer>0;
     if(wasInvinc) invincTimer=Math.max(0,invincTimer-dt);
     if(wasInvinc&&invincTimer===0){
-        // 無敵結束時，若玩家在建築物內則彈出
         ensureOutsideBuilding();
         pMarker.setLatLng([pLat,pLon]);
         pCircle.setLatLng([pLat,pLon]);
         updateMiniMap();
     }
-    document.getElementById('chip-star').style.display=invincTimer>0?'inline-block':'none';
-    if(invincTimer>0) document.getElementById('invinc-t').textContent=Math.ceil(invincTimer);
-    document.getElementById('invinc-glow').style.display=invincTimer>0?'block':'none';
-    const dot=document.getElementById('pdot');
-    if(dot) dot.style.background=invincTimer>0?'linear-gradient(135deg,#FFD700,#FF6F00,#FFD700)':'';
 
     if(rangeBoostTimer>0) rangeBoostTimer=Math.max(0,rangeBoostTimer-dt);
-    document.getElementById('chip-range').style.display=rangeBoostTimer>0?'inline-block':'none';
-    if(rangeBoostTimer>0) document.getElementById('range-t').textContent=Math.ceil(rangeBoostTimer);
-    pCircle.setRadius(effectiveR());  // 即時反映收集半徑
 
     const wasFreeze=aiFrozenTimer>0;
     if(wasFreeze) aiFrozenTimer=Math.max(0,aiFrozenTimer-dt);
     if(wasFreeze&&aiFrozenTimer===0){
         for(const ai of aiList){const el=ai.marker.getElement();if(el) el.style.filter='';}
     }
+
+    if(stunCD>0) stunCD=Math.max(0,stunCD-dt);
+    if(stunTimer>0) stunTimer=Math.max(0,stunTimer-dt);
+
+    if(magnetTimer>0) magnetTimer=Math.max(0,magnetTimer-dt);
+    if(magnetTimer>0){
+        if(!magnetCircle) magnetCircle=L.circle([pLat,pLon],{radius:MAGNET_R,color:'#ffa000',weight:2,fillColor:'#ffa000',fillOpacity:.05,dashArray:'6 4'}).addTo(map);
+        else magnetCircle.setLatLng([pLat,pLon]);
+    } else if(magnetCircle){magnetCircle.remove();magnetCircle=null;}
+
+    const wasCombo=comboTimer>0;
+    if(wasCombo) comboTimer=Math.max(0,comboTimer-dt);
+    if(wasCombo&&comboTimer===0) comboCount=0;
+
+    // === UI DOM（15fps）===
+    if(!uiFrame) return;
+
+    const dot=document.getElementById('pdot');
+    document.getElementById('chip-speed').style.display=speedBoostTimer>0?'inline-block':'none';
+    if(speedBoostTimer>0) document.getElementById('speed-t').textContent=Math.ceil(speedBoostTimer);
+
+    document.getElementById('chip-star').style.display=invincTimer>0?'inline-block':'none';
+    if(invincTimer>0) document.getElementById('invinc-t').textContent=Math.ceil(invincTimer);
+    document.getElementById('invinc-glow').style.display=invincTimer>0?'block':'none';
+    if(dot) dot.style.background=invincTimer>0?'linear-gradient(135deg,#FFD700,#FF6F00,#FFD700)':'';
+
+    document.getElementById('chip-range').style.display=rangeBoostTimer>0?'inline-block':'none';
+    if(rangeBoostTimer>0) document.getElementById('range-t').textContent=Math.ceil(rangeBoostTimer);
+    pCircle.setRadius(effectiveR());
+
     document.getElementById('chip-freeze').style.display=aiFrozenTimer>0?'inline-block':'none';
     if(aiFrozenTimer>0) document.getElementById('freeze-t').textContent=Math.ceil(aiFrozenTimer);
 
-    // 定身 CD（AI共用）+ 玩家定身計時
-    if(stunCD>0) stunCD=Math.max(0,stunCD-dt);
-    if(stunTimer>0) stunTimer=Math.max(0,stunTimer-dt);
     const sChip=document.getElementById('chip-stun');
     sChip.style.display=stunTimer>0?'inline-block':'none';
     sChip.style.background=stunTimer>0?'rgba(255,130,0,.7)':'';
     if(stunTimer>0) document.getElementById('stun-t').textContent=Math.ceil(stunTimer);
     document.getElementById('stun-glow').style.display=stunTimer>0?'block':'none';
-    const pdot2=document.getElementById('pdot');
-    if(pdot2) pdot2.classList.toggle('stunned', stunTimer>0);
+    if(dot) dot.classList.toggle('stunned', stunTimer>0);
 
-    if(magnetTimer>0) magnetTimer=Math.max(0,magnetTimer-dt);
     document.getElementById('chip-magnet').style.display=magnetTimer>0?'inline-block':'none';
     if(magnetTimer>0) document.getElementById('magnet-t').textContent=Math.ceil(magnetTimer);
-    if(magnetTimer>0){
-        if(!magnetCircle) magnetCircle=L.circle([pLat,pLon],{radius:MAGNET_R,color:'#ffa000',weight:2,fillColor:'#ffa000',fillOpacity:.05,dashArray:'6 4'}).addTo(map);
-        else magnetCircle.setLatLng([pLat,pLon]);
-    } else if(magnetCircle){magnetCircle.remove();magnetCircle=null;}
 
     const dChip=document.getElementById('chip-decoy');
     if(decoyActive){
@@ -1394,9 +1401,6 @@ function tickEffects(dt) {
         dChip.style.display='none';
     }
 
-    const wasCombo=comboTimer>0;
-    if(wasCombo) comboTimer=Math.max(0,comboTimer-dt);
-    if(wasCombo&&comboTimer===0) comboCount=0;
     const cChip=document.getElementById('chip-combo');
     if(comboCount>=2&&comboTimer>0){
         cChip.style.display='inline-block';
@@ -1661,6 +1665,7 @@ function tickSprint(dt) {
     }
     if(isSprinting&&!wasSprinting) playSprint();
     wasSprinting=isSprinting;
+    if(!uiFrame) return; // DOM 降到 15fps
 
     const isRecharging=!isSprinting&&sprintCD===0&&sprintBar<SPRINT_MAX;
     const pct=sprintCD>0?0:(sprintBar/SPRINT_MAX*100);
@@ -1702,14 +1707,8 @@ function tryMove(dLon,dLat) {
     map.setView([pLat,pLon],map.getZoom(),{animate:false});
 }
 
-// ── 節流更新（minimap + 距離文字，~15fps 足夠）────────────
-let lastViewUpdate=0;
-function throttledViewUpdate(ts){
-    if(ts-lastViewUpdate<67) return;
-    lastViewUpdate=ts;
-    updateMiniMap();
-    updateDistances();
-}
+// uiFrame=每4幀(~15fps)觸發UI更新; aiFrame=每2幀(~30fps)更新AI標記
+let frameCount=0, uiFrame=false, aiFrame=false;
 
 // ── 鍵盤 ──────────────────────────────────────────────────
 const keys={};
@@ -1788,14 +1787,13 @@ function collectNearest() {
 
 // ── 主迴圈 ────────────────────────────────────────────────
 let lastT=0;
-let astarBudget=0; // 每幀最多執行 1 次 A*，避免多 AI 同幀計算造成 lag spike
+let astarBudget=0;
 function loop(ts) {
     if(gameReady){
         try {
+            frameCount++; uiFrame=(frameCount%4===0); aiFrame=(frameCount%2===0);
             const dt=Math.min((ts-lastT)/1000,.05);
-            astarBudget=1; // 重置每幀預算
-            // 自動清除超過 700ms 未刷新的移動鍵（覆蓋最長 OS 初始延遲 ~500ms）
-            // Shift 等修飾鍵不過期，靠 keyup/blur 清除
+            astarBudget=1;
             for(const k in keys){ if(MOVE_KEYS.has(k)&&ts-keys[k]>700) delete keys[k]; }
             tickSprint(dt);
             tickEffects(dt);
@@ -1829,7 +1827,8 @@ function loop(ts) {
                     pushTrail(dt);
                 }
             }
-            throttledViewUpdate(ts);
+            if(uiFrame){ updateMiniMap(); updateDistances(); }
+            if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); } }
         } catch(e) {
             console.error('[loop]', e);  // 記錄錯誤但不中斷循環
         }

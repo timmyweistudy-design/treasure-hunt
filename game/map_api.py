@@ -1,5 +1,6 @@
+import threading
 import requests
-import random  # 仍用於 random.sample 抽地點
+import random
 from config import NOMINATIM_URL, OSRM_URL, GAME_CONFIG
 from game.models import Treasure, rate_limit
 
@@ -12,14 +13,51 @@ OVERPASS_MIRRORS = [
 HEADERS = {"User-Agent": "TreasureHuntGame/1.0", "Accept": "*/*"}
 
 
+def _parallel_post(query: str, handler, per_timeout: float, total_timeout: float):
+    """
+    POST query to all OVERPASS_MIRRORS simultaneously.
+    Calls handler(resp_json) on first successful response.
+    Returns handler result, or None if all fail / timeout.
+    """
+    result = [None]
+    done = threading.Event()
+    remaining = [len(OVERPASS_MIRRORS)]
+    lock = threading.Lock()
+
+    def try_url(url):
+        try:
+            resp = requests.post(url, data={"data": query}, headers=HEADERS,
+                                 timeout=per_timeout)
+            resp.raise_for_status()
+            value = handler(resp.json())
+            with lock:
+                if not done.is_set():
+                    result[0] = value
+                    done.set()
+        except Exception:
+            pass
+        finally:
+            with lock:
+                remaining[0] -= 1
+                if remaining[0] == 0:
+                    done.set()  # all mirrors failed
+
+    for url in OVERPASS_MIRRORS:
+        threading.Thread(target=try_url, args=(url,), daemon=True).start()
+
+    done.wait(timeout=total_timeout)
+    return result[0]
+
+
 class MapAPI:
-    _road_cache: dict = {}   # (round_lat2, round_lon2) → parsed data
+    _road_cache: dict = {}
 
     @staticmethod
     @rate_limit(calls_per_second=1)
     def geocode(city_name: str) -> dict:
         params = {"q": city_name, "format": "json", "limit": 1}
-        resp = requests.get(f"{NOMINATIM_URL}/search", params=params, headers=HEADERS, timeout=10)
+        resp = requests.get(f"{NOMINATIM_URL}/search", params=params,
+                            headers=HEADERS, timeout=10)
         resp.raise_for_status()
         results = resp.json()
         if not results:
@@ -28,64 +66,64 @@ class MapAPI:
 
     @staticmethod
     def _query_overpass(query: str) -> list:
-        """依序嘗試多個 Overpass 鏡像站，全失敗才拋出例外"""
-        last_err = None
-        for url in OVERPASS_MIRRORS:
-            try:
-                resp = requests.post(url, data={"data": query}, headers=HEADERS, timeout=8)
-                resp.raise_for_status()
-                return resp.json().get("elements", [])
-            except Exception as e:
-                last_err = e
-        raise last_err
+        """並行查詢所有鏡像站，回傳第一個成功的結果。"""
+        result = _parallel_post(
+            query,
+            handler=lambda j: j.get("elements", []),
+            per_timeout=6,
+            total_timeout=9,
+        )
+        if result is None:
+            raise RuntimeError("All Overpass mirrors failed")
+        return result
 
     @staticmethod
     def fetch_roads(lat: float, lon: float) -> dict:
-        """後備方法：以起點為中心固定 900m 半徑查詢建築物。"""
+        """備援：以起點為中心 900m 半徑查詢建築物（並行鏡像）。"""
         key = (round(lat, 2), round(lon, 2))
         if key in MapAPI._road_cache:
             return MapAPI._road_cache[key]
 
         d = 0.008
         query = (
-            f"[out:json][timeout:15][maxsize:33554432];"
+            f"[out:json][timeout:12][maxsize:33554432];"
             f"way[\"building\"]({lat-d},{lon-d},{lat+d},{lon+d});"
             f"(._;>;);out body;"
         )
-        for url in OVERPASS_MIRRORS:
-            try:
-                resp = requests.post(url, data={"data": query}, headers=HEADERS, timeout=18)
-                resp.raise_for_status()
-                result = MapAPI._parse_map_data(resp.json())
-                MapAPI._road_cache[key] = result
-                return result
-            except Exception:
-                continue
-        return {"roads": {"type": "FeatureCollection", "features": []}, "buildings": []}
+        result = _parallel_post(
+            query,
+            handler=MapAPI._parse_map_data,
+            per_timeout=14,
+            total_timeout=16,
+        )
+        if result is None:
+            return {"roads": {"type": "FeatureCollection", "features": []}, "buildings": []}
+        MapAPI._road_cache[key] = result
+        return result
 
     @staticmethod
     def fetch_roads_bbox(s: float, n: float, w: float, e: float) -> dict:
-        """主要方法：查詢建築物多邊形，覆蓋起點到所有寶藏的完整 bounding box，有記憶體快取。"""
+        """主要建築物查詢：並行鏡像，最先回傳的鏡像獲勝。"""
         key = (round(s, 3), round(n, 3), round(w, 3), round(e, 3))
         if key in MapAPI._road_cache:
             return MapAPI._road_cache[key]
 
         query = (
-            f"[out:json][timeout:25][maxsize:67108864];"
+            f"[out:json][timeout:20][maxsize:67108864];"
             f"way[\"building\"]({s},{w},{n},{e});"
             f"(._;>;);out body;"
         )
-        for url in OVERPASS_MIRRORS:
-            try:
-                resp = requests.post(url, data={"data": query}, headers=HEADERS, timeout=28)
-                resp.raise_for_status()
-                result = MapAPI._parse_map_data(resp.json())
-                MapAPI._road_cache[key] = result
-                return result
-            except Exception:
-                continue
+        result = _parallel_post(
+            query,
+            handler=MapAPI._parse_map_data,
+            per_timeout=22,
+            total_timeout=24,
+        )
+        if result is not None:
+            MapAPI._road_cache[key] = result
+            return result
 
-        # 全 bbox 失敗時，改抓城市中心附近的小範圍作為備援
+        # 全 bbox 失敗 → 退回城市中心小範圍
         clat, clon = (s + n) / 2, (w + e) / 2
         fallback = MapAPI.fetch_roads(clat, clon)
         if fallback["buildings"]:
@@ -94,7 +132,8 @@ class MapAPI:
 
     @staticmethod
     def _parse_map_data(data: dict) -> dict:
-        nodes = {e["id"]: [e["lon"], e["lat"]] for e in data.get("elements", []) if e["type"] == "node"}
+        nodes = {e["id"]: [e["lon"], e["lat"]]
+                 for e in data.get("elements", []) if e["type"] == "node"}
         road_features, buildings = [], []
         for e in data.get("elements", []):
             if e["type"] != "way":
@@ -108,7 +147,6 @@ class MapAPI:
                     "properties": {"hw": tags.get("highway", "")}
                 })
             elif "building" in tags and len(coords) >= 4:
-                # 橋梁 / 空橋 / 隧道排除，避免阻擋玩家通行
                 try:
                     layer = int(tags.get("layer", 0) or 0)
                 except (ValueError, TypeError):
@@ -118,23 +156,21 @@ class MapAPI:
                         tags.get("building") in ("bridge", "passage", "roof") or
                         layer >= 1 or layer < 0):
                     continue
-                # 頂點超過 24 個的多邊形進行抽稀，降低 JS 碰撞計算量
                 if len(coords) > 24:
                     step = max(1, len(coords) // 20)
                     coords = coords[::step]
                 buildings.append(coords)
         return {
             "roads": {"type": "FeatureCollection", "features": road_features},
-            "buildings": buildings[:3500]   # 最多 3500 棟
+            "buildings": buildings[:3000]
         }
 
     @staticmethod
     def fetch_poi(lat: float, lon: float) -> list:
-        d = 0.010  # 約 1.1km 範圍（縮小讓 WASD 步行可達）
-        # 拆成兩次較小的查詢，降低超時機率
+        d = 0.010
         queries = [
-            f'[out:json][timeout:8];(node["amenity"="cafe"]({lat-d},{lon-d},{lat+d},{lon+d});node["tourism"="museum"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="library"]({lat-d},{lon-d},{lat+d},{lon+d}););out body;',
-            f'[out:json][timeout:8];(node["leisure"="park"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="restaurant"]({lat-d},{lon-d},{lat+d},{lon+d}););out body;',
+            f'[out:json][timeout:7];(node["amenity"="cafe"]({lat-d},{lon-d},{lat+d},{lon+d});node["tourism"="museum"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="library"]({lat-d},{lon-d},{lat+d},{lon+d}););out body;',
+            f'[out:json][timeout:7];(node["leisure"="park"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="restaurant"]({lat-d},{lon-d},{lat+d},{lon+d}););out body;',
         ]
 
         elements = []
@@ -142,11 +178,10 @@ class MapAPI:
             try:
                 elements += MapAPI._query_overpass(q)
                 if len(elements) >= GAME_CONFIG["treasure_count"] * 4:
-                    break  # 已有足夠候選，跳過剩餘查詢
+                    break
             except Exception:
                 pass
 
-        # 若 Overpass 全部失敗，改用 Nominatim 搜尋周邊地點
         if not elements:
             return MapAPI._fetch_poi_nominatim(lat, lon)
 
@@ -173,8 +208,7 @@ class MapAPI:
     @staticmethod
     @rate_limit(calls_per_second=1)
     def _fetch_poi_nominatim(lat: float, lon: float) -> list:
-        """Overpass 全掛時的備援：用 Nominatim 抓周邊地點"""
-        keywords = ["cafe", "museum", "park", "restaurant", "library", "temple", "hotel"]
+        keywords = ["cafe", "museum", "park", "restaurant", "library"]
         results = []
         for kw in keywords:
             if len(results) >= GAME_CONFIG["treasure_count"]:
@@ -185,7 +219,8 @@ class MapAPI:
                     "viewbox": f"{lon-0.05},{lat+0.05},{lon+0.05},{lat-0.05}",
                     "bounded": 1
                 }
-                resp = requests.get(f"{NOMINATIM_URL}/search", params=params, headers=HEADERS, timeout=8)
+                resp = requests.get(f"{NOMINATIM_URL}/search", params=params,
+                                    headers=HEADERS, timeout=5)
                 for r in resp.json():
                     if r.get("display_name") and len(results) < GAME_CONFIG["treasure_count"]:
                         results.append(r)
@@ -202,8 +237,7 @@ class MapAPI:
             treasures.append(Treasure(
                 id=f"t{i}", name=name,
                 lat=float(r["lat"]), lon=float(r["lon"]),
-                category=category,
-                points=100
+                category=category, points=100
             ))
         return treasures
 
@@ -213,7 +247,7 @@ class MapAPI:
         url = f"{OSRM_URL}/route/v1/walking/{coord_str}"
         params = {"overview": "full", "geometries": "geojson"}
         try:
-            resp = requests.get(url, params=params, timeout=10)
+            resp = requests.get(url, params=params, timeout=8)
             resp.raise_for_status()
             return resp.json()["routes"][0]["geometry"]["coordinates"]
         except Exception:

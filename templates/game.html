@@ -2151,14 +2151,14 @@ function _parseOSMBuildings(data){
     }
     return buildings;
 }
-function fetchBuildingsDirect(_pts){
-    // 整個遊玩區域一個 bbox — 確保邊界內所有建築都有碰撞
-    const s=BOUNDS.s.toFixed(5), n=BOUNDS.n.toFixed(5),
-          w=BOUNDS.w.toFixed(5), e=BOUNDS.e.toFixed(5);
-    const query=`[out:json][timeout:25][maxsize:134217728];way["building"](${s},${w},${n},${e});(._;>;);out body;`;
+function fetchBuildingsDirect(){
+    // 整個遊玩邊界一個 bbox query（Overpass 格式：south,west,north,east）
+    const bS=BOUNDS.s.toFixed(5), bN=BOUNDS.n.toFixed(5),
+          bW=BOUNDS.w.toFixed(5), bE=BOUNDS.e.toFixed(5);
+    const query=`[out:json][timeout:25][maxsize:134217728];way["building"](${bS},${bW},${bN},${bE});(._;>;);out body;`;
     const body=new URLSearchParams({data:query});
     return new Promise(function(resolve){
-        var done=false, failed=0, n=OVERPASS_MIRRORS.length;
+        var done=false, failed=0, mirrorN=OVERPASS_MIRRORS.length;
         var ctrls=OVERPASS_MIRRORS.map(function(){return new AbortController();});
         var tid=setTimeout(function(){
             if(!done){done=true;ctrls.forEach(function(c){c.abort();});resolve([]);}
@@ -2170,14 +2170,14 @@ function fetchBuildingsDirect(_pts){
                     if(!done){done=true;clearTimeout(tid);ctrls.forEach(function(c){c.abort();});resolve(_parseOSMBuildings(j));}
                 })
                 .catch(function(){
-                    if(++failed===n&&!done){done=true;clearTimeout(tid);resolve([]);}
+                    if(++failed===mirrorN&&!done){done=true;clearTimeout(tid);resolve([]);}
                 });
         });
     });
 }
 // ── localStorage 快取（24 小時有效）──────────────────────────
 const _BLD_KEY=`bld3_${Math.round(BOUNDS.s*40)}_${Math.round(BOUNDS.n*40)}_${Math.round(BOUNDS.w*40)}_${Math.round(BOUNDS.e*40)}`;
-async function fetchBuildingsCached(pts){
+async function fetchBuildingsCached(){
     try{
         const raw=localStorage.getItem(_BLD_KEY);
         if(raw){
@@ -2188,7 +2188,7 @@ async function fetchBuildingsCached(pts){
             }
         }
     }catch(e){}
-    const blds=await fetchBuildingsDirect(pts);
+    const blds=await fetchBuildingsDirect();
     if(blds.length>0){
         try{
             localStorage.setItem(_BLD_KEY,JSON.stringify({ts:Date.now(),data:blds}));
@@ -2201,9 +2201,17 @@ async function fetchBuildingsCached(pts){
 
 // ── 建築物背景載入（不阻擋遊戲開始）────────────────────────
 async function loadBuildingsBackground(){
+    // 立即畫出遊玩邊界框，讓玩家看到遊玩範圍
+    L.rectangle([[BOUNDS.s,BOUNDS.w],[BOUNDS.n,BOUNDS.e]],{
+        color:'#1a73e8', weight:2.5, dashArray:'10 6',
+        fill:false, interactive:false, opacity:.8
+    }).addTo(map);
+
     try{
-        // 先試快取（瞬間），再試 Overpass（最多 17s）
-        const raw=await fetchBuildingsCached(FOCUS_POINTS);
+        const subEl=document.getElementById('ld-sub');
+        if(subEl) subEl.textContent='🏙️ 載入邊界內建築物…';
+        const raw=await fetchBuildingsCached();
+        if(subEl) subEl.textContent='';
         if(raw.length===0) return;
         loadBuildings(raw);
         routeGrid=buildRouteGrid();

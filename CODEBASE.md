@@ -1,8 +1,8 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-19（移除無碰撞模式 + 路線細格 A* + 載入加速預取 + UI 整理折疊說明欄 + 路線穿建築物修正 + 磁鐵吸引動畫 + 分數浮動文字 + 路線即時更新 + 自適應格子大小 + 多項優化 + 節流視圖更新 + 雲端部署 Render.com）**
+> **最後更新：2026-05-19**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
-> GitHub：https://github.com/timmyweistudy-design/treasure-hunt
+> **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
 
 ---
@@ -27,6 +27,15 @@
 
 ---
 
+### 2026-05-19 程式碼整理
+
+- 刪除 `game/map_renderer.py`（folium 舊渲染器，已由 Leaflet.js 取代，無任何呼叫）
+- 移除 `requirements.txt` 未使用依賴：`folium`, `branca`, `xyzservices`, `numpy`
+- `game/models.py`：移除死碼 `log_action` decorator 與 `Player.collect_treasure()` 方法；import 移至頂部
+- 從 git 移除根目錄 `scores.json`（stale 副本，正確路徑為 `data/scores.json`）
+
+---
+
 ## 1. 專案概覽
 
 | 項目 | 說明 |
@@ -38,7 +47,68 @@
 | 平台 | WSL2（Flask 需 `host="0.0.0.0"`，瀏覽器用 WSL2 IP:5000） |
 | 字型 | Google Fonts：Orbitron（數字/分數/計時/距離）、Noto Sans TC（中文介面） |
 
-### 2026-05-19 更新摘要
+### 2026-05-19 建築物載入修復（最新）
+
+**根本原因修復：`catch{}` 語法錯誤導致整個 script 無法執行**
+- `game.html` 中 `try{ return await Promise.any(...); }catch{ ... }` 的 `catch{}` 無參數屬於 ES2019 optional catch binding
+- 在 Chrome <66 等舊版瀏覽器為**語法錯誤**，整個 `<script>` 區塊不執行 → loading overlay 永遠停在預設文字
+- 修正：改用相容所有瀏覽器的 `new Promise` + `AbortController` 手動實作「第一個成功鏡像獲勝」
+
+**同步修正**
+- 移除 `Promise.any`（ES2020），改用手動並行 + 17s 硬逾時
+- 查詢半徑由 0.002° 改回 0.0013°（縮小 40% 查詢面積）
+- 伺服器備援 `fetch('/roads?...')` 加入 25s AbortController 逾時（原本無逾時，可能永遠等待）
+
+### 2026-05-19 雲端部署 + 性能優化更新摘要
+
+**雲端部署（Render.com + GitHub）**
+- app.py 加入 `PORT = int(os.environ.get("PORT", 5000))`，Render 環境變數自動注入
+- 啟動優先使用 waitress（8 threads production WSGI）；未安裝時 fallback 到 `threaded=True` Flask dev server
+- `Procfile`：`web: python app.py`
+- 永久公開網址：https://treasure-hunt-lew0.onrender.com
+- 部署方式：`git add -A && git commit -m "..." && git push origin master` → Render 約 2-3 分鐘自動重部署
+- 注意：Render 免費方案 15 分鐘無人使用後睡眠，首次訪問冷啟動 30-50s
+
+**排行榜 GitHub API 持久化（game/models.py 重寫）**
+- Render 磁碟為 ephemeral（重部署後清空），用 GitHub Contents API 持久化 `scores.json`
+- `_gh_load()`：GET `repos/timmyweistudy-design/treasure-hunt/contents/scores.json`，回傳 (scores, sha) 或 None
+- `_gh_save(scores, sha)`：PUT 同路徑，帶當前 SHA，寫回 GitHub repo
+- `Scoreboard._load()`：優先 GitHub，失敗 fallback 本機檔案
+- `Scoreboard.save_score()`：先寫 GitHub（更新 `self._sha`），再本機備份（失敗靜默）
+- 需在 Render 環境變數設 `GITHUB_TOKEN = ghp_...`
+- `.gitignore` 加入 `scores.json` 防止 git push 覆蓋 GitHub API 管理的檔案
+
+**幀節流系統（frame throttling）**
+- 新增 `frameCount`、`uiFrame`（每 4 幀=~15fps）、`aiFrame`（每 2 幀=~30fps）計數器
+- `uiFrame`（15fps）：DOM 更新 — `updateMiniMap()`、`updateDistances()`、AI chip 文字、sprint bar/label、全部 `tickEffects` 的 display/textContent 操作
+- `aiFrame`（30fps）：AI marker 位置同步（`ai.marker.setLatLng`）+ `map.setView`（在 `tryMove` 末尾 `if(aiFrame)` 才執行）
+- `throttledViewUpdate()` 函式已移除，map.setView 移至 `tryMove` 內 `if(aiFrame)` 條件
+- 效果：低階裝置不再因每幀 900+ DOM 操作卡頓，遠端玩家按鍵延遲/漂移/卡住大幅改善
+
+**非同步 A*（requestIdleCallback）**
+- tickChaser/tickPatroller/tickThief 的 A* 呼叫改為 `(requestIdleCallback||setTimeout)(()=>{...})`
+- 新增 per-ai `_astarPending` flag，pending 期間不重複排程
+- 修正：`dropDecoy()` 和 `tickDecoy()` 到期時同時重置 `ai.pathTimer=0` 和 `ai._astarPending=false`，否則 pending flag 卡住，A* 永不重算
+
+**按鍵系統（key system）**
+- 最終方案：`keys[e.key] = true`（布林值），`delete keys[e.key]` on keyup
+- `clearAllKeys()`：清除所有 keys；在 `blur`、`visibilitychange`（隱藏）、`focus`（重新獲焦）三事件觸發
+- 遊戲循環在每幀檢查 `if(!document.hasFocus()) clearAllKeys()`，確保失焦後不持續移動
+- 移除先前的 MOVE_KEYS timestamp 方案（400ms/700ms timeout），該方案導致衝刺 Shift 鍵誤判
+
+**對角線移動修正（tryMove）**
+- 舊版：對角線被擋 → `else if` 只試 lat → 放棄；無法同時通過 lat+lon 獨立滑牆
+- 新版：對角線被擋後，**獨立**嘗試 lat 和 lon（兩者都可各自成功）：
+  ```javascript
+  if(dLat&&!isInBuilding(pLat+dLat,pLon)){pLat+=dLat;moved=true;}
+  if(dLon&&!isInBuilding(pLat,pLon+dLon)){pLon+=dLon;moved=true;}
+  ```
+- 修正同時按上+右遇牆只走單一方向的 bug
+
+**道具 DOM 快取（tickItems）**
+- `item._badgeEl` 快取道具 marker 的 `.item-badge` element，避免每幀重複查詢 DOM
+
+### 2026-05-19 舊更新摘要
 
 **移除無碰撞模式**
 - 刪除「跳過（無碰撞模式）」按鈕與 `skipLoading()` 函式
@@ -191,7 +261,6 @@ timmy-agent/
 ├── game/
 │   ├── __init__.py
 │   ├── map_api.py          # 所有外部 API 呼叫 + 記憶體快取
-│   ├── map_renderer.py     # （未使用，保留）
 │   ├── models.py           # Treasure / Player / Scoreboard dataclass
 │   └── pathfinder.py       # TSP 演算法 + Haversine
 ├── static/
@@ -210,20 +279,38 @@ timmy-agent/
 
 ## 3. 啟動方式
 
+### 本機開發（WSL2）
 ```bash
 cd /mnt/c/Users/timmy/Downloads/timmy-agent
 
 # 安裝依賴（僅首次）
-venv/bin/pip install flask requests
+venv/bin/pip install flask requests waitress
 
 # 啟動伺服器
 venv/bin/python app.py
-# → Running on http://0.0.0.0:5000
+# → Starting with waitress on port 5000...
 
 # 在 Windows 瀏覽器開啟（WSL2 IP）
 # http://172.18.227.118:5000
-# 或用 localhost:5000（需 WSL2 port forwarding）
 ```
+
+### 雲端部署（Render.com）
+
+永久公開網址：**https://treasure-hunt-lew0.onrender.com**
+
+部署步驟：
+```bash
+git add -A
+git commit -m "描述"
+git push origin master
+# Render 自動偵測 push → 重新部署（約 2-3 分鐘）
+```
+
+注意事項：
+- Render 免費方案：15 分鐘無人使用後睡眠，首次訪問冷啟動 30-50s
+- Render 環境變數需設 `GITHUB_TOKEN`（排行榜持久化用）
+- Render 磁碟 ephemeral（每次部署重置），排行榜靠 GitHub API 持久化
+- 如果 `git push` 失敗（因 GitHub API 寫入 scores.json 導致落後），先 `git pull --rebase origin master` 再 push
 
 ---
 
@@ -484,7 +571,14 @@ def server_error(e):
 
 if __name__ == "__main__":
     os.makedirs("data", exist_ok=True)
-    app.run(host="0.0.0.0", debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    try:
+        from waitress import serve
+        print(f"Starting with waitress on port {port}...")
+        serve(app, host="0.0.0.0", port=port, threads=8)
+    except ImportError:
+        print(f"waitress not found, falling back to Flask dev server on port {port}...")
+        app.run(host="0.0.0.0", debug=False, port=port, threaded=True)
 ```
 
 ---
@@ -584,12 +678,59 @@ class Player:
         }
 
 
+import base64, os
+
+_GH_TOKEN  = os.environ.get("GITHUB_TOKEN", "")
+_GH_REPO   = "timmyweistudy-design/treasure-hunt"
+_GH_FILE   = "scores.json"
+_GH_API    = f"https://api.github.com/repos/{_GH_REPO}/contents/{_GH_FILE}"
+_GH_HEADS  = {"Authorization": f"token {_GH_TOKEN}", "Content-Type": "application/json"}
+
+
+def _gh_load():
+    """從 GitHub 讀取排行榜，失敗回傳 None。"""
+    if not _GH_TOKEN:
+        return None
+    try:
+        import requests
+        r = requests.get(_GH_API, headers=_GH_HEADS, timeout=5)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        return json.loads(base64.b64decode(data["content"]).decode()), data["sha"]
+    except Exception:
+        return None
+
+
+def _gh_save(scores, sha):
+    """把排行榜寫回 GitHub，失敗靜默。"""
+    if not _GH_TOKEN:
+        return
+    try:
+        import requests
+        content = base64.b64encode(
+            json.dumps(scores, ensure_ascii=False, indent=2).encode()
+        ).decode()
+        requests.put(_GH_API, headers=_GH_HEADS, timeout=8, json={
+            "message": "update scores",
+            "content": content,
+            "sha": sha,
+        })
+    except Exception:
+        pass
+
+
 class Scoreboard:
     def __init__(self, filepath="data/scores.json"):
         self.filepath = filepath
+        self._sha = None
         self.scores = self._load()
 
     def _load(self):
+        result = _gh_load()
+        if result is not None:
+            scores, self._sha = result
+            return scores
         try:
             with open(self.filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -608,8 +749,18 @@ class Scoreboard:
         self.scores.append(entry)
         self.scores.sort(key=lambda x: (-x["score"], x["time"]))
         self.scores = self.scores[:100]
-        with open(self.filepath, "w", encoding="utf-8") as f:
-            json.dump(self.scores, f, ensure_ascii=False, indent=2)
+        # 先嘗試 GitHub，再本機備份
+        if self._sha:
+            _gh_save(self.scores, self._sha)
+            result = _gh_load()
+            if result:
+                _, self._sha = result
+        os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
+        try:
+            with open(self.filepath, "w", encoding="utf-8") as f:
+                json.dump(self.scores, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
 
     def get_top10(self, city: str = None):
         if city:
@@ -1029,9 +1180,9 @@ class MapAPI:
 |------|------|
 | `init()` | 非同步載入建築物 → 地圖概覽 → 呼叫 `startCountdown()` |
 | `startCountdown()` | 3-2-1 動畫，結束後設 `gameReady=true`，啟動計時器 |
-| `skipLoading()` | 跳過碰撞載入直接 `startCountdown()` |
-| `loop(ts)` | requestAnimationFrame 主迴圈：`tickSprint` + WASD 移動 |
-| `tryMove(dLon,dLat)` | 移動 + Ray Casting 建築物碰撞 + 滑牆 |
+| `loop(ts)` | requestAnimationFrame 主迴圈：frameCount/uiFrame/aiFrame 節流 + WASD 移動；全包 try/catch 防止迴圈死亡 |
+| `clearAllKeys()` | 清除所有 keys（blur/visibilitychange/focus 觸發，每幀 !hasFocus 也呼叫） |
+| `tryMove(dLon,dLat)` | 移動 + Ray Casting 建築物碰撞 + 獨立軸滑牆（lat和lon分別嘗試）；`if(aiFrame) map.setView` |
 | `tickSprint(dt)` | 衝刺狀態機：消耗/冷卻/被動回充(0.4/s)/UI 更新 |
 | `updateDistances()` | 更新羅盤、各寶藏距離、接近虛線環、地圖 badge 狀態 |
 | `collect(id,lat,lon)` | POST /collect → 播音效、噴粒子、更新 UI、連鎖提示 |
@@ -1228,19 +1379,28 @@ session["optimal_order"] # 5 個 id list
    確保玩家可以在橋上、空橋走廊自由移動
 ```
 
-### Overpass 建築物查詢策略（fetch_roads_bbox）
+### Overpass 建築物查詢策略（瀏覽器直連 + 伺服器備援）
 
 ```
-主查詢：[timeout:25][maxsize:67108864] → requests timeout 28s
-  覆蓋範圍：全遊戲 bounding box（起點 + 所有寶藏 + 220m margin）
-  解決問題：原本 12s timeout 對 Tokyo/London/NYC 等密集城市不夠用
+前端 fetchBuildingsDirect（game.html）：
+  - 同時向 3 個 Overpass 鏡像 POST（無 Promise.any，相容所有瀏覽器）
+  - AbortController 硬限 17s，第一個成功的鏡像獲勝，其餘中止
+  - 查詢 6 個焦點點（出發點＋5寶藏），半徑 0.0013°（約 140m）
+  - Overpass query timeout: 16s
 
-備援（全 bbox 失敗時）：
-  fetch_roads(bbox 中心 lat/lon)
-  使用 [timeout:15][maxsize:33554432] → requests timeout 18s
-  範圍縮小至 900m 半徑，確保至少有局部碰撞
-  
-前端 skip 按鈕：10 秒後出現（原 14 秒）
+localStorage 快取（fetchBuildingsCached）：
+  - key = bld_{bbox_coarse}，TTL 24 小時
+  - 同城市第二次進入瞬間載入
+
+伺服器備援（/roads?pts=...）：
+  - 瀏覽器直連失敗（返回 []）時觸發
+  - fetch 帶 AbortController 25s timeout
+  - 伺服器呼叫 fetch_roads_focused()，並行鏡像最多等 24s
+
+後端 fetch_roads_focused（map_api.py）：
+  - 半徑 0.0013° focus-point union 查詢
+  - _parallel_post() 並行 3 鏡像，per_timeout=22s，total_timeout=24s
+  - 結果存入 MapAPI._road_cache
 ```
 
 ### A* 路徑規劃（AI 追跡者）
@@ -1268,6 +1428,79 @@ tickAI(dt)：
 spawnAI()：
   - 生成候選位置後呼叫 nearestWalkable() 移到最近可走格
   - 確保 AI 不會生成在建築物內部卡住
+```
+
+### 幀節流系統（Frame Throttling）
+
+```
+目的：避免每幀（~60fps）執行 900+ DOM 操作導致低階裝置卡頓
+
+frameCount++ 每幀遞增
+uiFrame = (frameCount % 4 === 0)  → 約 15fps，用於 DOM 更新
+aiFrame = (frameCount % 2 === 0)  → 約 30fps，用於 AI marker + map.setView
+
+DOM 操作一律包在 if(uiFrame){...}：
+  - tickSprint 的 sprint bar/label/dot
+  - tickEffects 的所有 getElementById/style/display/textContent
+  - tickItems 的 warn class 與 opacity
+  - tickAI chip 更新
+  - updateMiniMap / updateDistances（在 loop() 末尾 if(uiFrame) 呼叫）
+
+map.setView 在 tryMove() 末尾：if(aiFrame) map.setView(...)
+AI marker setLatLng 在 loop 末尾：if(aiFrame){ for(const ai of aiList){...} }
+
+item._badgeEl 快取道具的 DOM element，避免每幀重複查詢
+```
+
+### 非同步 A*（Async A*）
+
+```
+問題：runAstar 在密集城市耗時 5-20ms，每幀呼叫阻塞主線程
+
+解法：(requestIdleCallback||setTimeout)(()=>{ ai.path=runAstar(...); ai._astarPending=false; })
+  requestIdleCallback：瀏覽器空閒幀執行，不佔用動畫幀
+  setTimeout：Safari 後備（不支援 requestIdleCallback）
+
+ai._astarPending flag：
+  - 為 true 時跳過 pathTimer 到期的重排程，防止 A* 堆積
+  - 必須在以下情況重置：A* callback 完成、dropDecoy()、tickDecoy() 到期
+  - 若只重置 pathTimer 而忘記重置 _astarPending，A* 永遠不再執行（已修正）
+```
+
+### 排行榜 GitHub API 持久化
+
+```
+問題：Render 免費方案磁碟 ephemeral，每次部署重新部署後 data/scores.json 消失
+
+解法：用 GitHub Contents API 把 scores.json 存在 repo 本身
+
+流程：
+  啟動 → _gh_load() 讀 scores.json → 拿到 (scores, sha)
+  存分 → _gh_save(scores, sha) 寫回 → 再次 _gh_load() 更新 sha
+  失敗 → 靜默；本機檔案作為備用讀取來源
+
+注意：
+  - .gitignore 加了 scores.json，本機 git 不會推覆蓋 API 管理的版本
+  - 若 git push 在 GitHub API 寫入後執行，需先 git pull --rebase origin master
+  - GITHUB_TOKEN 需在 Render Dashboard > Environment Variables 設定
+```
+
+### 按鍵系統（Key System）
+
+```
+keys[e.key] = true   on keydown
+delete keys[e.key]   on keyup
+
+clearAllKeys()：delete keys[k] for all k
+  觸發時機：blur、visibilitychange(hidden)、focus
+  遊戲每幀：if(!document.hasFocus()) clearAllKeys()
+
+目的：cloudflare tunnel / alt-tab / OS 視窗切換時 keyup 不觸發
+  → key 殘留 → 角色持續移動（飄移）
+  → clearAllKeys 確保失焦後停止
+
+不用 timestamp 方案原因：
+  Shift 鍵 OS repeat delay 可達 500ms+，timestamp 超時導致衝刺誤判為放開
 ```
 
 ### WSL2 網路

@@ -1,8 +1,10 @@
-import time
+import base64
 import json
+import os
+import time
 from dataclasses import dataclass, field
-from typing import List
 from functools import wraps
+from typing import List
 
 
 def rate_limit(calls_per_second=1):
@@ -20,15 +22,6 @@ def rate_limit(calls_per_second=1):
             return result
         return wrapper
     return decorator
-
-
-def log_action(func):
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        result = func(self, *args, **kwargs)
-        print(f"[LOG] {self.name} 執行 {func.__name__} | 分數: {self.score}")
-        return result
-    return wrapper
 
 
 @dataclass
@@ -74,13 +67,6 @@ class Player:
     def elapsed_time(self):
         return time.time() - self.start_time
 
-    @log_action
-    def collect_treasure(self, treasure: 'Treasure'):
-        if not treasure.found:
-            treasure.found = True
-            self.found_treasures.append(treasure.id)
-            self.score += treasure.points
-
     def to_dict(self):
         return {
             "name": self.name,
@@ -89,8 +75,6 @@ class Player:
             "time": round(self.elapsed_time, 1)
         }
 
-
-import base64, os
 
 _GH_TOKEN  = os.environ.get("GITHUB_TOKEN", "")
 _GH_REPO   = "timmyweistudy-design/treasure-hunt"

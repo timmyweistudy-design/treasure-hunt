@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>尋寶中 - {{ city }}</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+          onerror="this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'"/>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+            onerror="this.onerror=null;document.write('<script src=\'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\'><\/script>')"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
@@ -461,6 +463,17 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ── 全域錯誤捕捉（JS crash → 顯示在 loading overlay）──────
+window.onerror = function(msg, src, line) {
+    const st = document.getElementById('ld-step');
+    const sb = document.getElementById('ld-sub');
+    const rb = document.getElementById('retry-btn');
+    if(st) st.textContent = '⚠️ 程式載入失敗';
+    if(sb) sb.textContent = msg + (line ? ' (L'+line+')' : '');
+    if(rb){ rb.textContent='← 回首頁'; rb.style.display='block'; rb.onclick=()=>location.href='/'; }
+    return false;
+};
+
 // ── 常數 ──────────────────────────────────────────────────
 const TREASURES    = {{ treasures_json | safe }};
 const OPTIMAL      = {{ optimal_order_json | safe }};

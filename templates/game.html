@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>尋寶中 - {{ city }}</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Noto Sans TC', Arial, sans-serif; height: 100vh;
+               display: flex; flex-direction: column; overflow: hidden; }
+
+        /* ── Header ── */
+        .hd { background: linear-gradient(90deg,#0d1117,#161b2e);
+              color: #fff; padding: 7px 16px; flex-shrink: 0;
+              display: flex; flex-direction: column; gap: 5px;
+              border-bottom: 1px solid rgba(100,160,255,.12); }
+        .hd-row1 { display: flex; justify-content: space-between; align-items: center; }
+        .hd-title {
+            font-size: 13px; font-weight: bold; letter-spacing: .5px;
+            background: linear-gradient(90deg,#7ec8f8,#34a853);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hd-right  { display: flex; align-items: center; gap: 14px; }
+        .hd-stats  { display: flex; gap: 22px; align-items: center; }
+        .stat { text-align: center; }
+        .stat .v { font-family: 'Orbitron', monospace; font-size: 22px; font-weight: 700; line-height: 1; letter-spacing: 1px; }
+        .stat .l { font-size: 9px; opacity: .55; margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+        #v-score { color: #ffd54f; }
+        #timer   { color: #7ec8f8; }
+        #timer.danger { color: #ff5252; animation: blink .5s infinite; }
+        @keyframes blink { 50% { opacity: .25; } }
+        /* score pop */
+        @keyframes score-pop {
+            0%   { transform: scale(1); }
+            40%  { transform: scale(1.65); color: #ffe082; }
+            100% { transform: scale(1); }
+        }
+        .score-pop { animation: score-pop .4s cubic-bezier(.17,.67,.51,1.35); }
+        /* score float */
+        .score-float {
+            position:absolute; z-index:9999; pointer-events:none;
+            font-family:'Orbitron',monospace; font-weight:900; font-size:18px;
+            color:#ffd54f; white-space:nowrap;
+            text-shadow:0 2px 8px rgba(0,0,0,.9),0 0 10px rgba(255,213,79,.5);
+            animation:float-up .9s ease-out forwards;
+        }
+        @keyframes float-up {
+            0%   { opacity:1; transform:translateY(0) scale(1); }
+            100% { opacity:0; transform:translateY(-65px) scale(1.3); }
+        }
+        /* magnet pull */
+        .item-badge.pulling {
+            animation:magnet-pull .35s ease-in-out infinite !important;
+        }
+        @keyframes magnet-pull {
+            0%,100% { box-shadow:0 0 0 0 rgba(255,160,0,.8); }
+            50%     { box-shadow:0 0 0 10px rgba(255,160,0,0); }
+        }
+        /* item expiry warning */
+        @keyframes item-warn { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+        .item-badge.warn { animation:item-warn .4s ease-in-out infinite !important;
+                           box-shadow:0 0 0 3px rgba(255,82,82,.7) !important; }
+        /* mute btn */
+        #mute-btn { background: rgba(255,255,255,.1); color: #fff;
+                    border: 1px solid rgba(255,255,255,.15);
+                    border-radius: 8px; padding: 4px 10px; cursor: pointer;
+                    font-size: 15px; line-height: 1; transition: background .2s; }
+        #mute-btn:hover { background: rgba(255,255,255,.22); }
+
+        /* ── Sprint bar ── */
+        .sprint-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+        .sprint-lbl  { min-width: 90px; font-size: 10.5px; color: #90caf9; }
+        .sprint-track { flex: 1; height: 8px; background: rgba(0,0,0,.45);
+                        border-radius: 6px; overflow: hidden;
+                        border: 1px solid rgba(255,255,255,.06); }
+        .sprint-fill  { height: 100%; width: 100%; border-radius: 6px;
+                        background: linear-gradient(90deg,#42a5f5,#7ec8f8);
+                        transition: width .1s linear, background .3s; }
+        .sprint-fill.cooling  { background: linear-gradient(90deg,#e57373,#ef9a9a); }
+        .sprint-fill.recharge { background: linear-gradient(90deg,#ffd54f,#fff176); }
+        .sprint-hint  { font-size: 10px; color: #546e7a; white-space: nowrap; }
+
+        /* ── Layout ── */
+        .wrap { flex: 1; display: flex; overflow: hidden; position: relative; }
+        #map  { flex: 1; }
+
+        /* ── Sidebar ── */
+        .sb { width: 268px; background: #f8f9fa; border-left: 1px solid #ddd;
+              display: flex; flex-direction: column; flex-shrink: 0; }
+        .sb-body { flex: 1; overflow-y: auto; padding: 10px; }
+        .sb-foot { padding: 10px; border-top: 1px solid #ddd; }
+
+        .kbd-box { background: #0d1117; color: #c9d4e8; border-radius: 10px;
+                   padding: 10px 12px; margin-bottom: 10px; font-size: 11.5px; line-height: 1.9;
+                   border: 1px solid rgba(100,160,255,.12); }
+        .kbd-box b { color: #7ec8f8; }
+        .key { display: inline-block; background: #1e293b; color: #94a3b8; padding: 1px 6px;
+               border-radius: 4px; font-family: monospace; font-size: 11px;
+               border: 1px solid #334155; border-bottom: 2px solid #475569; }
+
+        .compass-box { background: #fff; border-radius: 10px; padding: 10px;
+                       margin-bottom: 10px; display: flex; align-items: center; gap: 10px;
+                       border: 1.5px solid #e0e0e0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+        .compass-arrow-wrap { width: 44px; height: 44px; border-radius: 50%;
+                              background: #e3f2fd; display: flex; align-items: center;
+                              justify-content: center; flex-shrink: 0; font-size: 22px; }
+        .compass-info { flex: 1; min-width: 0; }
+        .compass-lbl  { font-size: 10px; color: #aaa; margin-bottom: 2px; }
+        .compass-name { font-size: 12px; font-weight: bold; color: #333;
+                        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .compass-dist { font-family: 'Orbitron', monospace; font-size: 13px; color: #1a73e8; font-weight: 700; margin-top: 2px; }
+
+        .order-hint { background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px;
+                      padding: 6px 10px; margin-bottom: 10px; font-size: 11px; color: #795548; }
+        .order-hint b { color: #f57f17; }
+
+        .prog-wrap { height: 5px; background: #e0e0e0; border-radius: 3px; margin-bottom: 10px; }
+        .prog-fill  { height: 100%; background: #34a853; border-radius: 3px; transition: width .4s; }
+        .sec-lbl { font-size: 11px; color: #888; font-weight: bold;
+                   letter-spacing: .4px; margin-bottom: 8px; }
+
+        .tc { background: #fff; border-radius: 8px; padding: 9px 11px; margin-bottom: 7px;
+              border-left: 4px solid #1a73e8; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+              transition: all .25s; }
+        .tc.near   { border-left-color: #f9a825; background: #fffde7; }
+        .tc.found  { border-left-color: #34a853; opacity: .42; }
+        .tc.target { border-left-color: #e91e63; background: #fce4ec; }
+        .tc .sq  { font-size: 10.5px; color: #bbb; }
+        .tc .nm  { font-size: 13px; font-weight: bold; margin: 2px 0 3px; }
+        .tc .cat { font-size: 11px; color: #888; }
+        .tc .dst { font-family: 'Orbitron', monospace; font-size: 11px; margin-top: 4px; color: #aaa; }
+        .tc .dst.ok  { color: #2e7d32; font-weight: bold; }
+        .tc .dst.far { color: #c62828; }
+        .cbtn { margin-top: 6px; width: 100%; padding: 6px; font-size: 12px; font-weight: bold;
+                border: none; border-radius: 5px; cursor: pointer; transition: background .2s;
+                background: #1a73e8; color: #fff; }
+        .cbtn:hover:not(:disabled) { background: #1558b0; }
+        .cbtn.near   { background: #f9a825; color: #333; }
+        .cbtn.target { background: #e91e63; }
+        .cbtn:disabled { background: #34a853; cursor: default; }
+        .endbtn { width: 100%; padding: 10px; background: #c62828; color: #fff;
+                  border: none; border-radius: 6px; cursor: pointer;
+                  font-size: 14px; font-weight: bold; }
+        .endbtn:hover { background: #b71c1c; }
+
+        /* ── Loading overlay ── */
+        #loading-overlay { position: absolute; inset: 0; background: rgba(8,15,32,.92);
+                           display: flex; align-items: center; justify-content: center;
+                           z-index: 8000; transition: opacity .35s; }
+        #loading-overlay.fade-out { opacity: 0; pointer-events: none; }
+        .ld-card { background: #1a2540; color: #fff; border-radius: 18px;
+                   padding: 38px 48px; text-align: center; max-width: 330px; width: 90%;
+                   box-shadow: 0 16px 48px rgba(0,0,0,.65); }
+        .ld-title { font-size: 17px; font-weight: bold; margin-bottom: 22px; letter-spacing: .5px; }
+        .ld-spin  { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,.12);
+                    border-top-color: #7ec8f8; border-radius: 50%;
+                    animation: spin .8s linear infinite; margin: 0 auto 18px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .ld-step  { font-size: 14px; color: #7ec8f8; margin-bottom: 6px; min-height: 22px; }
+        .ld-sub   { font-size: 11.5px; color: #7080a0; margin-bottom: 20px; min-height: 18px; }
+        .ld-retry { background: rgba(255,120,50,.18); color: #ffb74d;
+                    border: 1px solid rgba(255,120,50,.3);
+                    padding: 8px 22px; border-radius: 20px; cursor: pointer;
+                    font-size: 12px; display: none; transition: all .2s; }
+        .ld-retry:hover { background: rgba(255,120,50,.3); }
+
+        /* ── 鍵盤說明折疊 ── */
+        .kbd-toggle { width:100%; background:#0d1117; color:#90caf9;
+                      border:1px solid rgba(100,160,255,.15); border-radius:8px;
+                      padding:7px 12px; font-size:12px; font-weight:bold; cursor:pointer;
+                      text-align:left; margin-bottom:6px; font-family:inherit;
+                      display:flex; justify-content:space-between; align-items:center; }
+        .kbd-toggle:hover { background:#111827; color:#7ec8f8; }
+        .kbd-body { display:none; }
+        .kbd-body.open { display:block; }
+        .ld-count { font-family: 'Orbitron', monospace; font-size: 88px; font-weight: 900;
+                    background: linear-gradient(135deg,#7ec8f8,#42a5f5);
+                    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+                    line-height: 1; animation: count-pop .3s cubic-bezier(.17,.67,.51,1.35); }
+        @keyframes count-pop { 0%{transform:scale(1.5);opacity:.3} 100%{transform:scale(1);opacity:1} }
+        .ld-go { font-family: 'Orbitron', monospace; font-size: 46px; font-weight: 900;
+                 background: linear-gradient(135deg,#00e676,#34a853);
+                 -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+        /* ── Particles ── */
+        .particle { position: absolute; width: 9px; height: 9px; border-radius: 50%;
+                    pointer-events: none; z-index: 900; transform: translate(-50%,-50%);
+                    animation: particle-fly .72s cubic-bezier(0,.9,.57,1) forwards; }
+        @keyframes particle-fly {
+            0%   { transform: translate(-50%,-50%) scale(1.3); opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0); opacity: 0; }
+        }
+
+        /* ── Sprint glow ── */
+        #sprint-glow { display: none; position: absolute; inset: 0;
+                       pointer-events: none; z-index: 989;
+                       box-shadow: inset 0 0 80px rgba(245,124,0,.4); }
+
+        /* ── Danger vignette ── */
+        #vignette { display: none; position: absolute; inset: 0;
+                    pointer-events: none; z-index: 988;
+                    box-shadow: inset 0 0 100px rgba(200,0,0,.6);
+                    animation: vig-pulse .85s ease-in-out infinite; }
+        @keyframes vig-pulse { 0%,100%{opacity:.3} 50%{opacity:.8} }
+
+        /* ── Mini-map ── */
+        #mini-map { position: absolute; bottom: 60px; left: 10px;
+                    width: 130px; height: 130px; border-radius: 12px;
+                    border: 2px solid rgba(126,200,248,.65);
+                    box-shadow: 0 4px 16px rgba(0,0,0,.5), 0 0 0 1px rgba(126,200,248,.12);
+                    z-index: 995; overflow: hidden; opacity: .9; cursor: pointer;
+                    transition: opacity .2s, transform .2s; }
+        #mini-map:hover { opacity: 1; transform: scale(1.05); }
+
+        /* ── Recenter ── */
+        #recenter-btn { display: none; position: absolute; bottom: 24px; right: 14px;
+                        z-index: 999; background: #1a73e8; color: #fff;
+                        border: none; border-radius: 24px; padding: 8px 16px;
+                        font-size: 13px; font-weight: bold; cursor: pointer;
+                        box-shadow: 0 3px 8px rgba(0,0,0,.3); }
+        #recenter-btn:hover { background: #1558b0; }
+
+        /* ── Toast ── */
+        .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+                 background: rgba(13,17,23,.9); color: #fff; padding: 9px 22px;
+                 border-radius: 24px; font-size: 13px; z-index: 9999;
+                 opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap;
+                 border: 1px solid rgba(100,160,255,.2); backdrop-filter: blur(8px);
+                 box-shadow: 0 4px 20px rgba(0,0,0,.45); }
+        .toast.show { opacity: 1; }
+
+        /* ── Leaflet icons — Player ── */
+        .player-dot {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #42a5f5, #1565c0);
+            border: 3px solid rgba(255,255,255,.92);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; animation: ppulse 2s ease-in-out infinite;
+            box-shadow: 0 3px 10px rgba(21,101,192,.55);
+        }
+        .player-dot.sprint {
+            background: radial-gradient(circle at 35% 35%, #ffb74d, #e65100);
+            box-shadow: 0 3px 14px rgba(230,81,0,.65);
+        }
+        @keyframes ppulse {
+            0%,100%{ box-shadow:0 3px 10px rgba(21,101,192,.55), 0 0 0 6px rgba(26,115,232,.28) }
+            50%    { box-shadow:0 3px 10px rgba(21,101,192,.55), 0 0 0 16px rgba(26,115,232,.05) }
+        }
+        .tbadge { width: 34px; height: 34px; border-radius: 50%; color: #fff;
+                  font-weight: 900; font-size: 14px;
+                  display: flex; align-items: center; justify-content: center;
+                  border: 2.5px solid rgba(255,255,255,.92);
+                  box-shadow: 0 3px 10px rgba(0,0,0,.5);
+                  text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+        .tbadge.done    { background: #9e9e9e !important; opacity: .6; font-size: 15px; }
+        .tbadge.target  { box-shadow: 0 0 0 3px #e91e63, 0 2px 5px rgba(0,0,0,.35); }
+        .tbadge.inrange { animation: badge-pulse .55s ease-in-out infinite; }
+        @keyframes badge-pulse {
+            0%,100%{ transform:scale(1);   box-shadow:0 2px 5px rgba(0,0,0,.35); }
+            50%    { transform:scale(1.28); box-shadow:0 0 0 6px rgba(249,168,37,.45); }
+        }
+        .tbadge.golden { background:#FFD700!important; color:#000!important; font-size:15px;
+                         animation:golden-shine .8s ease-in-out infinite; }
+        @keyframes golden-shine {
+            0%,100%{box-shadow:0 0 8px rgba(255,215,0,.9),0 2px 5px rgba(0,0,0,.35)}
+            50%    {box-shadow:0 0 22px rgba(255,215,0,1),0 0 36px rgba(255,200,0,.55)} }
+
+        /* ── 道具 ── */
+        .item-badge { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
+                      justify-content:center;font-size:17px;border:3px solid #fff;
+                      box-shadow:0 2px 8px rgba(0,0,0,.55);
+                      animation:item-float .9s ease-in-out infinite; }
+        @keyframes item-float {
+            0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.12)} }
+
+        /* ── AI 追跡者 ── */
+        .ai-dot { width:42px;height:42px;border-radius:50%;
+                  background:radial-gradient(circle at 35% 35%,#ef5350,#b71c1c);
+                  display:flex;align-items:center;justify-content:center;font-size:20px;
+                  border:3px solid rgba(255,255,255,.88);
+                  animation:ai-pulse .6s ease-in-out infinite;
+                  box-shadow:0 3px 10px rgba(183,28,28,.5); }
+        @keyframes ai-pulse {
+            0%,100%{ box-shadow:0 3px 10px rgba(183,28,28,.5), 0 0 0 5px rgba(183,28,28,.4) }
+            50%    { box-shadow:0 3px 10px rgba(183,28,28,.5), 0 0 0 18px rgba(183,28,28,.04) } }
+
+        /* ── 巡邏守衛 ── */
+        .patrol-dot { width:42px;height:42px;border-radius:50%;
+                      background:radial-gradient(circle at 35% 35%,#ce93d8,#6a1b9a);
+                      display:flex;align-items:center;justify-content:center;font-size:20px;
+                      border:3px solid rgba(255,255,255,.88);
+                      animation:patrol-pulse .9s ease-in-out infinite;
+                      box-shadow:0 3px 10px rgba(106,27,154,.5); }
+        @keyframes patrol-pulse {
+            0%,100%{ box-shadow:0 3px 10px rgba(106,27,154,.5), 0 0 0 5px rgba(106,27,154,.4) }
+            50%    { box-shadow:0 3px 10px rgba(106,27,154,.5), 0 0 0 18px rgba(106,27,154,.06) } }
+        .patrol-dot.alert { background:radial-gradient(circle at 35% 35%,#ef5350,#c62828) !important;
+                            animation:ai-pulse .4s ease-in-out infinite !important; }
+
+        /* ── 寶物小偷 ── */
+        .thief-dot { width:42px;height:42px;border-radius:50%;
+                     background:radial-gradient(circle at 35% 35%,#757575,#212121);
+                     display:flex;align-items:center;justify-content:center;font-size:20px;
+                     border:3px solid rgba(255,255,255,.78);
+                     animation:thief-sneak .8s ease-in-out infinite;
+                     box-shadow:0 3px 10px rgba(33,33,33,.6); }
+        @keyframes thief-sneak {
+            0%,100%{ box-shadow:0 3px 10px rgba(33,33,33,.6), 0 0 0 4px rgba(66,66,66,.45);opacity:1 }
+            50%    { box-shadow:0 3px 10px rgba(33,33,33,.6), 0 0 0 12px rgba(66,66,66,.08);opacity:.72 } }
+
+        /* ── 定身電擊光圈（玩家被 AI 定身時） ── */
+        #stun-glow { display:none;position:absolute;inset:0;pointer-events:none;z-index:986;
+                     animation:stun-pulse .25s ease-in-out infinite; }
+        @keyframes stun-pulse {
+            0%,100%{box-shadow:inset 0 0 80px rgba(255,200,0,.55)}
+            50%    {box-shadow:inset 0 0 130px rgba(255,130,0,.9)} }
+        .player-dot.stunned { animation:stun-dot .3s ease-in-out infinite !important; }
+        @keyframes stun-dot {
+            0%,100%{box-shadow:0 0 0 8px rgba(255,200,0,.7)}
+            50%    {box-shadow:0 0 0 20px rgba(255,150,0,.2)} }
+
+        /* ── 無敵彩虹光圈 ── */
+        #invinc-glow { display:none;position:absolute;inset:0;pointer-events:none;z-index:987;
+                       animation:rainbow-glow 1.2s linear infinite; }
+        @keyframes rainbow-glow {
+            0%  {box-shadow:inset 0 0 90px rgba(255,215,0,.5)}
+            33% {box-shadow:inset 0 0 90px rgba(0,200,255,.5)}
+            66% {box-shadow:inset 0 0 90px rgba(255,100,200,.5)}
+            100%{box-shadow:inset 0 0 90px rgba(255,215,0,.5)} }
+
+        /* ── 效果列 ── */
+        .eff-row  { display:none;align-items:center;gap:7px;padding-bottom:2px; }
+        .eff-chip { background:rgba(255,255,255,.14);border-radius:12px;
+                    padding:3px 10px;font-size:11px;font-weight:bold;display:none;
+                    border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(4px); }
+    </style>
+</head>
+<body>
+
+<div class="hd">
+    <div class="hd-row1">
+        <span class="hd-title">🗺️ {{ city }} &nbsp;·&nbsp; 👤 {{ player_name }}</span>
+        <div class="hd-right">
+            <div class="hd-stats">
+                <div class="stat"><div class="v" id="v-score">0</div><div class="l">分數</div></div>
+                <div class="stat"><div class="v"><span id="v-found">0</span>/{{ optimal_route|length }}</div><div class="l">寶藏</div></div>
+                <div class="stat"><div class="v" id="timer">{{ time_limit }}</div><div class="l">秒</div></div>
+            </div>
+            <button id="mute-btn" onclick="toggleMute()" title="靜音切換">🔊</button>
+        </div>
+    </div>
+    <div class="sprint-row">
+        <span class="sprint-lbl" id="sprint-lbl">⚡ 衝刺就緒</span>
+        <div class="sprint-track"><div class="sprint-fill" id="sprint-fill"></div></div>
+        <span class="sprint-hint">Shift 衝刺</span>
+    </div>
+    <div class="eff-row" id="eff-row">
+        <span class="eff-chip" id="chip-speed">⚡ 加速 <span id="speed-t">5</span>s</span>
+        <span class="eff-chip" id="chip-star">⭐ 無敵 <span id="invinc-t">5</span>s</span>
+        <span class="eff-chip" id="chip-range">🔍 廣域 <span id="range-t">10</span>s</span>
+        <span class="eff-chip" id="chip-freeze">❄️ 冰凍 <span id="freeze-t">7</span>s</span>
+        <span class="eff-chip" id="chip-stun">⚡ 被定身！<span id="stun-t">3</span>s</span>
+        <span class="eff-chip" id="chip-magnet">🧲 磁鐵 <span id="magnet-t">8</span>s</span>
+        <span class="eff-chip" id="chip-decoy"><span id="decoy-label">🎯 誘餌</span> <span id="decoy-t">6</span>s</span>
+        <span class="eff-chip" id="chip-combo">🔥 連擊×<span id="combo-count">2</span> <span id="combo-t">22</span>s</span>
+        <span class="eff-chip" id="chip-ai"><span id="ai-count-txt"></span> <span id="ai-dist">—</span>m</span>
+    </div>
+</div>
+
+<div class="wrap">
+    <div id="map"></div>
+
+    <div class="sb">
+        <div class="sb-body">
+
+            <!-- 羅盤 -->
+            <div class="compass-box">
+                <div class="compass-arrow-wrap">
+                    <span id="compass-arrow" style="display:inline-block">↑</span>
+                </div>
+                <div class="compass-info">
+                    <div class="compass-lbl">🎯 建議下一個</div>
+                    <div class="compass-name" id="compass-name">—</div>
+                    <div class="compass-dist" id="compass-dist">—</div>
+                </div>
+            </div>
+
+            <!-- 順序提示 -->
+            <div class="order-hint">
+                🌟 按<b>建議順序</b>收集每個多 <b>+50 分</b>！
+            </div>
+
+            <!-- 進度條 -->
+            <div class="prog-wrap">
+                <div class="prog-fill" id="progress" style="width:0"></div>
+            </div>
+            <div class="sec-lbl">寶藏清單 · 路線 {{ total_dist }}m</div>
+
+            <!-- 寶藏卡片 -->
+            {% for t in optimal_route %}
+            <div class="tc" id="card-{{ t.id }}">
+                <div class="sq">建議第 {{ loop.index }} 個</div>
+                <div class="nm">{{ t.name }}</div>
+                <div class="cat">{{ t.category }} · {{ t.points }}分</div>
+                <div class="dst" id="dist-{{ t.id }}">計算中…</div>
+                <button class="cbtn" id="btn-{{ t.id }}"
+                        onclick="collect('{{ t.id }}', {{ t.lat }}, {{ t.lon }})">
+                    ✅ 收集寶藏
+                </button>
+            </div>
+            {% endfor %}
+
+            <!-- 鍵盤說明（可折疊） -->
+            <button class="kbd-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.arr').textContent=this.nextElementSibling.classList.contains('open')?'▲':'▼'">
+                <span>⌨️ 操作說明</span><span class="arr">▼</span>
+            </button>
+            <div class="kbd-body">
+                <div class="kbd-box">
+                    <b>移動</b>：<span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> / <span class="key">↑↓←→</span><br>
+                    <span class="key">Shift</span> 衝刺 10s・冷卻3s<br>
+                    <span class="key">Space</span> 收集 / 撿道具<br>
+                    <span class="key">Q</span> 誘餌（AI追6s・冷卻40s）<br>
+                    <b>道具</b>：⚡速×2(5s) ⭐無敵(5s) 🔍廣域×3(10s) ❄️凍AI(7s) 🧲磁鐵(8s)<br>
+                    <b>扣分</b>：👾追跡 <b>-50</b>・👁️巡邏 <b>-30</b>・🦹小偷 <b>-20</b><br>
+                    🔥 22秒速收2+寶藏＝連擊獎勵<br>
+                    💎 黃金寶藏出現=3倍分 15秒限時<br>
+                    走到 <b>{{ collect_radius }}m 內</b>可收集
+                </div>
+            </div>
+
+        </div>
+        <div class="sb-foot">
+            <button class="endbtn" onclick="if(confirm('確定結束？'))location.href='/finish'">
+                🏁 結束遊戲
+            </button>
+        </div>
+    </div>
+
+    <div id="loading-overlay">
+        <div class="ld-card">
+            <div class="ld-title">🏙️ 載入 {{ city }}</div>
+            <div class="ld-spin"></div>
+            <div class="ld-step" id="ld-step">🔌 連線中…</div>
+            <div class="ld-sub"  id="ld-sub">取得建築物輪廓，確保路線與碰撞正確</div>
+            <button class="ld-retry" id="retry-btn" onclick="retryLoading()">⚠️ 重試</button>
+        </div>
+    </div>
+
+    <div id="sprint-glow"></div>
+    <div id="vignette"></div>
+    <div id="invinc-glow"></div>
+    <div id="stun-glow"></div>
+    <div id="mini-map" title="點擊回到玩家位置"></div>
+    <button id="recenter-btn" onclick="map.setView([pLat,pLon],17)">🧭 回到玩家</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 常數 ──────────────────────────────────────────────────
+const TREASURES    = {{ treasures_json | safe }};
+const OPTIMAL      = {{ optimal_order_json | safe }};
+const ROUTE_COORDS = {{ route_coords_json | safe }};
+const START        = [{{ player_lat }}, {{ player_lon }}];
+const TIME_LIMIT   = {{ time_limit }};
+const CLCT_R       = {{ collect_radius }};
+const TOTAL        = TREASURES.length;
+const BOUNDS       = {{ bounds_json | safe }};
+
+const WALK_SPD    = 0.00025;
+const SPRINT_SPD  = 0.00050;
+const SPRINT_MAX  = 10;
+const COOL_T      = 3;
+const ORDER_BONUS = 50;
+
+// ── 道具 & AI ──────────────────────────────────────────────
+const AI_SPD         = 0.00020;   // deg/s ≈ 22 m/s（略慢於玩家步行）
+const AI_ATTACK_R    = 25;        // 觸發攻擊距離（公尺）
+const AI_ATTACK_CD   = 8;         // 攻擊冷卻（秒）
+const AI_MAX              = 16;       // AI 最多隻數（10巡邏守衛 + 3追跡者 + 3小偷）
+const THIEF_DELAY         = 100;      // 第一隻小偷出現倒數（秒）
+const THIEF_WAVE_INTERVAL = 100;      // 小偷追加間隔（秒）
+const THIEF_MAX           = 3;        // 小偷最多隻數
+const CHASER_SPAWN_DELAY  = 60;       // 第一隻追跡者出現（秒）
+const CHASER_WAVE_INTERVAL= 60;       // 追跡者追加間隔（秒）
+const CHASER_MAX          = 3;        // 追跡者最多隻數
+const ITEM_IVTL      = 4;         // 道具重生間隔（秒）
+const ITEM_LIFE      = 40;        // 道具存在時間（秒）
+const ITEM_MAX       = 10;        // 地圖上最多幾個道具
+const NAV_CELL       = 0.0004;    // A* 導航格尺寸 ≈ 44m
+const STUN_DURATION  = 3;         // 定身持續秒數（玩家被定住）
+const STUN_CD        = 30;        // 定身冷卻秒數（所有 AI 共用）
+const STUN_R         = 65;        // AI 施放定身的距離（公尺）
+const GOLDEN_DURATION= 15;        // 黃金寶藏持續秒數
+const GOLDEN_INTERVAL= 45;        // 黃金寶藏出現間隔秒數
+const GOLDEN_MULT    = 3;         // 黃金寶藏分數倍率
+const PATROLLER_FOV_LEN = 120;    // 巡邏守衛視野長度（公尺）
+const PATROLLER_FOV_HW  = 20;     // 巡邏守衛視野半寬（公尺）
+const THIEF_STEAL_R     = 20;     // 小偷偷竊觸發距離（公尺）
+
+// ── 遊戲狀態 ──────────────────────────────────────────────
+let pLat = START[0], pLon = START[1];
+let score = 0, found = 0, remaining = TIME_LIMIT;
+const collected = new Set();
+let buildings   = [];
+const GRID_DEG  = 0.001;           // 空間格尺寸 ≈ 110m，加速碰撞查詢
+let buildingGrid = {};
+let gameReady   = false;
+
+// 道具
+const items   = {};
+let itemIdCtr = 0, itemSpawnTimer = 3;   // 3 秒後出現第一個道具
+// 效果計時
+let speedBoostTimer = 0, invincTimer = 0;
+// AI（陣列，支援多隻）
+let aiList=[], initialSpawnDone=false, thiefSpawnTimer=THIEF_DELAY, thiefCount=0, thiefWaveTimer=0;
+let chaserSpawnTimer=CHASER_SPAWN_DELAY, chaserWaveTimer=0, chaserCount=0, chaserWarned=false;
+let navGrid=null;
+let routeLine=null, miniRouteLine=null;
+// 範圍道具 & 冰凍
+let rangeBoostTimer=0, aiFrozenTimer=0;
+let decoyActive=false, decoyLat=0, decoyLon=0, decoyTimer=0, decoyCD=0, decoyMarker=null;
+let comboCount=0, comboTimer=0;
+const COMBO_WINDOW=22;
+let stunTimer=0, stunCD=0;
+let magnetTimer=0, magnetAutoT=0, magnetCircle=null;
+const MAGNET_R = CLCT_R * 8;  // 400m magnet radius (vs 50m normal collect)
+const pullingItems = new Map(); // id → {type, marker, sLat, sLon, progress} for pull animation
+let goldenId=null, goldenTimer=0, goldenCycle=GOLDEN_INTERVAL, goldenRing=null;
+const inFlight=new Set();
+let ticker      = null;
+let countdownStarted = false;
+let nextOptIdx  = 0;
+let orderStreak = 0;
+let nearbyRing  = null;
+
+// ── 音效系統（Web Audio API，無需音效檔）────────────────────
+let audioCtx = null;
+let muted    = false;
+function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+function toggleMute() {
+    muted = !muted;
+    document.getElementById('mute-btn').textContent = muted ? '🔇' : '🔊';
+}
+function snd(fn) { if (!muted) try { fn(getAudio()); } catch(e){} }
+
+function playCollect() {
+    snd(ctx => {
+        // 上行三音符 C5→E5→G5
+        [[523,.0],[659,.09],[784,.2]].forEach(([freq,t]) => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='sine'; o.frequency.value=freq;
+            g.gain.setValueAtTime(.28, ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.45);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.45);
+        });
+    });
+}
+function playWin() {
+    snd(ctx => {
+        [[523,.0],[659,.1],[784,.2],[1047,.32]].forEach(([freq,t]) => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='sine'; o.frequency.value=freq;
+            g.gain.setValueAtTime(.22, ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.6);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.6);
+        });
+    });
+}
+function playSprint() {
+    snd(ctx => {
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.type='sawtooth';
+        o.frequency.setValueAtTime(250, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(120, ctx.currentTime+.14);
+        g.gain.setValueAtTime(.07, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+.14);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime+.14);
+    });
+}
+function playBlocked() {
+    snd(ctx => {
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.type='square'; o.frequency.value=110;
+        g.gain.setValueAtTime(.08, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+.07);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime+.07);
+    });
+}
+function playAlarm() {
+    snd(ctx => {
+        [0,.28,.56].forEach(t => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='square'; o.frequency.value=880;
+            g.gain.setValueAtTime(.1, ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.18);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.18);
+        });
+    });
+}
+
+function playItem() {
+    snd(ctx => {
+        [[880,.0],[1047,.08],[1319,.16]].forEach(([freq,t]) => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='sine'; o.frequency.value=freq;
+            g.gain.setValueAtTime(.22, ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.32);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.32);
+        });
+    });
+}
+function playAIAttack() {
+    snd(ctx => {
+        [0,.12,.24].forEach(t => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='sawtooth'; o.frequency.value=180;
+            g.gain.setValueAtTime(.18, ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.18);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.18);
+        });
+    });
+}
+function playFreeze() {
+    snd(ctx => {
+        [[880,.0],[660,.12],[440,.24],[220,.38]].forEach(([freq,t]) => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='triangle'; o.frequency.value=freq;
+            g.gain.setValueAtTime(.16, ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.28);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.28);
+        });
+    });
+}
+
+function playDecoy() {
+    snd(ctx => {
+        [[600,.0],[900,.1],[1200,.2]].forEach(([freq,t]) => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='square'; o.frequency.value=freq;
+            g.gain.setValueAtTime(.12, ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.15);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.15);
+        });
+    });
+}
+
+function playStun() {
+    snd(ctx => {
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.type='sawtooth';
+        o.frequency.setValueAtTime(250, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(900, ctx.currentTime+0.06);
+        o.frequency.exponentialRampToValueAtTime(120, ctx.currentTime+0.22);
+        g.gain.setValueAtTime(.28, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+0.28);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime+0.28);
+    });
+}
+function playMagnet() {
+    snd(ctx => {
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.type='sine'; o.frequency.setValueAtTime(110, ctx.currentTime);
+        o.frequency.linearRampToValueAtTime(220, ctx.currentTime+0.4);
+        g.gain.setValueAtTime(.18, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(.14, ctx.currentTime+0.4);
+        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+0.6);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime+0.6);
+    });
+}
+function playGolden() {
+    snd(ctx => {
+        [[523,.0],[659,.1],[784,.2],[1047,.3]].forEach(([freq,t]) => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='sine'; o.frequency.value=freq;
+            g.gain.setValueAtTime(.2, ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.38);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.38);
+        });
+    });
+}
+function playPatrollerAlert() {
+    snd(ctx => {
+        [[1200,.0],[800,.1],[600,.22]].forEach(([freq,t]) => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='sawtooth'; o.frequency.value=freq;
+            g.gain.setValueAtTime(.18, ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.18);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.18);
+        });
+    });
+}
+function playThiefSteal() {
+    snd(ctx => {
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.type='sine';
+        o.frequency.setValueAtTime(400, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(200, ctx.currentTime+0.3);
+        g.gain.setValueAtTime(.2, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+0.35);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime+0.35);
+    });
+}
+
+// ── 粒子爆炸效果 ──────────────────────────────────────────
+const PARTICLE_COLORS = ['#FFD700','#FF6B6B','#48DBFB','#1DD1A1','#FF9FF3','#FECA57','#fff'];
+function spawnParticles(tLat, tLon) {
+    const wrap = document.querySelector('.wrap');
+    const pt   = map.latLngToContainerPoint([tLat, tLon]);
+    for (let i=0; i<12; i++) {
+        const el  = document.createElement('div');
+        el.className = 'particle';
+        const angle = (i/12)*Math.PI*2;
+        const dist  = 35 + Math.random()*45;
+        el.style.cssText =
+            `left:${pt.x}px;top:${pt.y}px;` +
+            `background:${PARTICLE_COLORS[i%PARTICLE_COLORS.length]};` +
+            `--dx:${Math.cos(angle)*dist}px;--dy:${Math.sin(angle)*dist-25}px`;
+        wrap.appendChild(el);
+        setTimeout(() => el.remove(), 750);
+    }
+}
+
+// ── 主地圖 ────────────────────────────────────────────────
+const map = L.map('map', { keyboard: false }).setView(START, 17);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>', maxZoom: 19
+}).addTo(map);
+
+const pIcon = L.divIcon({
+    html: '<div class="player-dot" id="pdot">🏃</div>',
+    className: '', iconSize: [44,44], iconAnchor: [22,22]
+});
+const pMarker = L.marker(START, {icon: pIcon, zIndexOffset: 1000}).addTo(map);
+const pCircle = L.circle(START, {
+    radius: CLCT_R, color: '#1a73e8', weight: 1.5, fillColor: '#1a73e8', fillOpacity: .06
+}).addTo(map);
+L.marker(START, {
+    icon: L.divIcon({
+        html: '<div style="background:#1565c0;color:#fff;padding:3px 8px;border-radius:4px;font-size:11px;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🏠 起點</div>',
+        className: '', iconAnchor: [30,10]
+    }), zIndexOffset: -100, interactive: false
+}).addTo(map);
+
+const CC = {cafe:'#f57c00',museum:'#7b1fa2',park:'#2e7d32',library:'#1565c0',restaurant:'#c62828'};
+const tMarkers = {};
+TREASURES.forEach(t => {
+    const ord = OPTIMAL.indexOf(t.id) + 1;
+    const bg  = CC[t.category] || '#616161';
+    const m = L.marker([t.lat, t.lon], {
+        icon: L.divIcon({
+            html:`<div class="tbadge${ord===1?' target':''}" style="background:${bg}">${ord}</div>`,
+            className:'', iconSize:[34,34], iconAnchor:[17,17]
+        })
+    }).addTo(map);
+    m.bindPopup(`
+        <div style="min-width:175px;font-family:Arial">
+            <b style="font-size:14px">💎 ${t.name}</b><br>
+            <span style="color:#777;font-size:12px">${t.category}・${t.points}分</span><br>
+            <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#aaa">計算中…</div>
+            <button id="pp-btn-${t.id}" onclick="collect('${t.id}',${t.lat},${t.lon})"
+                style="margin-top:6px;width:100%;padding:7px;background:#1a73e8;color:#fff;
+                       border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold">
+                ✅ 收集寶藏
+            </button>
+        </div>`, {maxWidth:220});
+    tMarkers[t.id] = {marker:m, order:ord, bg};
+});
+if (ROUTE_COORDS.length > 0) {
+    routeLine = L.polyline(ROUTE_COORDS.map(c=>[c[1],c[0]]),
+        {color:'#e53935', weight:2.5, dashArray:'7 4', opacity:.65}).addTo(map);
+}
+
+// ── 小地圖 ────────────────────────────────────────────────
+const miniMap = L.map('mini-map', {
+    zoomControl:false, attributionControl:false,
+    dragging:false, keyboard:false,
+    scrollWheelZoom:false, touchZoom:false, doubleClickZoom:false
+}).setView(START, 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(miniMap);
+if (ROUTE_COORDS.length > 0)
+    miniRouteLine = L.polyline(ROUTE_COORDS.map(c=>[c[1],c[0]]),
+        {color:'#e53935', weight:1.5, opacity:.5, dashArray:'4 3'}).addTo(miniMap);
+
+const miniTMarkers = {};   // 追蹤小地圖上的寶藏圓點（收集後變灰）
+TREASURES.forEach(t => {
+    const m = L.circleMarker([t.lat, t.lon], {
+        radius:5, color:CC[t.category]||'#616161',
+        fillColor:CC[t.category]||'#616161', fillOpacity:.9, weight:1.5
+    }).addTo(miniMap);
+    miniTMarkers[t.id] = m;
+});
+const miniPlayer = L.circleMarker(START, {
+    radius:5, color:'#1565c0', fillColor:'#1a73e8', fillOpacity:1, weight:2
+}).addTo(miniMap);
+document.getElementById('mini-map').addEventListener('click', () => {
+    map.setView([pLat,pLon], 17, {animate:true, duration:0.4});
+});
+function updateMiniMap() {
+    miniPlayer.setLatLng([pLat,pLon]);
+    if (distM(pLat,pLon,miniMap.getCenter().lat,miniMap.getCenter().lng) > 200)
+        miniMap.setView([pLat,pLon], 13, {animate:false});
+}
+
+// ── 移動軌跡 ──────────────────────────────────────────────
+let trailPts=[], trailLine=null, trailTimer=0;
+function pushTrail(dt) {
+    trailTimer+=dt; if(trailTimer<0.1) return; trailTimer=0;
+    trailPts.push([pLat,pLon]);
+    if(trailPts.length>60) trailPts.shift();
+    if(trailPts.length>=2) {
+        if(!trailLine) trailLine=L.polyline(trailPts,{color:'#1a73e8',weight:2,opacity:.3,dashArray:'2 5'}).addTo(map);
+        else trailLine.setLatLngs(trailPts);
+    }
+}
+
+// ── 誘餌信號彈 ────────────────────────────────────────────
+function dropDecoy() {
+    if(!gameReady) return;
+    if(decoyCD>0){showToast(`🎯 誘餌冷卻中，還需 ${Math.ceil(decoyCD)}s`,1500);return;}
+    if(aiList.length===0){showToast('👾 還沒有追跡者出現',1500);return;}
+    if(decoyMarker) map.removeLayer(decoyMarker);
+    decoyLat=pLat; decoyLon=pLon;
+    decoyActive=true; decoyTimer=6; decoyCD=40;
+    decoyMarker=L.marker([decoyLat,decoyLon],{
+        icon:L.divIcon({
+            html:'<div style="font-size:26px;filter:drop-shadow(0 0 6px rgba(255,200,0,.9))">🎯</div>',
+            className:'',iconSize:[30,30],iconAnchor:[15,15]
+        }),zIndexOffset:800,interactive:false
+    }).addTo(map);
+    // 強制所有 AI 立即重算路徑到誘餌
+    for(const ai of aiList) ai.pathTimer=0;
+    showToast('🎯 誘餌投出！AI 轉而追逐誘餌！',2500);
+    playDecoy();
+}
+function tickDecoy(dt) {
+    if(decoyCD>0) decoyCD=Math.max(0,decoyCD-dt);
+    if(!decoyActive) return;
+    decoyTimer=Math.max(0,decoyTimer-dt);
+    if(decoyTimer===0){
+        decoyActive=false;
+        if(decoyMarker){map.removeLayer(decoyMarker);decoyMarker=null;}
+        for(const ai of aiList) ai.pathTimer=0;  // AI 立即重新追玩家
+        showToast('🎯 誘餌消失！追跡者重回追蹤！',1800);
+    }
+}
+
+// 定身由 AI 施放（見 tickAI）
+
+// ── 黃金寶藏系統 ─────────────────────────────────────────
+function setGoldenTreasure(id) {
+    if(goldenId) clearGoldenTreasure(false);
+    goldenId=id; goldenTimer=GOLDEN_DURATION;
+    const t=TREASURES.find(tr=>tr.id===id);
+    if(!t) return;
+    if(goldenRing) map.removeLayer(goldenRing);
+    goldenRing=L.circle([t.lat,t.lon],{
+        radius:35,color:'#FFD700',weight:3,fillColor:'#FFD700',fillOpacity:.12,dashArray:'5 4'
+    }).addTo(map);
+    if(tMarkers[id]&&!collected.has(id)){
+        tMarkers[id].marker.setIcon(L.divIcon({
+            html:'<div class="tbadge golden">💎</div>',
+            className:'',iconSize:[34,34],iconAnchor:[17,17]
+        }));
+    }
+    showToast(`✨ 黃金寶藏出現！${GOLDEN_MULT}×分數！${GOLDEN_DURATION}秒內收集！`,3000);
+    playGolden();
+}
+function clearGoldenTreasure(expired) {
+    const prevId=goldenId;
+    goldenId=null; goldenTimer=0;
+    if(goldenRing){map.removeLayer(goldenRing);goldenRing=null;}
+    if(prevId&&tMarkers[prevId]&&!collected.has(prevId)){
+        const t=TREASURES.find(tr=>tr.id===prevId);
+        const ord=tMarkers[prevId].order;
+        const bg=CC[t.category]||'#616161';
+        tMarkers[prevId].marker.setIcon(L.divIcon({
+            html:`<div class="tbadge" style="background:${bg}">${ord}</div>`,
+            className:'',iconSize:[34,34],iconAnchor:[17,17]
+        }));
+    }
+    if(expired) showToast('💎 黃金寶藏消失了…',2000);
+}
+function tickGolden(dt) {
+    if(goldenId){
+        goldenTimer=Math.max(0,goldenTimer-dt);
+        if(goldenTimer===0) clearGoldenTreasure(true);
+    }
+    goldenCycle=Math.max(0,goldenCycle-dt);
+    if(goldenCycle===0){
+        goldenCycle=GOLDEN_INTERVAL;
+        const candidates=TREASURES.filter(t=>!collected.has(t.id)&&t.id!==goldenId);
+        if(candidates.length>0){
+            setGoldenTreasure(candidates[Math.floor(Math.random()*candidates.length)].id);
+        }
+    }
+}
+
+// ── 道具系統 ──────────────────────────────────────────────
+function spawnItem() {
+    if(Object.keys(items).length>=ITEM_MAX) return;
+    // 50% chance to spawn near an uncollected treasure, biased toward range item
+    const uncollected=TREASURES.filter(t=>!collected.has(t.id));
+    let lat, lon, type;
+    if(uncollected.length>0 && Math.random()<0.5){
+        const tgt=uncollected[Math.floor(Math.random()*uncollected.length)];
+        // 150-300m so range boost is actually needed to reach from treasure
+        for(let i=0;i<8;i++){
+            const angle=Math.random()*Math.PI*2, rd=(150+Math.random()*150)/111111;
+            lat=Math.max(BOUNDS.s,Math.min(BOUNDS.n,tgt.lat+Math.cos(angle)*rd));
+            lon=Math.max(BOUNDS.w,Math.min(BOUNDS.e,tgt.lon+Math.sin(angle)*rd));
+            if(!isInBuilding(lat,lon)) break;
+        }
+        const r=Math.random();
+        type=r<.1?'speed':r<.2?'star':r<.8?'range':r<.9?'freeze':'magnet';
+    } else {
+        for(let i=0;i<8;i++){
+            lat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
+            lon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
+            if(!isInBuilding(lat,lon)) break;
+        }
+        const r=Math.random();
+        type=r<.2?'speed':r<.4?'star':r<.6?'range':r<.8?'freeze':'magnet';
+    }
+    const id='i'+(itemIdCtr++);
+    const [emoji,bg]=type==='speed'?['⚡','#f57c00']:type==='star'?['⭐','#7b1fa2']:
+                     type==='range'?['🔍','#00796b']:type==='freeze'?['❄️','#0288d1']:['🧲','#6a1b9a'];
+    const marker=L.marker([lat,lon],{
+        icon:L.divIcon({
+            html:`<div class="item-badge" style="background:${bg}">${emoji}</div>`,
+            className:'',iconSize:[32,32],iconAnchor:[16,16]
+        }),zIndexOffset:500
+    }).addTo(map);
+    items[id]={type,lat,lon,marker,timer:ITEM_LIFE};
+}
+function tickItems(dt) {
+    itemSpawnTimer-=dt;
+    if(itemSpawnTimer<=0){spawnItem();itemSpawnTimer=ITEM_IVTL;}
+    for(const [id,item] of Object.entries(items)){
+        item.timer-=dt;
+        if(item.timer<=0){map.removeLayer(item.marker);delete items[id];}
+        else if(item.timer<10){
+            const el=item.marker.getElement();
+            if(el){
+                const inner=el.querySelector('.item-badge');
+                if(inner){
+                    inner.classList.add('warn');
+                    if(item.timer<5) inner.style.opacity=(item.timer/5).toString();
+                }
+            }
+        }
+    }
+}
+function applyItem(type,id) {
+    map.removeLayer(items[id].marker); delete items[id];
+    if(type==='speed'){speedBoostTimer=5;showToast('⚡ 加速道具！速度×2，持續5秒！',2200);playItem();}
+    else if(type==='star'){invincTimer=5;showToast('⭐ 無敵星星！AI 逃跑+穿牆，持續5秒！',2200);playItem();}
+    else if(type==='range'){rangeBoostTimer=10;showToast('🔍 廣域道具！收集距離×3，持續10秒！',2200);playItem();}
+    else if(type==='magnet'){magnetTimer=8;magnetAutoT=0;showToast('🧲 磁鐵道具！自動收集範圍內寶藏！8秒！',2500);playMagnet();}
+    else{
+        aiFrozenTimer=7;
+        for(const ai of aiList){
+            const el=ai.marker.getElement();
+            if(el) el.style.filter='hue-rotate(150deg) brightness(1.4)';
+        }
+        showToast('❄️ 冰凍炸彈！所有守衛凍結7秒！',2500);
+        playFreeze();
+    }
+}
+
+// ── 分數扣分輔助 ─────────────────────────────────────────
+function applyScorePenalty(amount, msg) {
+    score=Math.max(0,score-amount);
+    const el=document.getElementById('v-score');
+    el.textContent=score;
+    el.classList.remove('score-pop'); void el.offsetWidth; el.classList.add('score-pop');
+    showToast(msg,2500);
+    fetch('/penalty',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({amount})}).catch(()=>{});
+}
+
+// ── AI 敵人系統（多隻、多型別）──────────────────────────
+function spawnAI(forceType, silent=false) {
+    if(aiList.length >= AI_MAX) return;
+    const type=forceType||'patroller';
+
+    // 各型別生成位置：巡邏守衛均勻分佈全圖；追跡者 & 小偷出現在玩家附近
+    let sLat, sLon;
+    if(type==='patroller'){
+        sLat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
+        sLon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
+    } else {
+        const angle=Math.random()*Math.PI*2, rd=0.003+Math.random()*0.002;
+        sLat=Math.max(BOUNDS.s+0.001,Math.min(BOUNDS.n-0.001,pLat+Math.cos(angle)*rd));
+        sLon=Math.max(BOUNDS.w+0.001,Math.min(BOUNDS.e-0.001,pLon+Math.sin(angle)*rd));
+    }
+    const [iLat,iLon]=nearestWalkable(sLat,sLon);
+
+    let iconHtml, miniColor, toastMsg;
+    if(type==='chaser'){
+        iconHtml='<div class="ai-dot">👾</div>';
+        miniColor='#c62828';
+        const n=chaserCount+1;
+        toastMsg=n===1?'👾 追跡者出現了！被抓到 -50分！':`👾 第 ${n} 隻追跡者！速度更快，小心！`;
+    } else if(type==='patroller'){
+        iconHtml='<div class="patrol-dot">👁️</div>';
+        miniColor='#6a1b9a';
+        toastMsg='👁️ 巡邏守衛出現！走入視野範圍 -30分！';
+    } else {
+        iconHtml='<div class="thief-dot">🦹</div>';
+        miniColor='#424242';
+        const tn=thiefCount+1;
+        toastMsg=tn===1?'🦹 寶物小偷出現！牠會偷移寶藏！-20分！':`🦹 第 ${tn} 隻小偷！更多寶藏危險！-20分！`;
+    }
+
+    const marker=L.marker([iLat,iLon],{
+        icon:L.divIcon({html:iconHtml,className:'',iconSize:[42,42],iconAnchor:[21,21]}),
+        zIndexOffset:950
+    }).addTo(map);
+    const miniMarker=L.circleMarker([iLat,iLon],{
+        radius:6,color:'#fff',fillColor:miniColor,fillOpacity:1,weight:2
+    }).addTo(miniMap);
+
+    const ai={type,lat:iLat,lon:iLon,marker,miniMarker,attackCD:0,path:[],pathTimer:aiList.length*0.4};
+    if(type==='chaser'){
+        ai.speedMult=1+chaserCount*0.15;  // 1.0×、1.15×、1.30× 依次加速
+        chaserCount++;
+    } else if(type==='patroller'){
+        // 均勻分散各巡邏守衛的起始路標，避免全部重疊
+        const pIdx=aiList.filter(a=>a.type==='patroller').length;
+        ai.waypointIdx=Math.floor(pIdx*OPTIMAL.length/10)%OPTIMAL.length;
+        ai.alertTimer=0; ai.alertCD=0; ai.fovPoly=null; ai.fovDrawTimer=0;
+        ai.facingLat=iLat+0.001; ai.facingLon=iLon;
+    } else {
+        ai.targetTId=null; ai.stealCD=0; ai._prevTargetTId=null; ai.targetMarker=null;
+        thiefCount++;
+    }
+
+    aiList.push(ai);
+    if(!silent) showToast(toastMsg,3200);
+}
+
+// ── 巡邏守衛：視野錐形碰撞 ──────────────────────────────
+function inPatrollerFOV(ai) {
+    const cosLat=Math.cos(ai.lat*Math.PI/180);
+    const dy=(pLat-ai.lat)*111111, dx=(pLon-ai.lon)*111111*cosLat;
+    let fMY=(ai.facingLat-ai.lat)*111111, fMX=(ai.facingLon-ai.lon)*111111*cosLat;
+    const fLen=Math.sqrt(fMX*fMX+fMY*fMY);
+    if(fLen<1e-6) return false;
+    fMX/=fLen; fMY/=fLen;
+    const fwd=dx*fMX+dy*fMY;
+    const lat=dx*fMY-dy*fMX;
+    return fwd>0&&fwd<=PATROLLER_FOV_LEN&&Math.abs(lat)<=PATROLLER_FOV_HW;
+}
+function updateFOVPoly(ai) {
+    const cosLat=Math.cos(ai.lat*Math.PI/180);
+    const DLat=1/111111, DLon=1/(111111*cosLat);
+    let fMY=(ai.facingLat-ai.lat)*111111, fMX=(ai.facingLon-ai.lon)*111111*cosLat;
+    const fLen=Math.sqrt(fMX*fMX+fMY*fMY);
+    if(fLen<1e-6) return;
+    fMX/=fLen; fMY/=fLen;
+    const tipLat=ai.lat+fMY*PATROLLER_FOV_LEN*DLat;
+    const tipLon=ai.lon+fMX*PATROLLER_FOV_LEN*DLon;
+    const lLat=tipLat+fMX*PATROLLER_FOV_HW*DLat, lLon=tipLon-fMY*PATROLLER_FOV_HW*DLon;
+    const rLat=tipLat-fMX*PATROLLER_FOV_HW*DLat, rLon=tipLon+fMY*PATROLLER_FOV_HW*DLon;
+    const bLLat=ai.lat+fMX*PATROLLER_FOV_HW*DLat, bLLon=ai.lon-fMY*PATROLLER_FOV_HW*DLon;
+    const bRLat=ai.lat-fMX*PATROLLER_FOV_HW*DLat, bRLon=ai.lon+fMY*PATROLLER_FOV_HW*DLon;
+    const pts=[[bLLat,bLLon],[lLat,lLon],[rLat,rLon],[bRLat,bRLon]];
+    const col=ai.alertTimer>0?'#c62828':'#6a1b9a';
+    if(!ai.fovPoly){
+        ai.fovPoly=L.polygon(pts,{color:col,weight:1.5,fillColor:col,fillOpacity:.18,interactive:false}).addTo(map);
+    } else {
+        ai.fovPoly.setLatLngs(pts);
+        ai.fovPoly.setStyle({color:col,fillColor:col});
+    }
+}
+
+// ── 寶物小偷：移動寶藏位置 ──────────────────────────────
+function relocateTreasure(tId) {
+    const t=TREASURES.find(tr=>tr.id===tId);
+    if(!t||collected.has(tId)) return;
+    const nLat0=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
+    const nLon0=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
+    const [nLat,nLon]=nearestWalkable(nLat0,nLon0);
+    t.lat=nLat; t.lon=nLon;
+    if(tMarkers[tId]){
+        tMarkers[tId].marker.setLatLng([nLat,nLon]);
+        tMarkers[tId].marker.unbindPopup();
+        tMarkers[tId].marker.bindPopup(`
+            <div style="min-width:175px;font-family:Arial">
+                <b style="font-size:14px">💎 ${t.name}</b><br>
+                <span style="color:#777;font-size:12px">${t.category}・${t.points}分</span><br>
+                <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#aaa">計算中…</div>
+                <button id="pp-btn-${t.id}" onclick="collect('${t.id}',${nLat},${nLon})"
+                    style="margin-top:6px;width:100%;padding:7px;background:#1a73e8;color:#fff;
+                           border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold">
+                    ✅ 收集寶藏
+                </button>
+            </div>`,{maxWidth:220});
+    }
+    if(miniTMarkers[tId]) miniTMarkers[tId].setLatLng([nLat,nLon]);
+    updateDistances();
+}
+
+// ── 追跡者行為 ───────────────────────────────────────────
+function tickChaser(ai,dt,s) {
+    const cs=s*(ai.speedMult||1);  // 每隻追跡者依序加速 15%
+    if(invincTimer>0){
+        const dLaP=ai.lat-pLat, dLoP=ai.lon-pLon;
+        const lenP=Math.sqrt(dLaP*dLaP+dLoP*dLoP);
+        if(lenP>1e-6){ai.lat+=dLaP/lenP*cs;ai.lon+=dLoP/lenP*cs;}
+        ai.path=[]; ai.pathTimer=1.5;
+    } else {
+        const chLat=decoyActive?decoyLat:pLat, chLon=decoyActive?decoyLon:pLon;
+        if(ai.pathTimer<=0){ai.path=runAstar(ai.lat,ai.lon,chLat,chLon);ai.pathTimer=1.5;}
+        while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
+        const tLat=ai.path.length>0?ai.path[0][0]:chLat, tLon=ai.path.length>0?ai.path[0][1]:chLon;
+        const dLa=tLat-ai.lat, dLo=tLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
+        if(len>1e-6){ai.lat+=dLa/len*cs;ai.lon+=dLo/len*cs;}
+    }
+    ai.marker.setLatLng([ai.lat,ai.lon]);
+    if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]);
+    ai.attackCD=Math.max(0,ai.attackCD-dt);
+    const dToP=distM(pLat,pLon,ai.lat,ai.lon);
+    if(dToP<STUN_R&&stunCD===0&&stunTimer===0&&invincTimer===0){
+        stunCD=STUN_CD; stunTimer=STUN_DURATION;
+        showToast('⚡ 被追跡者定身了！無法移動 3 秒！',3000); playStun();
+    }
+    if(dToP<AI_ATTACK_R&&ai.attackCD===0&&invincTimer===0){
+        ai.attackCD=AI_ATTACK_CD;
+        applyScorePenalty(50,'😱 被追跡者抓到！-50分！');
+        playAIAttack();
+    }
+    return dToP;
+}
+
+// ── 巡邏守衛行為 ─────────────────────────────────────────
+function tickPatroller(ai,dt,s) {
+    if(ai.alertCD>0) ai.alertCD=Math.max(0,ai.alertCD-dt);
+    if(ai.alertTimer>0){
+        ai.alertTimer=Math.max(0,ai.alertTimer-dt);
+        ai.facingLat=pLat; ai.facingLon=pLon;
+        if(ai.alertTimer===0){ai.path=[];ai.pathTimer=0;}
+    } else {
+        // 沿 OPTIMAL 路標巡邏
+        const wpId=OPTIMAL[ai.waypointIdx%OPTIMAL.length];
+        const wp=TREASURES.find(t=>t.id===wpId);
+        if(wp){
+            if(ai.pathTimer<=0){ai.path=runAstar(ai.lat,ai.lon,wp.lat,wp.lon);ai.pathTimer=2.0;}
+            while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
+            const mLat=ai.path.length>0?ai.path[0][0]:wp.lat, mLon=ai.path.length>0?ai.path[0][1]:wp.lon;
+            const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
+            if(len>1e-6){
+                ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
+                ai.lat+=dLa/len*s; ai.lon+=dLo/len*s;
+            }
+            if(distM(ai.lat,ai.lon,wp.lat,wp.lon)<30){
+                ai.waypointIdx=(ai.waypointIdx+1)%OPTIMAL.length;
+                ai.path=[]; ai.pathTimer=0;
+            }
+        }
+        // 視野偵測
+        if(ai.alertCD===0&&invincTimer===0&&inPatrollerFOV(ai)){
+            ai.alertTimer=3; ai.alertCD=10;
+            applyScorePenalty(30,'👁️ 巡邏守衛發現你了！-30分！');
+            playPatrollerAlert();
+            const dot=ai.marker.getElement()?.querySelector('.patrol-dot');
+            if(dot) dot.classList.add('alert');
+        }
+    }
+    if(ai.alertTimer===0){
+        const dot=ai.marker.getElement()?.querySelector('.patrol-dot');
+        if(dot) dot.classList.remove('alert');
+    }
+    // FOV 多邊形：每 0.1s 更新一次（10fps），降低每幀 DOM 操作量
+    ai.fovDrawTimer=Math.max(0,ai.fovDrawTimer-dt);
+    if(ai.fovDrawTimer===0){updateFOVPoly(ai);ai.fovDrawTimer=0.1;}
+    ai.marker.setLatLng([ai.lat,ai.lon]);
+    if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]);
+    const dToP=distM(pLat,pLon,ai.lat,ai.lon);
+    // ⚡ 定身技能：距離夠近且冷卻好就定身玩家（AI 自身繼續移動）
+    if(dToP<STUN_R&&stunCD===0&&stunTimer===0&&invincTimer===0){
+        stunCD=STUN_CD; stunTimer=STUN_DURATION;
+        showToast('⚡ 被巡邏守衛定身了！無法移動 3 秒！',3000); playStun();
+    }
+    return dToP;
+}
+
+// ── 小偷目標標示（每隻小偷在其目標上各顯示一個 🦹 圖示）──
+function _updateThiefMarker(ai) {
+    if(!ai.targetTId||collected.has(ai.targetTId)){
+        if(ai.targetMarker){map.removeLayer(ai.targetMarker);ai.targetMarker=null;}
+        return;
+    }
+    const t=TREASURES.find(tr=>tr.id===ai.targetTId);
+    if(!t) return;
+    if(!ai.targetMarker){
+        ai.targetMarker=L.marker([t.lat,t.lon],{
+            icon:L.divIcon({
+                html:'<div style="font-size:15px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))">🦹</div>',
+                className:'',iconSize:[18,18],iconAnchor:[9,20]
+            }),zIndexOffset:600,interactive:false
+        }).addTo(map);
+    } else {
+        ai.targetMarker.setLatLng([t.lat,t.lon]);
+    }
+}
+
+// ── 寶物小偷行為 ─────────────────────────────────────────
+function tickThief(ai,dt,s) {
+    if(ai.stealCD>0) ai.stealCD=Math.max(0,ai.stealCD-dt);
+    if(!ai.targetTId||collected.has(ai.targetTId)){
+        const cands=TREASURES.filter(t=>!collected.has(t.id));
+        if(cands.length===0) return 9999;
+        ai.targetTId=cands[Math.floor(Math.random()*cands.length)].id;
+        ai.path=[]; ai.pathTimer=0;
+    }
+    // 目標改變時更新標示
+    if(ai.targetTId!==ai._prevTargetTId){
+        ai._prevTargetTId=ai.targetTId;
+        _updateThiefMarker(ai);
+    }
+    const tgt=TREASURES.find(t=>t.id===ai.targetTId);
+    if(!tgt){ai.targetTId=null; return 9999;}
+    if(ai.pathTimer<=0){ai.path=runAstar(ai.lat,ai.lon,tgt.lat,tgt.lon);ai.pathTimer=2.0;}
+    while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
+    const mLat=ai.path.length>0?ai.path[0][0]:tgt.lat, mLon=ai.path.length>0?ai.path[0][1]:tgt.lon;
+    const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
+    if(len>1e-6){ai.lat+=dLa/len*s;ai.lon+=dLo/len*s;}
+    ai.marker.setLatLng([ai.lat,ai.lon]);
+    if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]);
+    if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
+        const name=tgt.name;
+        relocateTreasure(ai.targetTId);
+        applyScorePenalty(20,`🦹 小偷把「${name}」搬走了！-20分！`);
+        playThiefSteal();
+        if(ai.targetMarker){map.removeLayer(ai.targetMarker);ai.targetMarker=null;}
+        ai.targetTId=null; ai._prevTargetTId=null;
+        ai.stealCD=15; ai.path=[]; ai.pathTimer=0;
+    }
+    return distM(pLat,pLon,ai.lat,ai.lon);
+}
+function tickAI(dt) {
+    // ── 首幀：立即生成 10 名巡邏守衛 ─────────────────────
+    if(!initialSpawnDone){
+        initialSpawnDone=true;
+        for(let i=0;i<10;i++) spawnAI('patroller',true);
+        document.getElementById('chip-ai').style.display='inline-block';
+        showToast('👁️ 10 名巡邏守衛就位！走入視野 -30分！',4000);
+    }
+    // ── 追跡者波次（60s → 120s → 180s）─────────────────
+    if(chaserCount<CHASER_MAX){
+        if(chaserCount===0){
+            chaserSpawnTimer=Math.max(0,chaserSpawnTimer-dt);
+            if(!chaserWarned&&chaserSpawnTimer<=10){chaserWarned=true;showToast('⚠️ 10秒後追跡者出現！',2000);}
+            if(chaserSpawnTimer===0){spawnAI('chaser');chaserWaveTimer=CHASER_WAVE_INTERVAL;}
+        } else {
+            chaserWaveTimer=Math.max(0,chaserWaveTimer-dt);
+            if(chaserWaveTimer===0){spawnAI('chaser');chaserWaveTimer=CHASER_WAVE_INTERVAL;}
+        }
+    }
+    // ── 小偷波次（100s → 200s → 300s）─────────────────
+    if(thiefCount<THIEF_MAX){
+        if(thiefCount===0){
+            thiefSpawnTimer=Math.max(0,thiefSpawnTimer-dt);
+            if(thiefSpawnTimer===0){spawnAI('thief');thiefWaveTimer=THIEF_WAVE_INTERVAL;}
+        } else {
+            thiefWaveTimer=Math.max(0,thiefWaveTimer-dt);
+            if(thiefWaveTimer===0){spawnAI('thief');thiefWaveTimer=THIEF_WAVE_INTERVAL;}
+        }
+    }
+    // ── 逐一更新所有 AI ──────────────────────────────────
+    let nearestDist=Infinity;
+    for(const ai of aiList){
+        if(aiFrozenTimer>0){  // ❄️ 冰凍炸彈停止所有 AI；定身只凍玩家
+            const d=distM(pLat,pLon,ai.lat,ai.lon);
+            if(d<nearestDist) nearestDist=d;
+            continue;
+        }
+        ai.pathTimer-=dt;
+        const s=AI_SPD*dt;
+        let dToP;
+        if(ai.type==='chaser')         dToP=tickChaser(ai,dt,s);
+        else if(ai.type==='patroller')  dToP=tickPatroller(ai,dt,s);
+        else                            dToP=tickThief(ai,dt,s);
+        if(dToP<nearestDist) nearestDist=dToP;
+    }
+    // ── 動態 chip 標籤（各型別數量 + 下波倒數）──────────
+    const cntEl=document.getElementById('ai-count-txt');
+    if(cntEl){
+        const nC=aiList.filter(a=>a.type==='chaser').length;
+        const nP=aiList.filter(a=>a.type==='patroller').length;
+        const nT=aiList.filter(a=>a.type==='thief').length;
+        let parts=[];
+        if(nP) parts.push(`👁️×${nP}`);
+        if(nC) parts.push(`👾×${nC}`);
+        if(nT) parts.push(nT>1?`🦹×${nT}`:`🦹`);
+        let txt=parts.join(' ');
+        if(chaserCount<CHASER_MAX)
+            txt+=` +👾${Math.ceil(chaserCount===0?chaserSpawnTimer:chaserWaveTimer)}s`;
+        if(thiefCount<THIEF_MAX)
+            txt+=` +🦹${Math.ceil(thiefCount===0?thiefSpawnTimer:thiefWaveTimer)}s`;
+        cntEl.textContent=txt;
+    }
+    document.getElementById('ai-dist').textContent=nearestDist<Infinity?Math.round(nearestDist):'—';
+    document.getElementById('chip-ai').style.background=nearestDist<80?'rgba(198,40,40,.55)':'rgba(255,255,255,.2)';
+}
+
+// ── 效果計時器 ────────────────────────────────────────────
+function tickEffects(dt) {
+    if(speedBoostTimer>0) speedBoostTimer=Math.max(0,speedBoostTimer-dt);
+    document.getElementById('chip-speed').style.display=speedBoostTimer>0?'inline-block':'none';
+    if(speedBoostTimer>0) document.getElementById('speed-t').textContent=Math.ceil(speedBoostTimer);
+
+    const wasInvinc=invincTimer>0;
+    if(wasInvinc) invincTimer=Math.max(0,invincTimer-dt);
+    if(wasInvinc&&invincTimer===0){
+        // 無敵結束時，若玩家在建築物內則彈出
+        ensureOutsideBuilding();
+        pMarker.setLatLng([pLat,pLon]);
+        pCircle.setLatLng([pLat,pLon]);
+        updateMiniMap();
+    }
+    document.getElementById('chip-star').style.display=invincTimer>0?'inline-block':'none';
+    if(invincTimer>0) document.getElementById('invinc-t').textContent=Math.ceil(invincTimer);
+    document.getElementById('invinc-glow').style.display=invincTimer>0?'block':'none';
+    const dot=document.getElementById('pdot');
+    if(dot) dot.style.background=invincTimer>0?'linear-gradient(135deg,#FFD700,#FF6F00,#FFD700)':'';
+
+    if(rangeBoostTimer>0) rangeBoostTimer=Math.max(0,rangeBoostTimer-dt);
+    document.getElementById('chip-range').style.display=rangeBoostTimer>0?'inline-block':'none';
+    if(rangeBoostTimer>0) document.getElementById('range-t').textContent=Math.ceil(rangeBoostTimer);
+    pCircle.setRadius(effectiveR());  // 即時反映收集半徑
+
+    const wasFreeze=aiFrozenTimer>0;
+    if(wasFreeze) aiFrozenTimer=Math.max(0,aiFrozenTimer-dt);
+    if(wasFreeze&&aiFrozenTimer===0){
+        for(const ai of aiList){const el=ai.marker.getElement();if(el) el.style.filter='';}
+    }
+    document.getElementById('chip-freeze').style.display=aiFrozenTimer>0?'inline-block':'none';
+    if(aiFrozenTimer>0) document.getElementById('freeze-t').textContent=Math.ceil(aiFrozenTimer);
+
+    // 定身 CD（AI共用）+ 玩家定身計時
+    if(stunCD>0) stunCD=Math.max(0,stunCD-dt);
+    if(stunTimer>0) stunTimer=Math.max(0,stunTimer-dt);
+    const sChip=document.getElementById('chip-stun');
+    sChip.style.display=stunTimer>0?'inline-block':'none';
+    sChip.style.background=stunTimer>0?'rgba(255,130,0,.7)':'';
+    if(stunTimer>0) document.getElementById('stun-t').textContent=Math.ceil(stunTimer);
+    document.getElementById('stun-glow').style.display=stunTimer>0?'block':'none';
+    const pdot2=document.getElementById('pdot');
+    if(pdot2) pdot2.classList.toggle('stunned', stunTimer>0);
+
+    if(magnetTimer>0) magnetTimer=Math.max(0,magnetTimer-dt);
+    document.getElementById('chip-magnet').style.display=magnetTimer>0?'inline-block':'none';
+    if(magnetTimer>0) document.getElementById('magnet-t').textContent=Math.ceil(magnetTimer);
+    if(magnetTimer>0){
+        if(!magnetCircle) magnetCircle=L.circle([pLat,pLon],{radius:MAGNET_R,color:'#ffa000',weight:2,fillColor:'#ffa000',fillOpacity:.05,dashArray:'6 4'}).addTo(map);
+        else magnetCircle.setLatLng([pLat,pLon]);
+    } else if(magnetCircle){magnetCircle.remove();magnetCircle=null;}
+
+    const dChip=document.getElementById('chip-decoy');
+    if(decoyActive){
+        dChip.style.display='inline-block';
+        document.getElementById('decoy-label').textContent='🎯 誘餌';
+        document.getElementById('decoy-t').textContent=Math.ceil(decoyTimer);
+    } else if(decoyCD>0){
+        dChip.style.display='inline-block';
+        document.getElementById('decoy-label').textContent='🎯 Q冷卻';
+        document.getElementById('decoy-t').textContent=Math.ceil(decoyCD);
+    } else {
+        dChip.style.display='none';
+    }
+
+    const wasCombo=comboTimer>0;
+    if(wasCombo) comboTimer=Math.max(0,comboTimer-dt);
+    if(wasCombo&&comboTimer===0) comboCount=0;
+    const cChip=document.getElementById('chip-combo');
+    if(comboCount>=2&&comboTimer>0){
+        cChip.style.display='inline-block';
+        document.getElementById('combo-count').textContent=comboCount;
+        document.getElementById('combo-t').textContent=Math.ceil(comboTimer);
+        const pct=Math.round(comboTimer/COMBO_WINDOW*100);
+        cChip.style.backgroundImage=`linear-gradient(to right,rgba(255,213,79,.35) ${pct}%,rgba(255,255,255,.07) ${pct}%)`;
+    } else {
+        cChip.style.display='none';
+        cChip.style.backgroundImage='';
+    }
+
+    document.getElementById('eff-row').style.display=
+        (speedBoostTimer>0||invincTimer>0||rangeBoostTimer>0||aiFrozenTimer>0||
+         stunTimer>0||magnetTimer>0||
+         decoyActive||decoyCD>0||comboCount>=2||aiList.length>0)?'flex':'none';
+}
+
+// ── A* 路徑規劃（供 AI 追跡者使用）──────────────────────
+class MinHeap{
+    constructor(){this.h=[];}
+    push(it){this.h.push(it);this._up(this.h.length-1);}
+    pop(){const t=this.h[0],l=this.h.pop();if(this.h.length){this.h[0]=l;this._down(0);}return t;}
+    get size(){return this.h.length;}
+    _up(i){while(i>0){const p=(i-1)>>1;if(this.h[p][0]<=this.h[i][0])break;[this.h[p],this.h[i]]=[this.h[i],this.h[p]];i=p;}}
+    _down(i){const n=this.h.length;for(;;){let m=i,l=2*i+1,r=2*i+2;if(l<n&&this.h[l][0]<this.h[m][0])m=l;if(r<n&&this.h[r][0]<this.h[m][0])m=r;if(m===i)break;[this.h[m],this.h[i]]=[this.h[i],this.h[m]];i=m;}}
+}
+function buildNavGrid(){
+    const rows=Math.ceil((BOUNDS.n-BOUNDS.s)/NAV_CELL)+1;
+    const cols=Math.ceil((BOUNDS.e-BOUNDS.w)/NAV_CELL)+1;
+    const bl=new Uint8Array(rows*cols);
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
+        if(isInBuilding(BOUNDS.s+r*NAV_CELL,BOUNDS.w+c*NAV_CELL)) bl[r*cols+c]=1;
+    navGrid={rows,cols,blocked:bl};
+}
+function llToRC(lat,lon){
+    const r=Math.max(0,Math.min(navGrid.rows-1,Math.round((lat-BOUNDS.s)/NAV_CELL)));
+    const c=Math.max(0,Math.min(navGrid.cols-1,Math.round((lon-BOUNDS.w)/NAV_CELL)));
+    return [r,c];
+}
+function rcToLL(r,c){return [BOUNDS.s+r*NAV_CELL,BOUNDS.w+c*NAV_CELL];}
+function nearestWalkable(lat,lon){
+    if(!navGrid) return [lat,lon];
+    const {rows,cols,blocked}=navGrid;
+    const [r0,c0]=llToRC(lat,lon);
+    if(!blocked[r0*cols+c0]) return rcToLL(r0,c0);
+    for(let d=1;d<=20;d++){
+        for(let dr=-d;dr<=d;dr++) for(let dc=-d;dc<=d;dc++){
+            if(Math.abs(dr)!==d&&Math.abs(dc)!==d) continue;
+            const r=Math.max(0,Math.min(rows-1,r0+dr));
+            const c=Math.max(0,Math.min(cols-1,c0+dc));
+            if(!blocked[r*cols+c]) return rcToLL(r,c);
+        }
+    }
+    return [lat,lon];
+}
+function runAstar(fLat,fLon,tLat,tLon){
+    if(!navGrid) return [];
+    const {rows,cols,blocked}=navGrid;
+    const [r0,c0]=llToRC(fLat,fLon);
+    const [rG,cG]=llToRC(tLat,tLon);
+    if(r0===rG&&c0===cG) return [];
+    const kf=(r,c)=>r*cols+c;
+    const h=(r,c)=>Math.abs(r-rG)+Math.abs(c-cG);
+    const open=new MinHeap(), g=new Map(), par=new Map(), closed=new Set();
+    const sk=kf(r0,c0); g.set(sk,0); open.push([h(r0,c0),r0,c0]);
+    const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    let vis=0;
+    while(open.size&&vis<3000){
+        const [,r,c]=open.pop();
+        const k=kf(r,c); if(closed.has(k)) continue; closed.add(k); vis++;
+        if(r===rG&&c===cG){
+            const path=[]; let cur=k;
+            while(par.has(cur)){
+                const pr=Math.floor(cur/cols),pc=cur%cols;
+                path.push(rcToLL(pr,pc)); cur=par.get(cur);
+            }
+            path.reverse();
+            return path;
+        }
+        const gk=g.get(k);
+        for(const [dr,dc] of DIRS){
+            const nr=r+dr,nc=c+dc;
+            if(nr<0||nr>=rows||nc<0||nc>=cols) continue;
+            const nk=kf(nr,nc); if(closed.has(nk)||blocked[nk]) continue;
+            const ng=gk+((dr&&dc)?1.414:1);
+            if(ng<(g.get(nk)??Infinity)){g.set(nk,ng);par.set(nk,k);open.push([ng+h(nr,nc),nr,nc]);}
+        }
+    }
+    return [];
+}
+
+// ── 建築物載入後重算最佳路徑（細格 A*，22m 解析度）──────
+// Adaptive: keep grid ≤180×180 cells; min 11m, max 33m per cell
+const ROUTE_CELL = Math.max(0.0001, Math.max((BOUNDS.n-BOUNDS.s)/180,(BOUNDS.e-BOUNDS.w)/180));
+let routeGrid = null;  // built once after buildings load, reused for all route updates
+
+function buildRouteGrid(){
+    const rows=Math.ceil((BOUNDS.n-BOUNDS.s)/ROUTE_CELL)+1;
+    const cols=Math.ceil((BOUNDS.e-BOUNDS.w)/ROUTE_CELL)+1;
+    const bl=new Uint8Array(rows*cols);
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
+        if(isInBuilding(BOUNDS.s+r*ROUTE_CELL,BOUNDS.w+c*ROUTE_CELL)) bl[r*cols+c]=1;
+    return {rows,cols,blocked:bl};
+}
+
+function runRouteAstar(rg,fLat,fLon,tLat,tLon){
+    const {rows,cols,blocked}=rg;
+    const toRC=(lat,lon)=>[
+        Math.max(0,Math.min(rows-1,Math.round((lat-BOUNDS.s)/ROUTE_CELL))),
+        Math.max(0,Math.min(cols-1,Math.round((lon-BOUNDS.w)/ROUTE_CELL)))
+    ];
+    const toLL=(r,c)=>[BOUNDS.s+r*ROUTE_CELL,BOUNDS.w+c*ROUTE_CELL];
+    const [r0,c0]=toRC(fLat,fLon);
+    const [rG,cG]=toRC(tLat,tLon);
+    if(r0===rG&&c0===cG) return [];
+    const kf=(r,c)=>r*cols+c;
+    const h=(r,c)=>Math.abs(r-rG)+Math.abs(c-cG);
+    const open=new MinHeap(),g=new Map(),par=new Map(),closed=new Set();
+    const sk=kf(r0,c0);g.set(sk,0);open.push([h(r0,c0),r0,c0]);
+    const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    let vis=0;
+    while(open.size&&vis<16000){
+        const [,r,c]=open.pop();
+        const k=kf(r,c);if(closed.has(k))continue;closed.add(k);vis++;
+        if(r===rG&&c===cG){
+            const path=[];let cur=k;
+            while(par.has(cur)){const pr=Math.floor(cur/cols),pc=cur%cols;path.push(toLL(pr,pc));cur=par.get(cur);}
+            path.reverse();
+            return path;
+        }
+        const gk=g.get(k);
+        for(const [dr,dc] of DIRS){
+            const nr=r+dr,nc=c+dc;
+            if(nr<0||nr>=rows||nc<0||nc>=cols)continue;
+            const nk=kf(nr,nc);if(closed.has(nk)||blocked[nk])continue;
+            const ng=gk+((dr&&dc)?1.414:1);
+            if(ng<(g.get(nk)??Infinity)){g.set(nk,ng);par.set(nk,k);open.push([ng+h(nr,nc),nr,nc]);}
+        }
+    }
+    return [];
+}
+
+// BFS outward from (lat,lon) to find nearest unblocked cell in rg
+function snapToUnblocked(rg, lat, lon){
+    const {rows,cols,blocked}=rg;
+    const toRC=(la,lo)=>[
+        Math.max(0,Math.min(rows-1,Math.round((la-BOUNDS.s)/ROUTE_CELL))),
+        Math.max(0,Math.min(cols-1,Math.round((lo-BOUNDS.w)/ROUTE_CELL)))
+    ];
+    const toLL=(r,c)=>[BOUNDS.s+r*ROUTE_CELL,BOUNDS.w+c*ROUTE_CELL];
+    const [r0,c0]=toRC(lat,lon);
+    if(!blocked[r0*cols+c0]) return [lat,lon];
+    const q=[[r0,c0]], seen=new Set([r0*cols+c0]);
+    const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    while(q.length){
+        const [cr,cc]=q.shift();
+        for(const [dr,dc] of DIRS){
+            const nr=cr+dr,nc=cc+dc;
+            if(nr<0||nr>=rows||nc<0||nc>=cols) continue;
+            const nk=nr*cols+nc;
+            if(seen.has(nk)) continue;
+            seen.add(nk);
+            if(!blocked[nk]) return toLL(nr,nc);
+            q.push([nr,nc]);
+        }
+    }
+    return [lat,lon];
+}
+
+function rebuildOptimalRouteAstar() {
+    if(!navGrid||!routeGrid) return;
+    // Start from current player position; skip already-collected treasures
+    const rawWpts=[[pLat,pLon]];
+    for(const id of OPTIMAL){
+        if(collected.has(id)) continue;
+        const t=TREASURES.find(t=>t.id===id);
+        if(t) rawWpts.push([t.lat,t.lon]);
+    }
+    if(rawWpts.length<2){
+        if(routeLine){routeLine.remove();routeLine=null;}
+        if(miniRouteLine){miniRouteLine.remove();miniRouteLine=null;}
+        return;
+    }
+    const wpts=rawWpts.map(([la,lo])=>snapToUnblocked(routeGrid,la,lo));
+    let all=[];
+    for(let i=0;i<wpts.length-1;i++){
+        const seg=runRouteAstar(routeGrid,wpts[i][0],wpts[i][1],wpts[i+1][0],wpts[i+1][1]);
+        if(seg.length>0) all=all.concat(seg);
+        else all.push(rawWpts[i],rawWpts[i+1]);
+    }
+    if(all.length<2) return;
+    if(routeLine) routeLine.setLatLngs(all);
+    else routeLine=L.polyline(all,{color:'#e53935',weight:2.5,dashArray:'7 4',opacity:.65}).addTo(map);
+    if(miniRouteLine) miniRouteLine.setLatLngs(all);
+    else miniRouteLine=L.polyline(all,{color:'#e53935',weight:1.5,opacity:.5,dashArray:'4 3'}).addTo(miniMap);
+}
+
+// ── 建築物碰撞 ────────────────────────────────────────────
+function loadBuildings(raw) {
+    buildings = raw.map(coords=>({
+        coords,
+        mnLa:Math.min(...coords.map(c=>c[1])), mxLa:Math.max(...coords.map(c=>c[1])),
+        mnLo:Math.min(...coords.map(c=>c[0])), mxLo:Math.max(...coords.map(c=>c[0]))
+    }));
+    // 建立空間格：每棟建築物登記到所有它覆蓋的格子，查詢時只看玩家所在格
+    buildingGrid = {};
+    buildings.forEach((b, idx) => {
+        const la0=Math.floor(b.mnLa/GRID_DEG), la1=Math.floor(b.mxLa/GRID_DEG);
+        const lo0=Math.floor(b.mnLo/GRID_DEG), lo1=Math.floor(b.mxLo/GRID_DEG);
+        for(let la=la0;la<=la1;la++) for(let lo=lo0;lo<=lo1;lo++){
+            const k=la+','+lo;
+            (buildingGrid[k]||(buildingGrid[k]=[])).push(idx);
+        }
+    });
+    buildNavGrid();
+}
+function pointInPoly(lat,lon,coords) {
+    let inside=false;
+    for(let i=0,j=coords.length-1;i<coords.length;j=i++){
+        const xi=coords[i][0],yi=coords[i][1],xj=coords[j][0],yj=coords[j][1];
+        if(((yi>lat)!==(yj>lat))&&(lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)) inside=!inside;
+    }
+    return inside;
+}
+function isInBuilding(lat,lon) {
+    const k=Math.floor(lat/GRID_DEG)+','+Math.floor(lon/GRID_DEG);
+    const ids=buildingGrid[k];
+    if(!ids) return false;
+    for(const i of ids){
+        const b=buildings[i];
+        if(lat<b.mnLa||lat>b.mxLa||lon<b.mnLo||lon>b.mxLo) continue;
+        if(pointInPoly(lat,lon,b.coords)) return true;
+    }
+    return false;
+}
+function ensureOutsideBuilding() {
+    if(!isInBuilding(pLat,pLon)) return;
+    const steps=[.00005,.0001,.0002,.0004];
+    const dirs=[[0,1],[0,-1],[1,0],[-1,0],[1,1],[-1,1],[1,-1],[-1,-1]];
+    for(const s of steps) for(const [dx,dy] of dirs){
+        const nl=pLat+dy*s,no=pLon+dx*s;
+        if(!isInBuilding(nl,no)){pLat=nl;pLon=no;return;}
+    }
+}
+
+// ── 衝刺狀態機 ────────────────────────────────────────────
+let sprintBar=SPRINT_MAX, sprintCD=0, isSprinting=false, wasSprinting=false;
+function tickSprint(dt) {
+    const want=keys['Shift']||keys['ShiftLeft']||keys['ShiftRight'];
+    if(sprintCD>0){
+        sprintCD=Math.max(0,sprintCD-dt);
+        if(sprintCD===0) sprintBar=SPRINT_MAX;
+        isSprinting=false;
+    } else if(want&&sprintBar>0){
+        isSprinting=true;
+        sprintBar=Math.max(0,sprintBar-dt);
+        if(sprintBar===0){sprintCD=COOL_T;isSprinting=false;}
+    } else {
+        isSprinting=false;
+        if(sprintBar<SPRINT_MAX) sprintBar=Math.min(SPRINT_MAX,sprintBar+dt*.4);
+    }
+    if(isSprinting&&!wasSprinting) playSprint();
+    wasSprinting=isSprinting;
+
+    const isRecharging=!isSprinting&&sprintCD===0&&sprintBar<SPRINT_MAX;
+    const pct=sprintCD>0?0:(sprintBar/SPRINT_MAX*100);
+    const fill=document.getElementById('sprint-fill');
+    const lbl =document.getElementById('sprint-lbl');
+    fill.style.width=pct+'%';
+    fill.classList.toggle('cooling', sprintCD>0);
+    fill.classList.toggle('recharge',isRecharging);
+    lbl.textContent=
+        sprintCD>0    ?`🔄 冷卻 ${sprintCD.toFixed(1)}s`:
+        isSprinting   ?`⚡ 衝刺中！`:
+        isRecharging  ?`↑ 回充 ${sprintBar.toFixed(1)}s`:
+                       `⚡ 衝刺就緒`;
+    const dot=document.getElementById('pdot');
+    if(dot) dot.className='player-dot'+(isSprinting?' sprint':'');
+    document.getElementById('sprint-glow').style.display=isSprinting?'block':'none';
+}
+
+// ── 移動 + 滑牆 ───────────────────────────────────────────
+let blockFlash=0;
+function tryMove(dLon,dLat) {
+    const nLat=pLat+dLat, nLon=pLon+dLon;
+    if(invincTimer>0)                              {pLat=nLat;pLon=nLon;}  // 無敵穿牆
+    else if(!isInBuilding(nLat,nLon))             {pLat=nLat;pLon=nLon;}
+    else if(dLat&&!isInBuilding(pLat+dLat,pLon)) {pLat+=dLat;}
+    else if(dLon&&!isInBuilding(pLat,pLon+dLon)) {pLon+=dLon;}
+    else {
+        if(++blockFlash===1){showToast('🚧 建築物擋住，請繞路',1200);playBlocked();}
+        if(blockFlash>60){     // 卡住超過 ~1 秒：自動脫困 + 清除卡鍵
+            blockFlash=0;
+            ensureOutsideBuilding();
+            clearAllKeys();
+        }
+        return;
+    }
+    blockFlash=0;
+    pMarker.setLatLng([pLat,pLon]);
+    pCircle.setLatLng([pLat,pLon]);
+    map.setView([pLat,pLon],map.getZoom(),{animate:false});
+}
+
+// ── 節流更新（minimap + 距離文字，~15fps 足夠）────────────
+let lastViewUpdate=0;
+function throttledViewUpdate(ts){
+    if(ts-lastViewUpdate<67) return;
+    lastViewUpdate=ts;
+    updateMiniMap();
+    updateDistances();
+}
+
+// ── 鍵盤 ──────────────────────────────────────────────────
+const keys={};
+const MOVE_KEYS=new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D']);
+
+function clearAllKeys(){ for(const k in keys) delete keys[k]; }
+
+document.addEventListener('keydown', e=>{
+    getAudio();   // 第一次按鍵時喚醒 AudioContext
+    if(MOVE_KEYS.has(e.key)) e.preventDefault();
+    if(e.key===' '){e.preventDefault();collectNearest();return;}
+    if(e.key==='q'||e.key==='Q'){e.preventDefault();dropDecoy();return;}
+    keys[e.key]=true;
+});
+document.addEventListener('keyup', e=>{ delete keys[e.key]; });
+// 多重清除：任何失焦情況都清除按鍵，防止飄移
+window.addEventListener('blur', clearAllKeys);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) clearAllKeys(); });
+window.addEventListener('focus', clearAllKeys);  // 重新獲焦時也清，讓玩家重按
+
+// 分數浮動文字（從寶藏位置往上飄）
+function showScoreFloat(lat, lon, pts) {
+    const pt=map.latLngToContainerPoint([lat,lon]);
+    const div=document.createElement('div');
+    div.className='score-float';
+    div.textContent=`+${pts}`;
+    div.style.cssText=`left:${pt.x-24}px;top:${pt.y-10}px`;
+    document.getElementById('map').appendChild(div);
+    setTimeout(()=>div.remove(), 950);
+}
+
+// 磁鐵拉動動畫
+function tickPullingItems(dt) {
+    for(const [id,pull] of pullingItems){
+        pull.progress=Math.min(1, pull.progress+dt/0.55);
+        const e=pull.progress*(2-pull.progress); // ease-out quad
+        const lat=pull.sLat+(pLat-pull.sLat)*e;
+        const lon=pull.sLon+(pLon-pull.sLon)*e;
+        pull.marker.setLatLng([lat,lon]);
+        const el=pull.marker.getElement();
+        if(el){
+            const inner=el.querySelector('.item-badge');
+            if(inner){
+                const s=1-pull.progress*0.7;
+                inner.style.transform=`scale(${s}) rotate(${pull.progress*360}deg)`;
+            }
+        }
+        if(pull.progress>=1){
+            // arrived — apply and clean up
+            items[id]={type:pull.type,lat:pLat,lon:pLon,marker:pull.marker};
+            applyItem(pull.type,id);
+            pullingItems.delete(id);
+        }
+    }
+}
+
+// Space：收集最近寶藏 / 撿道具
+function collectNearest() {
+    if(!gameReady) return;
+    let got=false;
+    const eR=effectiveR();
+    // 撿附近所有道具
+    for(const [id,item] of Object.entries(items)){
+        if(distM(pLat,pLon,item.lat,item.lon)<=eR){applyItem(item.type,id);got=true;}
+    }
+    // 收集最近寶藏
+    let nearest=null, nd=Infinity;
+    TREASURES.forEach(t=>{
+        if(collected.has(t.id)) return;
+        const d=distM(pLat,pLon,t.lat,t.lon);
+        if(d<eR&&d<nd){nearest=t;nd=d;}
+    });
+    if(nearest){collect(nearest.id,nearest.lat,nearest.lon);got=true;}
+    if(!got) showToast('📍 附近沒有寶藏或道具，走近一點！',1800);
+}
+
+// ── 主迴圈 ────────────────────────────────────────────────
+let lastT=0;
+function loop(ts) {
+    if(gameReady){
+        try {
+            const dt=Math.min((ts-lastT)/1000,.05);
+            tickSprint(dt);
+            tickEffects(dt);
+            tickItems(dt);
+            tickDecoy(dt);
+            tickGolden(dt);
+            tickAI(dt);
+            // 🧲 磁鐵：把 400m 內道具拉向玩家（動畫吸引）
+            if(magnetTimer>0){
+                for(const [id,item] of Object.entries(items)){
+                    if(!pullingItems.has(id)&&distM(pLat,pLon,item.lat,item.lon)<=MAGNET_R){
+                        const inner=item.marker.getElement()?.querySelector('.item-badge');
+                        if(inner) inner.classList.add('pulling');
+                        pullingItems.set(id,{type:item.type,marker:item.marker,
+                            sLat:item.lat,sLon:item.lon,progress:0});
+                        delete items[id];
+                    }
+                }
+            }
+            tickPullingItems(dt);
+            if(stunTimer===0){  // 被定身時無法移動
+                let dx=0,dy=0;
+                if(keys['ArrowUp']  ||keys['w']||keys['W']) dy+=1;
+                if(keys['ArrowDown'] ||keys['s']||keys['S']) dy-=1;
+                if(keys['ArrowRight']||keys['d']||keys['D']) dx+=1;
+                if(keys['ArrowLeft'] ||keys['a']||keys['A']) dx-=1;
+                if(dx||dy){
+                    const n=Math.hypot(dx,dy);
+                    const spd=(isSprinting?SPRINT_SPD:WALK_SPD)*(speedBoostTimer>0?2:1);
+                    tryMove(dx/n*spd*dt, dy/n*spd*dt);
+                    pushTrail(dt);
+                }
+            }
+            throttledViewUpdate(ts);
+        } catch(e) {
+            console.error('[loop]', e);  // 記錄錯誤但不中斷循環
+        }
+    }
+    lastT=ts;
+    requestAnimationFrame(loop);  // 永遠繼續，不受例外影響
+}
+requestAnimationFrame(loop);
+
+// Recenter
+map.on('moveend',()=>{
+    document.getElementById('recenter-btn').style.display=
+        distM(pLat,pLon,map.getCenter().lat,map.getCenter().lng)>300?'block':'none';
+});
+
+// ── 距離工具 ──────────────────────────────────────────────
+function distM(la1,lo1,la2,lo2){
+    const R=6371000,r=Math.PI/180;
+    const a=Math.sin((la2-la1)*r/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin((lo2-lo1)*r/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function bearingDeg(la1,lo1,la2,lo2){
+    const r=Math.PI/180;
+    const y=Math.sin((lo2-lo1)*r)*Math.cos(la2*r);
+    const x=Math.cos(la1*r)*Math.sin(la2*r)-Math.sin(la1*r)*Math.cos(la2*r)*Math.cos((lo2-lo1)*r);
+    return(Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+function effectiveR(){return rangeBoostTimer>0?CLCT_R*3:CLCT_R;}
+
+// ── 更新距離、羅盤、接近環 ────────────────────────────────
+function updateDistances() {
+    const nextId=OPTIMAL.find(id=>!collected.has(id));
+    const nextT =nextId?TREASURES.find(t=>t.id===nextId):null;
+
+    if(nextT){
+        const d  =Math.round(distM(pLat,pLon,nextT.lat,nextT.lon));
+        const deg=bearingDeg(pLat,pLon,nextT.lat,nextT.lon);
+        document.getElementById('compass-arrow').style.transform=`rotate(${deg}deg)`;
+        document.getElementById('compass-name').textContent=nextT.name;
+        document.getElementById('compass-dist').textContent=d+'m';
+    } else {
+        document.getElementById('compass-name').textContent='全部找到了！🎉';
+        document.getElementById('compass-dist').textContent='';
+    }
+
+    // 接近環（2×有效收集半徑的虛線圓，提示快到了）
+    const eR=effectiveR();
+    const nearDist=eR*2;
+    const hasNear=TREASURES.some(t=>!collected.has(t.id)&&distM(pLat,pLon,t.lat,t.lon)<=nearDist);
+    if(hasNear){
+        if(!nearbyRing) nearbyRing=L.circle([pLat,pLon],{
+            radius:nearDist,color:'#f9a825',weight:1.5,fillOpacity:0,dashArray:'6 4',opacity:.6
+        }).addTo(map);
+        else{nearbyRing.setLatLng([pLat,pLon]);nearbyRing.setRadius(nearDist);}
+    } else if(nearbyRing){ map.removeLayer(nearbyRing); nearbyRing=null; }
+
+    TREASURES.forEach(t=>{
+        if(collected.has(t.id)) return;
+        const d  =Math.round(distM(pLat,pLon,t.lat,t.lon));
+        const inR=d<=eR;
+        const isTarget=(t.id===nextId);
+
+        const dEl =document.getElementById('dist-'+t.id);
+        const btn =document.getElementById('btn-'+t.id);
+        const card=document.getElementById('card-'+t.id);
+        const ppD =document.getElementById('pp-dist-'+t.id);
+        if(dEl) {dEl.textContent=inR?`✅ 範圍內（${d}m）`:`📍 ${d}m（需${eR}m內）`;
+                 dEl.className='dst '+(inR?'ok':'far');}
+        if(btn&&!btn.disabled){
+            btn.className='cbtn'+(inR?' near':isTarget?' target':'');
+            btn.textContent=inR?'✅ 立刻收集！':'✅ 收集寶藏';
+        }
+        if(card) card.className='tc'+(inR?' near':isTarget&&!inR?' target':'');
+        if(ppD) {ppD.textContent=inR?`✅ 範圍內（${d}m）`:`距你 ${d}m（需${eR}m內）`;
+                 ppD.style.color=inR?'#2e7d32':'#c62828';}
+        if(tMarkers[t.id]){
+            const isGolden=t.id===goldenId&&goldenTimer>0;
+            let html;
+            if(isGolden){
+                html='<div class="tbadge golden">💎</div>';
+            } else {
+                const ord=tMarkers[t.id].order, bg=CC[t.category]||'#616161';
+                const cls=`tbadge${inR?' inrange':isTarget?' target':''}`;
+                html=`<div class="${cls}" style="background:${bg}">${ord}</div>`;
+            }
+            tMarkers[t.id].marker.setIcon(L.divIcon({html,className:'',iconSize:[34,34],iconAnchor:[17,17]}));
+        }
+    });
+}
+updateDistances();
+
+// ── 收集寶藏 ──────────────────────────────────────────────
+async function collect(id, tLat, tLon) {
+    const tCurrent=TREASURES.find(t=>t.id===id);
+    if(tCurrent){tLat=tCurrent.lat;tLon=tCurrent.lon;}
+    if(collected.has(id)||inFlight.has(id)) return;
+    const d=distM(pLat,pLon,tLat,tLon);
+    const eR=effectiveR();
+    if(d>eR){
+        showToast(`📍 還差 ${Math.round(d-eR)}m！先走過去`,2500);
+        map.fitBounds([[pLat,pLon],[tLat,tLon]],{padding:[60,60]});
+        return;
+    }
+    inFlight.add(id);
+    const optIdx =OPTIMAL.indexOf(id);
+    const isOrder=(optIdx===nextOptIdx);
+    const bonus  =isOrder?ORDER_BONUS:0;
+    // 連擊計算（22秒內連續收集）
+    const tentativeCount=comboTimer>0?comboCount+1:1;
+    const comboBonus=tentativeCount>=2?(tentativeCount-1)*30:0;
+    // 黃金寶藏加成
+    const goldenBonus=id===goldenId&&goldenTimer>0?TREASURES.find(t=>t.id===id).points*(GOLDEN_MULT-1):0;
+    const btn  =document.getElementById('btn-'+id);
+    const ppBtn=document.getElementById('pp-btn-'+id);
+    if(btn){btn.disabled=true;btn.textContent='處理中…';}
+
+    try {
+        const res=await fetch('/collect/'+id,{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({order_bonus:bonus+comboBonus+goldenBonus})
+        });
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const data=await res.json();
+
+        // 更新順序連鎖
+        if(isOrder){nextOptIdx++;orderStreak++;}
+        else orderStreak=0;
+        // 連擊確認
+        comboCount=tentativeCount;
+        comboTimer=COMBO_WINDOW;
+        // 黃金收集
+        if(id===goldenId) clearGoldenTreasure(false);
+
+        collected.add(id);
+        for(const ai of aiList){if(ai.type==='thief'&&ai.targetTId===id){if(ai.targetMarker){map.removeLayer(ai.targetMarker);ai.targetMarker=null;}ai.targetTId=null;ai._prevTargetTId=null;ai.path=[];ai.pathTimer=0;}}
+        inFlight.delete(id);
+        const prevScore=score;
+        score=data.score; found=data.found;
+
+        // 分數浮動文字 + 路線即時更新（略過已收集，defer 避免阻塞主線程）
+        showScoreFloat(tLat, tLon, score-prevScore);
+        setTimeout(rebuildOptimalRouteAstar, 50);
+
+        // 分數跳動動畫
+        const scoreEl=document.getElementById('v-score');
+        scoreEl.textContent=score;
+        scoreEl.classList.remove('score-pop');
+        void scoreEl.offsetWidth;
+        scoreEl.classList.add('score-pop');
+
+        document.getElementById('v-found').textContent=found;
+        document.getElementById('progress').style.width=(found/TOTAL*100)+'%';
+
+        const card=document.getElementById('card-'+id);
+        if(card) card.className='tc found';
+        if(btn)  btn.textContent='✅ 已找到';
+        const dEl=document.getElementById('dist-'+id);
+        if(dEl){dEl.textContent='✅ 已收集';dEl.className='dst ok';}
+
+        if(tMarkers[id]) tMarkers[id].marker.setIcon(L.divIcon({
+            html:'<div class="tbadge done">✅</div>',
+            className:'',iconSize:[34,34],iconAnchor:[17,17]
+        }));
+        // 小地圖寶藏變灰
+        if(miniTMarkers[id]) miniTMarkers[id].setStyle({
+            color:'#9e9e9e',fillColor:'#9e9e9e',fillOpacity:.3
+        });
+        if(ppBtn){ppBtn.disabled=true;ppBtn.textContent='✅ 已收集';ppBtn.style.background='#34a853';}
+
+        // 音效 + 粒子
+        playCollect();
+        spawnParticles(tLat, tLon);
+
+        // 連鎖提示
+        const tData=TREASURES.find(tr=>tr.id===id);
+        const pts=tData?tData.points:100;
+        let bonusStr=bonus?` 🌟+${bonus}順序加分`:'';
+        if(comboBonus>0) bonusStr+=` 🔥連擊×${comboCount}+${comboBonus}`;
+        if(goldenBonus>0) bonusStr+=` 💎×3+${goldenBonus}黃金`;
+        if(orderStreak>=3) bonusStr+=` 🔥連鎖×${orderStreak}！`;
+        showToast(`💎 +${pts+bonus+comboBonus+goldenBonus}分${bonusStr}！共 ${score} 分（${found}/${TOTAL}）`);
+        updateDistances();
+
+        if(data.status==='win'){
+            clearInterval(ticker);
+            playWin();
+            showToast('🎉 全部收集完成！計算獎勵…',3000);
+            setTimeout(()=>location.href='/finish',2800);
+        }
+    } catch(e) {
+        inFlight.delete(id);
+        if(btn){btn.disabled=false;btn.className='cbtn';btn.textContent='✅ 收集寶藏';}
+        showToast('❌ '+e.message+' 請重試');
+    }
+}
+
+// ── 計時器（由倒數啟動）──────────────────────────────────
+const timerEl=document.getElementById('timer');
+const vigEl  =document.getElementById('vignette');
+let alarmPlayed=false;
+
+// ── Toast ─────────────────────────────────────────────────
+let toastT;
+function showToast(msg,ms=2200){
+    const el=document.getElementById('toast');
+    el.textContent=msg;el.classList.add('show');
+    clearTimeout(toastT);
+    toastT=setTimeout(()=>el.classList.remove('show'),ms);
+}
+
+// ── 3-2-1 倒數後開始遊戲 ─────────────────────────────────
+async function startCountdown(){
+    if(countdownStarted) return;
+    countdownStarted=true;
+    const overlay=document.getElementById('loading-overlay');
+    const card   =document.querySelector('.ld-card');
+
+    for(const n of ['3','2','1']){
+        card.innerHTML=`<div class="ld-count">${n}</div>`;
+        await new Promise(r=>setTimeout(r,850));
+    }
+    card.innerHTML='<div class="ld-go">🚀 開始！</div>';
+    await new Promise(r=>setTimeout(r,500));
+
+    overlay.classList.add('fade-out');
+    await new Promise(r=>setTimeout(r,360));
+    overlay.style.display='none';
+    gameReady=true;
+
+    ticker=setInterval(()=>{
+        remaining--;
+        timerEl.textContent=remaining;
+        if(remaining<=60){
+            timerEl.classList.add('danger');
+            vigEl.style.display='block';
+            if(!alarmPlayed){alarmPlayed=true;playAlarm();}
+        }
+        if(remaining<=0){
+            clearInterval(ticker);
+            showToast('⏰ 時間到！',2000);
+            setTimeout(()=>location.href='/finish',2000);
+        }
+    },1000);
+
+    showToast('🚶 WASD 移動 · Shift 衝刺 · Space 收集！',3500);
+}
+
+function retryLoading(){
+    document.getElementById('retry-btn').style.display='none';
+    doLoad();
+}
+
+// ── 載入建築物 → 地圖概覽 → 倒數 ─────────────────────────
+async function doLoad(){
+    try{
+        document.getElementById('ld-step').textContent='🔌 連線伺服器…';
+        document.getElementById('ld-sub').textContent='取得建築物輪廓（伺服器預先快取可大幅加速）';
+        const res=await fetch(`/roads?s=${BOUNDS.s}&n=${BOUNDS.n}&w=${BOUNDS.w}&e=${BOUNDS.e}`);
+        document.getElementById('ld-step').textContent='⚙️ 建立碰撞資料…';
+        document.getElementById('ld-sub').textContent='計算建築多邊形與導航格…';
+
+        const data=await res.json();
+        const raw=data.buildings||[];
+        if(raw.length===0){
+            document.getElementById('ld-step').textContent='⚠️ 此城市建築物資料不足';
+            document.getElementById('ld-sub').textContent='無法正確計算碰撞，請換一個城市';
+            document.getElementById('retry-btn').textContent='← 回首頁';
+            document.getElementById('retry-btn').style.display='block';
+            document.getElementById('retry-btn').onclick=()=>location.href='/';
+            return;
+        }
+        loadBuildings(raw);
+        routeGrid=buildRouteGrid();
+        rebuildOptimalRouteAstar();
+
+        L.geoJSON({
+            type:'FeatureCollection',
+            features:raw.map(coords=>({
+                type:'Feature',
+                geometry:{type:'Polygon',coordinates:[coords]},
+                properties:{}
+            }))
+        },{style:{color:'#e65100',weight:1,opacity:.45,fillColor:'#ff6d00',fillOpacity:.09}}
+        ).addTo(map);
+
+        ensureOutsideBuilding();
+        pMarker.setLatLng([pLat,pLon]);
+        pCircle.setLatLng([pLat,pLon]);
+        updateDistances();
+
+        document.getElementById('ld-step').textContent=`✅ ${raw.length} 棟建築物就緒`;
+        document.getElementById('ld-sub').textContent='🗺️ 查看地圖概覽…';
+        const allPts=[START,...TREASURES.map(t=>[t.lat,t.lon])];
+        map.fitBounds(L.latLngBounds(allPts),{padding:[40,40],animate:true,duration:0.8});
+        await new Promise(r=>setTimeout(r,1400));
+        map.setView([pLat,pLon],17,{animate:true,duration:0.6});
+        await new Promise(r=>setTimeout(r,700));
+
+        document.getElementById('ld-sub').textContent='準備開始…';
+        await new Promise(r=>setTimeout(r,200));
+        startCountdown();
+    } catch(e){
+        document.getElementById('ld-step').textContent='⚠️ 載入失敗，請重試';
+        document.getElementById('ld-sub').textContent=e.message||'網路連線錯誤';
+        document.getElementById('retry-btn').style.display='block';
+    }
+}
+(async function init(){ await doLoad(); })();
+</script>
+</body>
+</html>

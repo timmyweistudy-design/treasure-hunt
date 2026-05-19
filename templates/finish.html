@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>遊戲結束</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #080c18; min-height: 100vh; color: #c8d8f0; }
+
+        /* ── Hero ── */
+        .hero {
+            text-align: center;
+            background: linear-gradient(160deg, #0d2318 0%, #0a1428 50%, #1a0a0a 100%);
+            padding: 56px 20px 44px;
+            position: relative; overflow: hidden;
+        }
+        .hero::after {
+            content: '';
+            position: absolute; inset: 0; pointer-events: none;
+            background:
+                radial-gradient(ellipse 70% 90% at 30% 50%, rgba(52,168,83,.12) 0%, transparent 70%),
+                radial-gradient(ellipse 70% 90% at 70% 50%, rgba(26,115,232,.10) 0%, transparent 70%);
+        }
+        .hero-inner { position: relative; z-index: 1; }
+        .hero h1 {
+            font-family: 'Orbitron', monospace; font-weight: 900;
+            font-size: clamp(1.6rem, 5vw, 2.4rem); letter-spacing: 2px;
+            background: linear-gradient(90deg, #00e676, #7ec8f8);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            margin-bottom: 10px;
+        }
+        .hero p { font-size: 1rem; color: #8aa8cc; }
+
+        /* ── Container ── */
+        .container { max-width: 640px; margin: 36px auto; padding: 0 20px; }
+
+        /* ── Card ── */
+        .card {
+            background: #0e1829;
+            border: 1px solid rgba(100,160,255,.13);
+            border-radius: 18px; padding: 28px 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.5);
+            margin-bottom: 24px;
+        }
+
+        /* ── Stats grid ── */
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+        .stat {
+            text-align: center; padding: 20px 10px;
+            border-radius: 14px;
+        }
+        .stat-total  { background: linear-gradient(135deg,rgba(26,115,232,.18),rgba(26,115,232,.06));
+                       border: 1px solid rgba(26,115,232,.25); }
+        .stat-treas  { background: linear-gradient(135deg,rgba(52,168,83,.18),rgba(52,168,83,.06));
+                       border: 1px solid rgba(52,168,83,.25); }
+        .stat-time-b { background: linear-gradient(135deg,rgba(255,213,79,.18),rgba(255,213,79,.06));
+                       border: 1px solid rgba(255,213,79,.25); }
+        .stat-elapsed{ background: linear-gradient(135deg,rgba(255,87,34,.18),rgba(255,87,34,.06));
+                       border: 1px solid rgba(255,87,34,.25); }
+
+        .stat .num {
+            font-family: 'Orbitron', monospace; font-weight: 900;
+            font-size: 2rem; line-height: 1; letter-spacing: 1px;
+        }
+        .stat-total  .num { color: #7ec8f8; }
+        .stat-treas  .num { color: #69d98a; }
+        .stat-time-b .num { color: #ffd54f; }
+        .stat-elapsed .num { color: #ff8a65; }
+
+        .stat .label { font-size: 11px; color: #4a6080; margin-top: 7px; letter-spacing: .4px; text-transform: uppercase; }
+
+        /* ── Score formula hint ── */
+        .hint { font-size: 11px; color: #3a5070; margin-bottom: 20px; text-align: center; }
+
+        /* ── Back button ── */
+        .back-btn {
+            display: block; text-align: center; padding: 14px;
+            background: linear-gradient(135deg,#1a73e8,#0d47a1);
+            color: #fff; text-decoration: none;
+            border-radius: 12px; font-size: 15px; font-weight: bold;
+            box-shadow: 0 4px 16px rgba(26,115,232,.4);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .back-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,115,232,.55); }
+
+        /* ── Leaderboard ── */
+        .card h2 { margin-bottom: 6px; color: #7ec8f8; font-size: 1.05rem; }
+        .sub { font-size: 11px; color: #3a5070; margin-bottom: 16px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead tr { border-bottom: 1px solid rgba(100,160,255,.15); }
+        th { padding: 9px 12px; text-align: left; font-size: 11px; color: #3a5070;
+             text-transform: uppercase; letter-spacing: .5px; }
+        td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 14px; }
+        tbody tr:hover { background: rgba(255,255,255,.03); }
+        .me td { background: rgba(52,168,83,.08) !important; }
+        td:first-child { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 14px; }
+        td b { font-family: 'Orbitron', monospace; font-size: 13px; color: #7ec8f8; }
+        td:nth-child(4) { color: #8aa8cc; }
+        td:nth-child(5) { color: #8aa8cc; }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <div class="hero-inner">
+        <h1>
+            {% if found_count == total %}🎉 完美通關！
+            {% elif found_count >= total // 2 %}🌟 表現不錯！
+            {% else %}💪 繼續加油！{% endif %}
+        </h1>
+        <p>{{ player.name }} 的冒險結束了</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <div class="stats">
+            <div class="stat stat-total">
+                <div class="num" id="final-score" data-target="{{ player.score }}">0</div>
+                <div class="label">總分</div>
+            </div>
+            <div class="stat stat-treas">
+                <div class="num">{{ found_count }}/{{ total }}</div>
+                <div class="label">寶藏</div>
+            </div>
+            <div class="stat stat-time-b">
+                <div class="num" style="font-size:1.5rem">+{{ time_bonus }}</div>
+                <div class="label">時間獎勵</div>
+            </div>
+            <div class="stat stat-elapsed">
+                <div class="num" style="font-size:1.5rem">{{ player.elapsed_time | round(0) | int }}s</div>
+                <div class="label">用時</div>
+            </div>
+        </div>
+        <p class="hint">寶藏分（依距離 50~500）+ 順序/連擊獎勵 + 時間獎勵（剩餘秒×1）</p>
+        <a href="/" class="back-btn">🔄 再玩一次</a>
+    </div>
+
+    {% if top10 %}
+    <div class="card">
+        <h2>🏆 {{ city }} 排行榜</h2>
+        <p class="sub">同城市玩家最高分</p>
+        <table>
+            <thead>
+                <tr><th>名次</th><th>玩家</th><th>分數</th><th>寶藏</th><th>時間</th></tr>
+            </thead>
+            <tbody>
+            {% for s in top10 %}
+            <tr {% if s.name == player.name and s.score == player.score %}class="me"{% endif %}>
+                <td>{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}{{ loop.index }}{% endif %}</td>
+                <td>{{ s.name }}</td>
+                <td><b>{{ s.score }}</b></td>
+                <td>{{ s.treasures }}</td>
+                <td>{{ s.time }}s</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Score roll-up animation
+    const el = document.getElementById('final-score');
+    const target = parseInt(el.dataset.target, 10);
+    const dur = 1200;
+    const start = performance.now();
+    function step(now) {
+        const t = Math.min((now - start) / dur, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(ease * target);
+        if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+</script>
+</body>
+</html>

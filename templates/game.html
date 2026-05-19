@@ -2152,11 +2152,18 @@ function _parseOSMBuildings(data){
     return buildings;
 }
 function fetchBuildingsDirect(pts){
-    const R=0.0013;
-    const clauses=pts.map(([la,lo])=>
+    // 在相鄰兩點之間插入中點，讓路徑沿途的建築物也被涵蓋
+    const extPts=[];
+    for(let i=0;i<pts.length;i++){
+        extPts.push(pts[i]);
+        if(i<pts.length-1)
+            extPts.push([(pts[i][0]+pts[i+1][0])/2,(pts[i][1]+pts[i+1][1])/2]);
+    }
+    const R=0.002;  // 222m（原 144m）讓每個點覆蓋更大區域
+    const clauses=extPts.slice(0,24).map(([la,lo])=>
         `way["building"](${(la-R).toFixed(5)},${(lo-R).toFixed(5)},${(la+R).toFixed(5)},${(lo+R).toFixed(5)});`
     ).join('');
-    const query=`[out:json][timeout:16][maxsize:67108864];(${clauses});(._;>;);out body;`;
+    const query=`[out:json][timeout:20][maxsize:67108864];(${clauses});(._;>;);out body;`;
     const body=new URLSearchParams({data:query});
     return new Promise(function(resolve){
         var done=false, failed=0, n=OVERPASS_MIRRORS.length;
@@ -2177,7 +2184,7 @@ function fetchBuildingsDirect(pts){
     });
 }
 // ── localStorage 快取（24 小時有效）──────────────────────────
-const _BLD_KEY=`bld_${Math.round(BOUNDS.s*40)}_${Math.round(BOUNDS.n*40)}_${Math.round(BOUNDS.w*40)}_${Math.round(BOUNDS.e*40)}`;
+const _BLD_KEY=`bld2_${Math.round(BOUNDS.s*40)}_${Math.round(BOUNDS.n*40)}_${Math.round(BOUNDS.w*40)}_${Math.round(BOUNDS.e*40)}`;
 async function fetchBuildingsCached(pts){
     try{
         const raw=localStorage.getItem(_BLD_KEY);
@@ -2204,7 +2211,7 @@ async function fetchBuildingsCached(pts){
 async function loadBuildingsBackground(){
     try{
         // 先試快取（瞬間），再試 Overpass（最多 17s）
-        const raw=await fetchBuildingsCached(FOCUS_POINTS.slice(0,6));
+        const raw=await fetchBuildingsCached(FOCUS_POINTS);
         if(raw.length===0) return;
         loadBuildings(raw);
         routeGrid=buildRouteGrid();

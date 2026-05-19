@@ -1776,7 +1776,9 @@ let astarBudget=0;
 // ── 鍵盤 ──────────────────────────────────────────────────
 const keys={};
 const keyDownAt={};   // key → 按下時間戳，用於偵測幽靈按鍵
-const MOVE_KEYS=new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D']);
+// 單字元鍵統一存小寫，避免 Shift+W keydown('W') / keyup('w') 大小寫不一致導致飄移
+function _nk(k){ return k.length===1 ? k.toLowerCase() : k; }
+const MOVE_KEYS=new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d']);
 
 function clearAllKeys(){
     for(const k in keys) delete keys[k];
@@ -1787,15 +1789,16 @@ document.addEventListener('keydown', e=>{
     if(!gameReady) return;                        // 倒數期間完全忽略，防止殘留
     if(e.isComposing||e.key==='Process') return;  // 中文/日文輸入法 IME 攔截
     getAudio();
-    if(MOVE_KEYS.has(e.key)) e.preventDefault();
-    if(e.key===' '){e.preventDefault();collectNearest();return;}
-    if(e.key==='q'||e.key==='Q'){e.preventDefault();dropDecoy();return;}
-    keys[e.key]=true;
-    keyDownAt[e.key]=Date.now();
+    const k=_nk(e.key);
+    if(MOVE_KEYS.has(k)) e.preventDefault();
+    if(k===' '){e.preventDefault();collectNearest();return;}
+    if(k==='q'){e.preventDefault();dropDecoy();return;}
+    keys[k]=true;
+    keyDownAt[k]=Date.now();
 });
 document.addEventListener('keyup', e=>{
-    delete keys[e.key];
-    delete keyDownAt[e.key];
+    const k=_nk(e.key);
+    delete keys[k]; delete keyDownAt[k];
 });
 // 多重清除：任何失焦情況都清除按鍵，防止飄移
 window.addEventListener('blur', clearAllKeys);
@@ -1897,10 +1900,10 @@ function loop(ts) {
             tickPullingItems(dt);
             if(stunTimer===0){  // 被定身時無法移動
                 let dx=0,dy=0;
-                if(keys['ArrowUp']  ||keys['w']||keys['W']) dy+=1;
-                if(keys['ArrowDown'] ||keys['s']||keys['S']) dy-=1;
-                if(keys['ArrowRight']||keys['d']||keys['D']) dx+=1;
-                if(keys['ArrowLeft'] ||keys['a']||keys['A']) dx-=1;
+                if(keys['ArrowUp']   ||keys['w']) dy+=1;
+                if(keys['ArrowDown'] ||keys['s']) dy-=1;
+                if(keys['ArrowRight']||keys['d']) dx+=1;
+                if(keys['ArrowLeft'] ||keys['a']) dx-=1;
                 if(dx||dy){
                     const n=Math.hypot(dx,dy);
                     const spd=(isSprinting?SPRINT_SPD:WALK_SPD)*(speedBoostTimer>0?2:1);

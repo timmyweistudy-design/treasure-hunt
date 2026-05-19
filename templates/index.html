@@ -130,11 +130,14 @@
 
     <div class="card">
         <h2>🚀 開始遊戲</h2>
-        <form action="/start" method="POST">
+        <form action="/start" method="POST" id="start-form">
             <div class="form-row">
                 <input type="text" name="player_name" placeholder="你的名字" required maxlength="20">
                 <input type="text" name="city" placeholder="城市（Taipei、Tokyo、Paris...）" value="Taipei" required>
-                <button type="submit">開始尋寶！</button>
+                <button type="submit" id="start-btn">開始尋寶！</button>
+            </div>
+            <div id="loading-hint" style="display:none;margin-top:12px;color:#7ec8f8;font-size:13px;text-align:center">
+                🌐 正在取得城市地圖與建築物資料，請稍候（10–20 秒）…
             </div>
         </form>
     </div>
@@ -174,6 +177,13 @@
 </div>
 
 <script>
+    document.getElementById('start-form').addEventListener('submit', function(){
+        const btn = document.getElementById('start-btn');
+        btn.textContent = '載入中…';
+        btn.disabled = true;
+        document.getElementById('loading-hint').style.display = 'block';
+    });
+
     const s = document.getElementById('stars');
     for (let i = 0; i < 70; i++) {
         const el = document.createElement('div');

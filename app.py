@@ -1,7 +1,7 @@
 import os
 import json
 import time
-import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, request, session, jsonify, redirect, url_for
 from game.models import Player, Scoreboard
 from game.map_api import MapAPI
@@ -43,7 +43,6 @@ def start_game():
         total_dist = calculate_total_distance(player_coords, optimal_route)
 
         all_coords = [player_coords] + [t.coords for t in optimal_route]
-        route_coords = MapAPI.get_route(all_coords)
 
         # Bounding box covering start + all treasure locations (for building collision)
         all_lats = [lat] + [t.lat for t in treasures]
@@ -56,6 +55,20 @@ def start_game():
             "e": max(all_lons) + margin,
         }
 
+        # 並行 fetch：建築物 + OSRM 路線（省去遊戲載入畫面的等待）
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f_buildings = ex.submit(MapAPI.fetch_roads_bbox,
+                                    bounds["s"], bounds["n"], bounds["w"], bounds["e"])
+            f_route     = ex.submit(MapAPI.get_route, all_coords)
+            try:
+                buildings_data = f_buildings.result(timeout=30)
+            except Exception:
+                buildings_data = {"buildings": []}
+            try:
+                route_coords = f_route.result(timeout=15)
+            except Exception:
+                route_coords = []
+
         session["player"] = {
             "name": player_name,
             "lat": lat, "lon": lon,
@@ -66,18 +79,6 @@ def start_game():
         }
         session["treasures"] = [t.to_dict() for t in treasures]
         session["optimal_order"] = [t.id for t in optimal_route]
-
-        # 預先在背景 fetch 建築物，瀏覽器請求 /roads 時可直接從快取回傳
-        def _prefetch(s, n, w, e):
-            try:
-                MapAPI.fetch_roads_bbox(s, n, w, e)
-            except Exception:
-                pass
-        threading.Thread(
-            target=_prefetch,
-            args=(bounds["s"], bounds["n"], bounds["w"], bounds["e"]),
-            daemon=True
-        ).start()
 
         return render_template("game.html",
             player_name=player_name,
@@ -92,6 +93,7 @@ def start_game():
             optimal_order_json=json.dumps([t.id for t in optimal_route]),
             route_coords_json=json.dumps(route_coords),
             bounds_json=json.dumps(bounds),
+            buildings_json=json.dumps(buildings_data.get("buildings", [])),
         )
 
     except ValueError as e:

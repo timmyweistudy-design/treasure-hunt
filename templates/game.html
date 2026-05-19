@@ -1736,15 +1736,25 @@ function tickSprint(dt) {
 
 // ── 移動 + 滑牆 ───────────────────────────────────────────
 let blockFlash=0;
+function clampToBounds(lat,lon){
+    return [
+        Math.max(BOUNDS.s, Math.min(BOUNDS.n, lat)),
+        Math.max(BOUNDS.w, Math.min(BOUNDS.e, lon))
+    ];
+}
 function tryMove(dLon,dLat) {
-    const nLat=pLat+dLat, nLon=pLon+dLon;
+    let nLat=pLat+dLat, nLon=pLon+dLon;
+    // 邊界限制：不可走出正方形邊界
+    [nLat,nLon]=clampToBounds(nLat,nLon);
     if(invincTimer>0){pLat=nLat;pLon=nLon;}
     else if(!isInBuilding(nLat,nLon)){pLat=nLat;pLon=nLon;}
     else {
         // 對角線被擋時，兩軸獨立嘗試（修正無法斜走問題）
         let moved=false;
-        if(dLat&&!isInBuilding(pLat+dLat,pLon)){pLat+=dLat;moved=true;}
-        if(dLon&&!isInBuilding(pLat,pLon+dLon)){pLon+=dLon;moved=true;}
+        const cLat=Math.max(BOUNDS.s,Math.min(BOUNDS.n,pLat+dLat));
+        const cLon=Math.max(BOUNDS.w,Math.min(BOUNDS.e,pLon+dLon));
+        if(dLat&&!isInBuilding(cLat,pLon)){pLat=cLat;moved=true;}
+        if(dLon&&!isInBuilding(pLat,cLon)){pLon=cLon;moved=true;}
         if(!moved){
             if(++blockFlash===1){showToast('🚧 建築物擋住，請繞路',1200);playBlocked();}
             if(blockFlash>60){blockFlash=0;ensureOutsideBuilding();clearAllKeys();}
@@ -1754,7 +1764,7 @@ function tryMove(dLon,dLat) {
     blockFlash=0;
     pMarker.setLatLng([pLat,pLon]);
     pCircle.setLatLng([pLat,pLon]);
-    if(aiFrame) map.setView([pLat,pLon],map.getZoom(),{animate:false}); // 30fps 足夠
+    if(aiFrame) map.setView([pLat,pLon],map.getZoom(),{animate:false});
 }
 
 // uiFrame=每4幀(~15fps)觸發UI更新; aiFrame=每2幀(~30fps)更新AI標記

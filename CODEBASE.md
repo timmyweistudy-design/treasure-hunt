@@ -47,6 +47,20 @@
 | 平台 | WSL2（Flask 需 `host="0.0.0.0"`，瀏覽器用 WSL2 IP:5000） |
 | 字型 | Google Fonts：Orbitron（數字/分數/計時/距離）、Noto Sans TC（中文介面） |
 
+### 2026-05-19 game.html 玩家邊界 & 飄移修復（最新）
+
+**玩家不可走出 BOUNDS 邊界**
+- `tryMove()` 加入 `clampToBounds(lat, lon)`，每次移動前先將目標座標夾在 `BOUNDS.s/n/w/e` 內
+- 對角線滑牆時兩軸各自 clamp，不讓任一軸超出邊界
+
+**幽靈按鍵飄移（其他玩家）**
+- `keydown` 最前方加 `if(!gameReady) return`：倒數期間完全不記錄按鍵
+- `keydown` 加 `if(e.isComposing||e.key==='Process') return`：攔截中文輸入法（IME）假事件
+- `startCountdown()` 在 `gameReady=true` 前呼叫 `clearAllKeys()`：清除倒數累積的殘留按鍵
+- 主迴圈每幀掃描：移動鍵超過 3 秒未收到 `keyup` 強制清除（`keyDownAt` 時間戳追蹤）
+
+---
+
 ### 2026-05-19 game.html 建築物碰撞 & 地圖修復（最新）
 
 **白屏根本原因：`let astarBudget` 重複宣告**

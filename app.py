@@ -4,7 +4,7 @@ import time
 import uuid
 import random
 import threading
-from flask import Flask, render_template, request, session, jsonify, redirect, url_for
+from flask import Flask, render_template, request, session, jsonify, redirect, url_for, make_response
 from game.models import Player, Scoreboard, Treasure
 from game.map_api import MapAPI
 from game.pathfinder import solve_tsp_exact, calculate_total_distance, haversine
@@ -13,6 +13,38 @@ from config import GAME_CONFIG
 app = Flask(__name__)
 app.secret_key = "treasure-hunt-fixed-key-2026"
 scoreboard = Scoreboard()
+
+# Pre-populated coords for common cities — skip Nominatim entirely for these
+_KNOWN_CITIES: dict = {
+    "taipei":       (25.0375198,  121.5636796),
+    "台北":          (25.0375198,  121.5636796),
+    "taichung":     (24.1477358,  120.6736482),
+    "台中":          (24.1477358,  120.6736482),
+    "tainan":       (22.9997281,  120.2270277),
+    "台南":          (22.9997281,  120.2270277),
+    "kaohsiung":    (22.6203348,  120.3120375),
+    "高雄":          (22.6203348,  120.3120375),
+    "tokyo":        (35.6761919,  139.6503106),
+    "東京":          (35.6761919,  139.6503106),
+    "osaka":        (34.6937249,  135.5022535),
+    "大阪":          (34.6937249,  135.5022535),
+    "kyoto":        (35.0212466,  135.7555968),
+    "京都":          (35.0212466,  135.7555968),
+    "seoul":        (37.5666791,  126.9782914),
+    "首爾":          (37.5666791,  126.9782914),
+    "hong kong":    (22.3193039,  114.1693611),
+    "香港":          (22.3193039,  114.1693611),
+    "singapore":    (1.357107,    103.8194992),
+    "新加坡":         (1.357107,    103.8194992),
+    "bangkok":      (13.7544238,  100.4930399),
+    "曼谷":          (13.7544238,  100.4930399),
+    "paris":        (48.8588897,  2.3200410),
+    "london":       (51.5074456, -0.1277653),
+    "new york":     (40.7127281, -74.0060152),
+    "los angeles":  (34.0536909, -118.2427666),
+    "sydney":       (-33.8688197, 151.2092955),
+    "melbourne":    (-37.8142176, 144.9631608),
+}
 
 # ── 背景準備任務：req_id → {status, ...} ──────────────────────
 _pending: dict = {}
@@ -55,8 +87,11 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
             all_t = [Treasure(**d) for d in cached["treasures"]]
             treasures = random.sample(all_t, min(GAME_CONFIG["treasure_count"], len(all_t)))
         else:
-            location = MapAPI.geocode(city)
-            lat, lon = location["lat"], location["lon"]
+            if city_key in _KNOWN_CITIES:
+                lat, lon = _KNOWN_CITIES[city_key]
+            else:
+                location = MapAPI.geocode(city)
+                lat, lon = location["lat"], location["lon"]
             treasures = MapAPI.fetch_poi(lat, lon)
             if not treasures:
                 _pending[req_id] = {"status": "error", "message": "此城市找不到足夠的地點，請嘗試其他城市"}
@@ -221,7 +256,7 @@ def game():
         return redirect("/")
     gd = _game_data.pop(game_key)
     session.pop("game_key", None)
-    return render_template("game.html",
+    resp = make_response(render_template("game.html",
         player_name=gd["player_name"],
         player_lat=gd["player_lat"],
         player_lon=gd["player_lon"],
@@ -235,7 +270,10 @@ def game():
         route_coords_json=gd["route_coords_json"],
         bounds_json=gd["bounds_json"],
         focus_points_json=gd["focus_points_json"],
-    )
+    ))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 @app.route("/roads")

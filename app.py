@@ -1,7 +1,7 @@
 import os
 import json
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 from flask import Flask, render_template, request, session, jsonify, redirect, url_for
 from game.models import Player, Scoreboard
 from game.map_api import MapAPI
@@ -11,6 +11,28 @@ from config import GAME_CONFIG
 app = Flask(__name__)
 app.secret_key = "treasure-hunt-fixed-key-2026"
 scoreboard = Scoreboard()
+
+# 建築物預先快取協調：防止 /start 背景 fetch 和 /roads 同時打 Overpass
+_pf_lock = threading.Lock()
+_pf_events: dict = {}   # bbox_key → threading.Event（fetch 進行中時存在）
+
+def _prefetch_buildings(s, n, w, e):
+    key = (round(s, 3), round(n, 3), round(w, 3), round(e, 3))
+    with _pf_lock:
+        if key in MapAPI._road_cache or key in _pf_events:
+            return  # 已快取或已在 fetch 中
+        evt = threading.Event()
+        _pf_events[key] = evt
+    def _run():
+        try:
+            MapAPI.fetch_roads_bbox(s, n, w, e)
+        except Exception:
+            pass
+        finally:
+            evt.set()
+            with _pf_lock:
+                _pf_events.pop(key, None)
+    threading.Thread(target=_run, daemon=True).start()
 
 
 @app.route("/")
@@ -43,6 +65,7 @@ def start_game():
         total_dist = calculate_total_distance(player_coords, optimal_route)
 
         all_coords = [player_coords] + [t.coords for t in optimal_route]
+        route_coords = MapAPI.get_route(all_coords)
 
         # Bounding box covering start + all treasure locations (for building collision)
         all_lats = [lat] + [t.lat for t in treasures]
@@ -55,19 +78,8 @@ def start_game():
             "e": max(all_lons) + margin,
         }
 
-        # 並行 fetch：建築物 + OSRM 路線（省去遊戲載入畫面的等待）
-        with ThreadPoolExecutor(max_workers=2) as ex:
-            f_buildings = ex.submit(MapAPI.fetch_roads_bbox,
-                                    bounds["s"], bounds["n"], bounds["w"], bounds["e"])
-            f_route     = ex.submit(MapAPI.get_route, all_coords)
-            try:
-                buildings_data = f_buildings.result(timeout=30)
-            except Exception:
-                buildings_data = {"buildings": []}
-            try:
-                route_coords = f_route.result(timeout=15)
-            except Exception:
-                route_coords = []
+        # 背景預取建築物（/roads 到來時直接從快取回傳，不重複打 Overpass）
+        _prefetch_buildings(bounds["s"], bounds["n"], bounds["w"], bounds["e"])
 
         session["player"] = {
             "name": player_name,
@@ -93,7 +105,6 @@ def start_game():
             optimal_order_json=json.dumps([t.id for t in optimal_route]),
             route_coords_json=json.dumps(route_coords),
             bounds_json=json.dumps(bounds),
-            buildings_json=json.dumps(buildings_data.get("buildings", [])),
         )
 
     except ValueError as e:
@@ -112,6 +123,12 @@ def get_roads():
     w = request.args.get("w", type=float)
     e = request.args.get("e", type=float)
     if None not in (s, n, w, e):
+        # 若有背景 prefetch 正在進行，等它完成（避免同時打兩次 Overpass）
+        key = (round(s, 3), round(n, 3), round(w, 3), round(e, 3))
+        with _pf_lock:
+            evt = _pf_events.get(key)
+        if evt:
+            evt.wait(timeout=28)
         try:
             return jsonify(MapAPI.fetch_roads_bbox(s, n, w, e))
         except Exception:

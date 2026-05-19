@@ -214,10 +214,11 @@ def server_error(e):
 
 if __name__ == "__main__":
     os.makedirs("data", exist_ok=True)
+    port = int(os.environ.get("PORT", 5000))
     try:
         from waitress import serve
-        print("Starting with waitress (production WSGI)...")
-        serve(app, host="0.0.0.0", port=5000, threads=8)
+        print(f"Starting with waitress on port {port}...")
+        serve(app, host="0.0.0.0", port=port, threads=8)
     except ImportError:
-        print("waitress not found, falling back to Flask dev server (threaded)...")
-        app.run(host="0.0.0.0", debug=False, port=5000, threaded=True)
+        print(f"waitress not found, falling back to Flask dev server on port {port}...")
+        app.run(host="0.0.0.0", debug=False, port=port, threaded=True)

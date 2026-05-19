@@ -1692,7 +1692,8 @@ function ensureOutsideBuilding() {
     const steps=[.00005,.0001,.0002,.0004];
     const dirs=[[0,1],[0,-1],[1,0],[-1,0],[1,1],[-1,1],[1,-1],[-1,-1]];
     for(const s of steps) for(const [dx,dy] of dirs){
-        const nl=pLat+dy*s,no=pLon+dx*s;
+        const nl=Math.max(BOUNDS.s,Math.min(BOUNDS.n,pLat+dy*s));
+        const no=Math.max(BOUNDS.w,Math.min(BOUNDS.e,pLon+dx*s));
         if(!isInBuilding(nl,no)){pLat=nl;pLon=no;return;}
     }
 }
@@ -1865,13 +1866,16 @@ function loop(ts) {
             frameCount++; uiFrame=(frameCount%4===0); aiFrame=(frameCount%2===0);
             const dt=Math.min((ts-lastT)/1000,.05);
             if(!document.hasFocus()) clearAllKeys();
-            // 幽靈按鍵防護：移動鍵超過 3 秒未收到 keyup → 強制清除
+            // 幽靈按鍵防護：移動鍵 500ms 無 keydown 重整 → 視為已放開
             const _now=Date.now();
             for(const k of MOVE_KEYS){
-                if(keyDownAt[k]&&_now-keyDownAt[k]>3000){
+                if(keyDownAt[k]&&_now-keyDownAt[k]>500){
                     delete keys[k]; delete keyDownAt[k];
                 }
             }
+            // 硬邊界：任何程式路徑都不可讓玩家超出 BOUNDS
+            pLat=Math.max(BOUNDS.s,Math.min(BOUNDS.n,pLat));
+            pLon=Math.max(BOUNDS.w,Math.min(BOUNDS.e,pLon));
             tickSprint(dt);
             tickEffects(dt);
             tickItems(dt);

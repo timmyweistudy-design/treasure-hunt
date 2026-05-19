@@ -2106,11 +2106,11 @@ function _parseOSMBuildings(data){
     return buildings;
 }
 async function fetchBuildingsDirect(pts){
-    const R=0.0013;
+    const R=0.0020; // 220m 半徑，6 點足夠覆蓋遊戲範圍
     const clauses=pts.map(([la,lo])=>
         `way["building"](${(la-R).toFixed(5)},${(lo-R).toFixed(5)},${(la+R).toFixed(5)},${(lo+R).toFixed(5)});`
     ).join('');
-    const query=`[out:json][timeout:20][maxsize:67108864];(${clauses});(._;>;);out body;`;
+    const query=`[out:json][timeout:18][maxsize:67108864];(${clauses});(._;>;);out body;`;
     const body=new URLSearchParams({data:query});
     const attempts=OVERPASS_MIRRORS.map(url=>
         fetch(url,{method:'POST',body})
@@ -2118,6 +2118,29 @@ async function fetchBuildingsDirect(pts){
             .then(j=>_parseOSMBuildings(j))
     );
     try{ return await Promise.any(attempts); }catch{ return []; }
+}
+// ── localStorage 快取（24 小時有效）──────────────────────────
+const _BLD_KEY=`bld_${Math.round(BOUNDS.s*40)}_${Math.round(BOUNDS.n*40)}_${Math.round(BOUNDS.w*40)}_${Math.round(BOUNDS.e*40)}`;
+async function fetchBuildingsCached(pts){
+    try{
+        const raw=localStorage.getItem(_BLD_KEY);
+        if(raw){
+            const {ts,data}=JSON.parse(raw);
+            if(Date.now()-ts<86400000&&data.length>0){
+                document.getElementById('ld-sub').textContent='✅ 使用快取資料（瞬間載入）';
+                return data;
+            }
+        }
+    }catch(e){}
+    const blds=await fetchBuildingsDirect(pts);
+    if(blds.length>0){
+        try{
+            localStorage.setItem(_BLD_KEY,JSON.stringify({ts:Date.now(),data:blds}));
+        }catch(e){
+            try{localStorage.clear();localStorage.setItem(_BLD_KEY,JSON.stringify({ts:Date.now(),data:blds}));}catch(e2){}
+        }
+    }
+    return blds;
 }
 
 // ── 載入建築物 → 地圖概覽 → 倒數 ─────────────────────────
@@ -2131,8 +2154,8 @@ async function doLoad(){
         },1000);
         document.getElementById('ld-sub').textContent='直連地圖資料庫中… 0s';
 
-        // 優先：瀏覽器直連 Overpass（不經伺服器）
-        let raw=await fetchBuildingsDirect(FOCUS_POINTS);
+        // 優先：瀏覽器直連 Overpass（出發點＋5寶藏，220m 半徑，有快取）
+        let raw=await fetchBuildingsCached(FOCUS_POINTS.slice(0,6));
 
         // 備援：若直連失敗，改走伺服器
         if(raw.length===0){

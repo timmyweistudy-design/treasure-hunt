@@ -1869,10 +1869,11 @@ function loop(ts) {
             frameCount++; uiFrame=(frameCount%4===0); aiFrame=(frameCount%2===0);
             const dt=Math.min((ts-lastT)/1000,.05);
             if(!document.hasFocus()) clearAllKeys();
-            // 幽靈按鍵防護：移動鍵 500ms 無 keydown 重整 → 視為已放開
+            // 幽靈按鍵保底：移動鍵 2000ms 無 keydown 重整 → 強制清除
+            // 2000ms > OS 最大初始 repeat delay（Windows 最高 1000ms），不會誤清合法持鍵
             const _now=Date.now();
             for(const k of MOVE_KEYS){
-                if(keyDownAt[k]&&_now-keyDownAt[k]>500){
+                if(keyDownAt[k]&&_now-keyDownAt[k]>2000){
                     delete keys[k]; delete keyDownAt[k];
                 }
             }

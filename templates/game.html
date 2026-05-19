@@ -1778,14 +1778,12 @@ let astarBudget=0;
 
 // ── 鍵盤 ──────────────────────────────────────────────────
 const keys={};
-const keyDownAt={};   // key → 按下時間戳，用於偵測幽靈按鍵
 // 單字元鍵統一存小寫，避免 Shift+W keydown('W') / keyup('w') 大小寫不一致導致飄移
 function _nk(k){ return k.length===1 ? k.toLowerCase() : k; }
 const MOVE_KEYS=new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d']);
 
 function clearAllKeys(){
     for(const k in keys) delete keys[k];
-    for(const k in keyDownAt) delete keyDownAt[k];
 }
 
 document.addEventListener('keydown', e=>{
@@ -1797,18 +1795,10 @@ document.addEventListener('keydown', e=>{
     if(k===' '){e.preventDefault();collectNearest();return;}
     if(k==='q'){e.preventDefault();dropDecoy();return;}
     keys[k]=true;
-    const _t=Date.now();
-    keyDownAt[k]=_t;
-    // 多鍵同按時 OS 的 key-repeat 只給最後按下的鍵；
-    // 任何移動鍵的 repeat 都替所有目前持著的移動鍵刷新時間戳，
-    // 防止幽靈保底把「沒收到 repeat 的那個鍵」誤清掉
-    if(MOVE_KEYS.has(k)){
-        for(const mk of MOVE_KEYS){ if(keys[mk]) keyDownAt[mk]=_t; }
-    }
 });
 document.addEventListener('keyup', e=>{
     const k=_nk(e.key);
-    delete keys[k]; delete keyDownAt[k];
+    delete keys[k];
 });
 // 多重清除：任何失焦情況都清除按鍵，防止飄移
 window.addEventListener('blur', clearAllKeys);
@@ -1879,14 +1869,6 @@ function loop(ts) {
             frameCount++; uiFrame=(frameCount%4===0); aiFrame=(frameCount%2===0);
             const dt=Math.min((ts-lastT)/1000,.05);
             if(!document.hasFocus()) clearAllKeys();
-            // 幽靈按鍵保底：移動鍵 2000ms 無 keydown 重整 → 強制清除
-            // 2000ms > OS 最大初始 repeat delay（Windows 最高 1000ms），不會誤清合法持鍵
-            const _now=Date.now();
-            for(const k of MOVE_KEYS){
-                if(keyDownAt[k]&&_now-keyDownAt[k]>2000){
-                    delete keys[k]; delete keyDownAt[k];
-                }
-            }
             // 硬邊界：任何程式路徑都不可讓玩家超出 BOUNDS
             pLat=Math.max(BOUNDS.s,Math.min(BOUNDS.n,pLat));
             pLon=Math.max(BOUNDS.w,Math.min(BOUNDS.e,pLon));

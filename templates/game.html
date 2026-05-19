@@ -1101,7 +1101,7 @@ function spawnAI(forceType, silent=false) {
         // 均勻分散各巡邏守衛的起始路標，避免全部重疊
         const pIdx=aiList.filter(a=>a.type==='patroller').length;
         ai.waypointIdx=Math.floor(pIdx*OPTIMAL.length/10)%OPTIMAL.length;
-        ai.alertTimer=0; ai.alertCD=0; ai.fovPoly=null; ai.fovDrawTimer=0;
+        ai.alertTimer=0; ai.alertCD=0; ai.fovPoly=null; ai.fovDrawTimer=Math.random()*0.1;
         ai.facingLat=iLat+0.001; ai.facingLon=iLon;
     } else {
         ai.targetTId=null; ai.stealCD=0; ai._prevTargetTId=null; ai.targetMarker=null;
@@ -1141,9 +1141,10 @@ function updateFOVPoly(ai) {
     const col=ai.alertTimer>0?'#c62828':'#6a1b9a';
     if(!ai.fovPoly){
         ai.fovPoly=L.polygon(pts,{color:col,weight:1.5,fillColor:col,fillOpacity:.18,interactive:false}).addTo(map);
+        ai._fovCol=col;
     } else {
         ai.fovPoly.setLatLngs(pts);
-        ai.fovPoly.setStyle({color:col,fillColor:col});
+        if(col!==ai._fovCol){ai.fovPoly.setStyle({color:col,fillColor:col});ai._fovCol=col;}
     }
 }
 
@@ -1768,7 +1769,7 @@ function tryMove(dLon,dLat) {
     blockFlash=0;
     pMarker.setLatLng([pLat,pLon]);
     pCircle.setLatLng([pLat,pLon]);
-    if(aiFrame) map.setView([pLat,pLon],map.getZoom(),{animate:false});
+    map.setView([pLat,pLon],map.getZoom(),{animate:false});
 }
 
 // uiFrame=每4幀(~15fps)觸發UI更新; aiFrame=每2幀(~30fps)更新AI標記

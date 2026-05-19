@@ -247,6 +247,11 @@ def finish_game():
                            top10=scoreboard.get_top10(city))
 
 
+@app.route("/health")
+def health():
+    return "ok", 200
+
+
 @app.errorhandler(404)
 def not_found(e):
     return render_template("index.html", error="頁面不存在"), 404

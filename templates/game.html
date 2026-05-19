@@ -2080,25 +2080,73 @@ function retryLoading(){
     doLoad();
 }
 
+// ── 直接從 Overpass 取得建築物（繞過伺服器）────────────────
+const OVERPASS_MIRRORS=[
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.openstreetmap.ru/api/interpreter',
+    'https://overpass-api.de/api/interpreter',
+];
+function _parseOSMBuildings(data){
+    const nodes={};
+    for(const el of(data.elements||[])) if(el.type==='node') nodes[el.id]=[el.lon,el.lat];
+    const buildings=[];
+    for(const el of(data.elements||[])){
+        if(el.type!=='way') continue;
+        const tags=el.tags||{};
+        if(!('building' in tags)) continue;
+        const layer=parseInt(tags.layer||'0')||0;
+        if(tags.bridge||tags.tunnel||tags.building==='bridge'||
+           tags.building==='passage'||tags.building==='roof'||layer>=1||layer<0) continue;
+        let coords=(el.nodes||[]).map(n=>nodes[n]).filter(Boolean);
+        if(coords.length<4) continue;
+        if(coords.length>24){const s=Math.max(1,Math.floor(coords.length/20));coords=coords.filter((_,i)=>i%s===0);}
+        buildings.push(coords);
+        if(buildings.length>=3000) break;
+    }
+    return buildings;
+}
+async function fetchBuildingsDirect(pts){
+    const R=0.0013;
+    const clauses=pts.map(([la,lo])=>
+        `way["building"](${(la-R).toFixed(5)},${(lo-R).toFixed(5)},${(la+R).toFixed(5)},${(lo+R).toFixed(5)});`
+    ).join('');
+    const query=`[out:json][timeout:20][maxsize:67108864];(${clauses});(._;>;);out body;`;
+    const body=new URLSearchParams({data:query});
+    const attempts=OVERPASS_MIRRORS.map(url=>
+        fetch(url,{method:'POST',body})
+            .then(r=>{if(!r.ok)throw r.status;return r.json();})
+            .then(j=>_parseOSMBuildings(j))
+    );
+    try{ return await Promise.any(attempts); }catch{ return []; }
+}
+
 // ── 載入建築物 → 地圖概覽 → 倒數 ─────────────────────────
 async function doLoad(){
     try{
-        document.getElementById('ld-step').textContent='🔌 連線伺服器…';
+        document.getElementById('ld-step').textContent='🌐 取得建築物輪廓…';
         let elapsed=0;
         const timer=setInterval(()=>{
             elapsed++;
-            document.getElementById('ld-sub').textContent=`下載建築物輪廓中… ${elapsed}s`;
+            document.getElementById('ld-sub').textContent=`直連地圖資料庫中… ${elapsed}s`;
         },1000);
-        document.getElementById('ld-sub').textContent='下載建築物輪廓中… 0s';
+        document.getElementById('ld-sub').textContent='直連地圖資料庫中… 0s';
 
-        const ptsParam=encodeURIComponent(JSON.stringify(FOCUS_POINTS));
-        const res=await fetch(`/roads?pts=${ptsParam}`);
+        // 優先：瀏覽器直連 Overpass（不經伺服器）
+        let raw=await fetchBuildingsDirect(FOCUS_POINTS);
+
+        // 備援：若直連失敗，改走伺服器
+        if(raw.length===0){
+            document.getElementById('ld-sub').textContent='改由伺服器載入…';
+            try{
+                const ptsParam=encodeURIComponent(JSON.stringify(FOCUS_POINTS));
+                const res=await fetch(`/roads?pts=${ptsParam}`);
+                const data=await res.json();
+                raw=data.buildings||[];
+            }catch(e2){}
+        }
         clearInterval(timer);
         document.getElementById('ld-step').textContent='⚙️ 建立碰撞資料…';
         document.getElementById('ld-sub').textContent='計算建築多邊形與導航格…';
-
-        const data=await res.json();
-        const raw=data.buildings||[];
         if(raw.length===0){
             document.getElementById('ld-step').textContent='⚠️ 此城市建築物資料不足';
             document.getElementById('ld-sub').textContent='無法正確計算碰撞，請換一個城市';

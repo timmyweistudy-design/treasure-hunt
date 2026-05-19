@@ -1794,8 +1794,9 @@ function loop(ts) {
         try {
             const dt=Math.min((ts-lastT)/1000,.05);
             astarBudget=1; // 重置每幀預算
-            // 自動清除超過 400ms 未刷新的按鍵（修正 keyup 漏觸發導致的飄移）
-            for(const k in keys){ if(ts-keys[k]>400) delete keys[k]; }
+            // 自動清除超過 700ms 未刷新的移動鍵（覆蓋最長 OS 初始延遲 ~500ms）
+            // Shift 等修飾鍵不過期，靠 keyup/blur 清除
+            for(const k in keys){ if(MOVE_KEYS.has(k)&&ts-keys[k]>700) delete keys[k]; }
             tickSprint(dt);
             tickEffects(dt);
             tickItems(dt);

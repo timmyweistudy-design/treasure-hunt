@@ -47,7 +47,19 @@
 | 平台 | WSL2（Flask 需 `host="0.0.0.0"`，瀏覽器用 WSL2 IP:5000） |
 | 字型 | Google Fonts：Orbitron（數字/分數/計時/距離）、Noto Sans TC（中文介面） |
 
-### 2026-05-19 game.html 玩家邊界 & 飄移修復（最新）
+### 2026-05-19 移動 bug 修復：對角線 + 卡頓（最新）
+
+**對角線移動只走單一方向（`tryMove` 碰撞判斷順序 bug）**
+- 根本原因：`else` 分支先執行 `if(dLat){pLat=cLat}` 更新了 `pLat`，再用*新* `pLat` 測試 lon 碰撞，導致 Y 位移影響 X 碰撞判斷
+- 修正：先以原始 `pLat/pLon` 計算兩軸碰撞結果（`moveLat`, `moveLon`），再一起套用
+
+**持續按住移動鍵卡頓（main thread 被建築物計算阻塞）**
+- 根本原因：`loadBuildingsBackground()` 連續同步呼叫 `loadBuildings()` → `buildRouteGrid()` → `rebuildOptimalRouteAstar()`，阻塞主執行緒數百 ms，rAF 無法插入執行
+- 修正：三個重計算之間加入 `await new Promise(r=>setTimeout(r,0))` 讓出主執行緒
+
+---
+
+### 2026-05-19 game.html 玩家邊界 & 飄移修復
 
 **玩家不可走出 BOUNDS 邊界（多層）**
 - `tryMove()` 加入 `clampToBounds(lat, lon)`，每次移動前夾在 `BOUNDS.s/n/w/e` 內

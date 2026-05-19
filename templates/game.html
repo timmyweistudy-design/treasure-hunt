@@ -1751,11 +1751,14 @@ function tryMove(dLon,dLat) {
     else if(!isInBuilding(nLat,nLon)){pLat=nLat;pLon=nLon;}
     else {
         // 對角線被擋時，兩軸獨立嘗試（修正無法斜走問題）
-        let moved=false;
+        // 先計算兩軸碰撞結果（使用原始 pLat/pLon），再套用，避免先更新一軸影響另一軸判斷
         const cLat=Math.max(BOUNDS.s,Math.min(BOUNDS.n,pLat+dLat));
         const cLon=Math.max(BOUNDS.w,Math.min(BOUNDS.e,pLon+dLon));
-        if(dLat&&!isInBuilding(cLat,pLon)){pLat=cLat;moved=true;}
-        if(dLon&&!isInBuilding(pLat,cLon)){pLon=cLon;moved=true;}
+        const moveLat=dLat && !isInBuilding(cLat,pLon);
+        const moveLon=dLon && !isInBuilding(pLat,cLon);
+        let moved=false;
+        if(moveLat){pLat=cLat;moved=true;}
+        if(moveLon){pLon=cLon;moved=true;}
         if(!moved){
             if(++blockFlash===1){showToast('🚧 建築物擋住，請繞路',1200);playBlocked();}
             if(blockFlash>60){blockFlash=0;ensureOutsideBuilding();clearAllKeys();}
@@ -2250,8 +2253,11 @@ async function loadBuildingsBackground(){
         if(subEl) subEl.textContent='';
         if(raw.length===0) return;
         loadBuildings(raw);
+        await new Promise(r=>setTimeout(r,0));   // yield — 讓 rAF 能在重計算間隙執行
         routeGrid=buildRouteGrid();
+        await new Promise(r=>setTimeout(r,0));
         rebuildOptimalRouteAstar();
+        await new Promise(r=>setTimeout(r,0));
         L.geoJSON({
             type:'FeatureCollection',
             features:raw.map(coords=>({

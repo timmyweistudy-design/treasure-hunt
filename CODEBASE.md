@@ -58,6 +58,10 @@
 - `keydown` 最前方加 `if(!gameReady) return`：倒數期間完全不記錄按鍵
 - `keydown` 加 `if(e.isComposing||e.key==='Process') return`：攔截中文輸入法（IME）假事件
 - `startCountdown()` 在 `gameReady=true` 前呼叫 `clearAllKeys()`：清除倒數累積的殘留按鍵
+- **根本原因修復**：所有單字元鍵統一用 `_nk(k)` 轉小寫後儲存
+  - Shift+W → keydown `e.key='W'` → 存 `'w'`；放開 W（Shift 已放）→ keyup `e.key='w'` → 刪 `'w'` ✓
+  - 原本大小寫不一致：存 `'W'` 但刪 `'w'`，導致 `keys['W']` 永遠殘留飄移
+  - CapsLock 切換造成的大小寫不一致也同步修復
 - 主迴圈每幀掃描移動鍵：超過 **500ms** 無 keydown 重整即視為放開（原 3000ms 太慢）
   - keydown repeat 約每 33ms 觸發，500ms ≈ 15 次重整，ghost key 在 <0.5s 內消失
 - `keyDownAt[key]` 每次 keydown（含 repeat）都更新，確保合法持鍵不被誤清

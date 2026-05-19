@@ -1764,18 +1764,28 @@ let astarBudget=0;
 
 // ── 鍵盤 ──────────────────────────────────────────────────
 const keys={};
+const keyDownAt={};   // key → 按下時間戳，用於偵測幽靈按鍵
 const MOVE_KEYS=new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D']);
 
-function clearAllKeys(){ for(const k in keys) delete keys[k]; }
+function clearAllKeys(){
+    for(const k in keys) delete keys[k];
+    for(const k in keyDownAt) delete keyDownAt[k];
+}
 
 document.addEventListener('keydown', e=>{
-    getAudio();   // 第一次按鍵時喚醒 AudioContext
+    if(!gameReady) return;                        // 倒數期間完全忽略，防止殘留
+    if(e.isComposing||e.key==='Process') return;  // 中文/日文輸入法 IME 攔截
+    getAudio();
     if(MOVE_KEYS.has(e.key)) e.preventDefault();
     if(e.key===' '){e.preventDefault();collectNearest();return;}
     if(e.key==='q'||e.key==='Q'){e.preventDefault();dropDecoy();return;}
     keys[e.key]=true;
+    keyDownAt[e.key]=Date.now();
 });
-document.addEventListener('keyup', e=>{ delete keys[e.key]; });
+document.addEventListener('keyup', e=>{
+    delete keys[e.key];
+    delete keyDownAt[e.key];
+});
 // 多重清除：任何失焦情況都清除按鍵，防止飄移
 window.addEventListener('blur', clearAllKeys);
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) clearAllKeys(); });
@@ -1845,6 +1855,13 @@ function loop(ts) {
             frameCount++; uiFrame=(frameCount%4===0); aiFrame=(frameCount%2===0);
             const dt=Math.min((ts-lastT)/1000,.05);
             if(!document.hasFocus()) clearAllKeys();
+            // 幽靈按鍵防護：移動鍵超過 3 秒未收到 keyup → 強制清除
+            const _now=Date.now();
+            for(const k of MOVE_KEYS){
+                if(keyDownAt[k]&&_now-keyDownAt[k]>3000){
+                    delete keys[k]; delete keyDownAt[k];
+                }
+            }
             tickSprint(dt);
             tickEffects(dt);
             tickItems(dt);
@@ -2106,6 +2123,7 @@ async function startCountdown(){
     overlay.classList.add('fade-out');
     await new Promise(r=>setTimeout(r,360));
     overlay.style.display='none';
+    clearAllKeys();   // 清除倒數期間任何殘留按鍵，防止遊戲開始時飄移
     gameReady=true;
 
     ticker=setInterval(()=>{

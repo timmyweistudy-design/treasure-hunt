@@ -1134,7 +1134,7 @@ function tickChaser(ai,dt,s) {
         ai.path=[]; ai.pathTimer=1.5;
     } else {
         const chLat=decoyActive?decoyLat:pLat, chLon=decoyActive?decoyLon:pLon;
-        if(ai.pathTimer<=0&&astarBudget>0){astarBudget--;ai.path=runAstar(ai.lat,ai.lon,chLat,chLon);ai.pathTimer=1.5;}
+        if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=1.5;const fl=ai.lat,fo=ai.lon,tl=chLat,to=chLon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
         while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
         const tLat=ai.path.length>0?ai.path[0][0]:chLat, tLon=ai.path.length>0?ai.path[0][1]:chLon;
         const dLa=tLat-ai.lat, dLo=tLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
@@ -1166,7 +1166,7 @@ function tickPatroller(ai,dt,s) {
         const wpId=OPTIMAL[ai.waypointIdx%OPTIMAL.length];
         const wp=TREASURES.find(t=>t.id===wpId);
         if(wp){
-            if(ai.pathTimer<=0&&astarBudget>0){astarBudget--;ai.path=runAstar(ai.lat,ai.lon,wp.lat,wp.lon);ai.pathTimer=2.0;}
+            if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=2.0;const fl=ai.lat,fo=ai.lon,tl=wp.lat,to=wp.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
             while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
             const mLat=ai.path.length>0?ai.path[0][0]:wp.lat, mLon=ai.path.length>0?ai.path[0][1]:wp.lon;
             const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
@@ -1240,7 +1240,7 @@ function tickThief(ai,dt,s) {
     }
     const tgt=TREASURES.find(t=>t.id===ai.targetTId);
     if(!tgt){ai.targetTId=null; return 9999;}
-    if(ai.pathTimer<=0&&astarBudget>0){astarBudget--;ai.path=runAstar(ai.lat,ai.lon,tgt.lat,tgt.lon);ai.pathTimer=2.0;}
+    if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=2.0;const fl=ai.lat,fo=ai.lon,tl=tgt.lat,to=tgt.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
     while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
     const mLat=ai.path.length>0?ai.path[0][0]:tgt.lat, mLon=ai.path.length>0?ai.path[0][1]:tgt.lon;
     const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
@@ -1721,7 +1721,7 @@ document.addEventListener('keydown', e=>{
     if(MOVE_KEYS.has(e.key)) e.preventDefault();
     if(e.key===' '){e.preventDefault();collectNearest();return;}
     if(e.key==='q'||e.key==='Q'){e.preventDefault();dropDecoy();return;}
-    keys[e.key]=performance.now(); // 時間戳記，讓 loop 自動過期漏掉的 keyup
+    keys[e.key]=true;
 });
 document.addEventListener('keyup', e=>{ delete keys[e.key]; });
 // 多重清除：任何失焦情況都清除按鍵，防止飄移
@@ -1794,7 +1794,7 @@ function loop(ts) {
             frameCount++; uiFrame=(frameCount%4===0); aiFrame=(frameCount%2===0);
             const dt=Math.min((ts-lastT)/1000,.05);
             astarBudget=1;
-            for(const k in keys){ if(MOVE_KEYS.has(k)&&ts-keys[k]>700) delete keys[k]; }
+            if(!document.hasFocus()) clearAllKeys();
             tickSprint(dt);
             tickEffects(dt);
             tickItems(dt);

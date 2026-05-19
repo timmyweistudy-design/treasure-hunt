@@ -850,8 +850,7 @@ function dropDecoy() {
             className:'',iconSize:[30,30],iconAnchor:[15,15]
         }),zIndexOffset:800,interactive:false
     }).addTo(map);
-    // 強制所有 AI 立即重算路徑到誘餌
-    for(const ai of aiList) ai.pathTimer=0;
+    for(const ai of aiList){ai.pathTimer=0;ai._astarPending=false;}
     showToast('🎯 誘餌投出！AI 轉而追逐誘餌！',2500);
     playDecoy();
 }
@@ -862,7 +861,7 @@ function tickDecoy(dt) {
     if(decoyTimer===0){
         decoyActive=false;
         if(decoyMarker){map.removeLayer(decoyMarker);decoyMarker=null;}
-        for(const ai of aiList) ai.pathTimer=0;  // AI 立即重新追玩家
+        for(const ai of aiList){ai.pathTimer=0;ai._astarPending=false;}
         showToast('🎯 誘餌消失！追跡者重回追蹤！',1800);
     }
 }
@@ -961,14 +960,12 @@ function tickItems(dt) {
     for(const [id,item] of Object.entries(items)){
         item.timer-=dt;
         if(item.timer<=0){map.removeLayer(item.marker);delete items[id];}
-        else if(item.timer<10){
-            const el=item.marker.getElement();
-            if(el){
-                const inner=el.querySelector('.item-badge');
-                if(inner){
-                    inner.classList.add('warn');
-                    if(item.timer<5) inner.style.opacity=(item.timer/5).toString();
-                }
+        else if(item.timer<10&&uiFrame){
+            // 快取 DOM 元素，避免每幀 querySelector
+            if(!item._badgeEl) item._badgeEl=item.marker.getElement()?.querySelector('.item-badge');
+            if(item._badgeEl){
+                item._badgeEl.classList.add('warn');
+                if(item.timer<5) item._badgeEl.style.opacity=(item.timer/5).toString();
             }
         }
     }
@@ -1688,27 +1685,29 @@ function tickSprint(dt) {
 let blockFlash=0;
 function tryMove(dLon,dLat) {
     const nLat=pLat+dLat, nLon=pLon+dLon;
-    if(invincTimer>0)                              {pLat=nLat;pLon=nLon;}  // 無敵穿牆
-    else if(!isInBuilding(nLat,nLon))             {pLat=nLat;pLon=nLon;}
-    else if(dLat&&!isInBuilding(pLat+dLat,pLon)) {pLat+=dLat;}
-    else if(dLon&&!isInBuilding(pLat,pLon+dLon)) {pLon+=dLon;}
+    if(invincTimer>0){pLat=nLat;pLon=nLon;}
+    else if(!isInBuilding(nLat,nLon)){pLat=nLat;pLon=nLon;}
     else {
-        if(++blockFlash===1){showToast('🚧 建築物擋住，請繞路',1200);playBlocked();}
-        if(blockFlash>60){     // 卡住超過 ~1 秒：自動脫困 + 清除卡鍵
-            blockFlash=0;
-            ensureOutsideBuilding();
-            clearAllKeys();
+        // 對角線被擋時，兩軸獨立嘗試（修正無法斜走問題）
+        let moved=false;
+        if(dLat&&!isInBuilding(pLat+dLat,pLon)){pLat+=dLat;moved=true;}
+        if(dLon&&!isInBuilding(pLat,pLon+dLon)){pLon+=dLon;moved=true;}
+        if(!moved){
+            if(++blockFlash===1){showToast('🚧 建築物擋住，請繞路',1200);playBlocked();}
+            if(blockFlash>60){blockFlash=0;ensureOutsideBuilding();clearAllKeys();}
+            return;
         }
-        return;
     }
     blockFlash=0;
     pMarker.setLatLng([pLat,pLon]);
     pCircle.setLatLng([pLat,pLon]);
-    map.setView([pLat,pLon],map.getZoom(),{animate:false});
+    if(aiFrame) map.setView([pLat,pLon],map.getZoom(),{animate:false}); // 30fps 足夠
 }
 
 // uiFrame=每4幀(~15fps)觸發UI更新; aiFrame=每2幀(~30fps)更新AI標記
 let frameCount=0, uiFrame=false, aiFrame=false;
+// astarBudget 已廢棄（改為非同步 requestIdleCallback），保留宣告避免 ReferenceError
+let astarBudget=0;
 
 // ── 鍵盤 ──────────────────────────────────────────────────
 const keys={};
@@ -1793,7 +1792,6 @@ function loop(ts) {
         try {
             frameCount++; uiFrame=(frameCount%4===0); aiFrame=(frameCount%2===0);
             const dt=Math.min((ts-lastT)/1000,.05);
-            astarBudget=1;
             if(!document.hasFocus()) clearAllKeys();
             tickSprint(dt);
             tickEffects(dt);

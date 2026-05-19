@@ -42,20 +42,34 @@ def index():
     return render_template("index.html", top10=scoreboard.get_top10())
 
 
+_city_cache: dict = {}   # city_key → {lat, lon, treasures_dict_list}
+
 @app.route("/start", methods=["POST"])
 def start_game():
     player_name = request.form.get("player_name", "玩家").strip()
     city = request.form.get("city", "Taipei").strip()
 
     try:
-        location = MapAPI.geocode(city)
-        lat, lon = location["lat"], location["lon"]
-
-        treasures = MapAPI.fetch_poi(lat, lon)
-        if not treasures:
-            return render_template("index.html",
-                                   error="此城市找不到足夠的地點，請嘗試其他城市",
-                                   top10=scoreboard.get_top10())
+        city_key = city.lower().strip()
+        if city_key in _city_cache:
+            cached = _city_cache[city_key]
+            lat, lon = cached["lat"], cached["lon"]
+            import random as _random
+            from game.models import Treasure as _Treasure
+            all_t = [_Treasure(**d) for d in cached["treasures"]]
+            treasures = _random.sample(all_t, min(GAME_CONFIG["treasure_count"], len(all_t)))
+        else:
+            location = MapAPI.geocode(city)
+            lat, lon = location["lat"], location["lon"]
+            treasures = MapAPI.fetch_poi(lat, lon)
+            if not treasures:
+                return render_template("index.html",
+                                       error="此城市找不到足夠的地點，請嘗試其他城市",
+                                       top10=scoreboard.get_top10())
+            _city_cache[city_key] = {
+                "lat": lat, "lon": lon,
+                "treasures": [t.to_dict() for t in treasures],
+            }
 
         # 依距離設定寶藏分數：越遠分越高（50~500分，四捨五入到10）
         for t in treasures:
@@ -66,8 +80,8 @@ def start_game():
         optimal_route = solve_tsp_exact(player_coords, treasures)
         total_dist = calculate_total_distance(player_coords, optimal_route)
 
-        all_coords = [player_coords] + [t.coords for t in optimal_route]
-        route_coords = MapAPI.get_route(all_coords)
+        # 跳過 OSRM（client-side A* 自己畫路線），直接用寶藏座標當 focus_points
+        route_coords = []
 
         # Bounding box covering start + all treasure locations (for building collision)
         all_lats = [lat] + [t.lat for t in treasures]
@@ -80,13 +94,7 @@ def start_game():
             "e": max(all_lons) + margin,
         }
 
-        # 焦點點：出發點＋各寶藏＋路線取樣（最多 14 點）
         focus_points = [(lat, lon)] + [(t.lat, t.lon) for t in treasures]
-        if route_coords:
-            step = max(1, len(route_coords) // 8)
-            for coord in route_coords[::step]:
-                focus_points.append((coord[1], coord[0]))  # [lon,lat]→[lat,lon]
-        focus_points = focus_points[:14]
 
         # 背景預取建築物（用 focus point 小 bbox 聯合查詢）
         _prefetch_buildings(focus_points)

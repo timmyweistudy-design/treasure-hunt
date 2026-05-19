@@ -57,7 +57,7 @@ class MapAPI:
     def geocode(city_name: str) -> dict:
         params = {"q": city_name, "format": "json", "limit": 1}
         resp = requests.get(f"{NOMINATIM_URL}/search", params=params,
-                            headers=HEADERS, timeout=10)
+                            headers=HEADERS, timeout=6)
         resp.raise_for_status()
         results = resp.json()
         if not results:
@@ -70,8 +70,8 @@ class MapAPI:
         result = _parallel_post(
             query,
             handler=lambda j: j.get("elements", []),
-            per_timeout=6,
-            total_timeout=9,
+            per_timeout=5,
+            total_timeout=7,
         )
         if result is None:
             raise RuntimeError("All Overpass mirrors failed")

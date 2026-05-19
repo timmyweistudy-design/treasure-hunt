@@ -1797,7 +1797,14 @@ document.addEventListener('keydown', e=>{
     if(k===' '){e.preventDefault();collectNearest();return;}
     if(k==='q'){e.preventDefault();dropDecoy();return;}
     keys[k]=true;
-    keyDownAt[k]=Date.now();
+    const _t=Date.now();
+    keyDownAt[k]=_t;
+    // 多鍵同按時 OS 的 key-repeat 只給最後按下的鍵；
+    // 任何移動鍵的 repeat 都替所有目前持著的移動鍵刷新時間戳，
+    // 防止幽靈保底把「沒收到 repeat 的那個鍵」誤清掉
+    if(MOVE_KEYS.has(k)){
+        for(const mk of MOVE_KEYS){ if(keys[mk]) keyDownAt[mk]=_t; }
+    }
 });
 document.addEventListener('keyup', e=>{
     const k=_nk(e.key);

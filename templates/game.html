@@ -586,8 +586,8 @@ const ITEM_LIFE      = 40;        // 道具存在時間（秒）
 const ITEM_MAX       = 20;        // 地圖上最多幾個道具
 const ITEM_MIN_DIST  = 100;       // 道具最小間距（公尺）
 const NAV_CELL       = 0.0004;    // A* 導航格尺寸 ≈ 44m
-const STUN_DURATION  = 3;         // 定身持續秒數（玩家被定住）
-const STUN_CD        = 30;        // 定身冷卻秒數（所有 AI 共用）
+const STUN_DURATION  = 1;         // 定身持續秒數（玩家被定住）
+const STUN_CD        = 15;        // 定身冷卻秒數（所有 AI 共用）
 const STUN_R         = 65;        // AI 施放定身的距離（公尺）
 const GOLDEN_DURATION= 15;        // 黃金寶藏持續秒數
 const GOLDEN_INTERVAL= 45;        // 黃金寶藏出現間隔秒數
@@ -1332,6 +1332,7 @@ function catchWantedThief() {
         if(ai.targetMarker) map.removeLayer(ai.targetMarker);
         if(ai.catchCircle) map.removeLayer(ai.catchCircle);
         if(ai.fovPoly) map.removeLayer(ai.fovPoly);
+        if(ai.stunRing) map.removeLayer(ai.stunRing);
         aiList.splice(i,1);
         thiefCount=Math.max(0,thiefCount-1);
         wantedMaxTimer=0;
@@ -1520,6 +1521,13 @@ function spawnAI(forceType, silent=false) {
 
     const ai={type,lat:iLat,lon:iLon,marker,miniMarker,attackCD:0,path:[],pathTimer:aiList.length*0.4,
               combatStun:0,wanted:false,wantedTimer:0,stolenAmt:0};
+    // 定身範圍虛線圓（巡邏守衛 & 追跡者）
+    if(type==='patroller'||type==='chaser'){
+        ai.stunRing=L.circle([iLat,iLon],{
+            radius:STUN_R,color:'#e53935',weight:1.2,
+            fillOpacity:0,dashArray:'5 5',interactive:false
+        }).addTo(map);
+    }
     if(type==='chaser'){
         ai.speedMult=1+chaserCount*0.15;  // 1.0×、1.15×、1.30× 依次加速
         chaserCount++;
@@ -1633,7 +1641,7 @@ function tickChaser(ai,dt,s) {
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
     if(dToP<STUN_R&&stunCD===0&&stunTimer===0&&invincTimer===0){
         stunCD=STUN_CD; stunTimer=STUN_DURATION;
-        showToast('⚡ 被追跡者定身了！無法移動 3 秒！',3000); playStun();
+        showToast('⚡ 被追跡者定身了！無法移動 1 秒！',1500); playStun();
     }
     if(dToP<AI_ATTACK_R&&ai.attackCD===0&&invincTimer===0){
         ai.attackCD=AI_ATTACK_CD;
@@ -1689,7 +1697,7 @@ function tickPatroller(ai,dt,s) {
     // ⚡ 定身技能：距離夠近且冷卻好就定身玩家（AI 自身繼續移動）
     if(dToP<STUN_R&&stunCD===0&&stunTimer===0&&invincTimer===0){
         stunCD=STUN_CD; stunTimer=STUN_DURATION;
-        showToast('⚡ 被巡邏守衛定身了！無法移動 3 秒！',3000); playStun();
+        showToast('⚡ 被巡邏守衛定身了！無法移動 1 秒！',1500); playStun();
     }
     return dToP;
 }
@@ -2485,7 +2493,7 @@ function loop(ts) {
             camLat+=(pLat-camLat)*k; camLon+=(pLon-camLon)*k;
             map.setView([camLat,camLon],map.getZoom(),{animate:false,noMoveStart:true});}
             if(uiFrame){ updateMiniMap(); updateDistances(); }
-            if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); if(ai.stunLabel){const sp=map.latLngToContainerPoint([ai.lat,ai.lon]);ai.stunLabel.style.left=(sp.x-11)+'px';ai.stunLabel.style.top=(sp.y-38)+'px';} } }
+            if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); if(ai.stunRing) ai.stunRing.setLatLng([ai.lat,ai.lon]); if(ai.stunLabel){const sp=map.latLngToContainerPoint([ai.lat,ai.lon]);ai.stunLabel.style.left=(sp.x-11)+'px';ai.stunLabel.style.top=(sp.y-38)+'px';} } }
         } catch(e) {
             console.error('[loop]', e);  // 記錄錯誤但不中斷循環
         }

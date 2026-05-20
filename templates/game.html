@@ -654,7 +654,7 @@ let gameReady   = false;
 // 天氣
 let weatherType = 'sunny';   // 'sunny' | 'fog' | 'storm'
 let weatherTimer = 0;        // 當前天氣剩餘秒數（0 = 晴天）
-let weatherCD    = 90;       // 下次天氣觸發倒數
+let weatherCD    = 60;       // 下次天氣觸發倒數
 let _ambientSrc  = null;     // 環境音 BufferSource
 let _ambientGain = null;     // 環境音音量節點
 let birdTimer    = 4 + Math.random()*4;    // 晴天小鳥叫下次觸發（秒）
@@ -1123,7 +1123,7 @@ function tickWeather(dt) {
     }
     weatherCD=Math.max(0,weatherCD-dt);
     if(weatherCD===0){
-        weatherCD=90;
+        weatherCD=60;
         setWeather(Math.random()<0.5?'fog':'storm');
     }
 }

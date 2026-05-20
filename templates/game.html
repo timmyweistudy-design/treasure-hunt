@@ -575,7 +575,9 @@ const AI_SPD         = 0.00020;   // deg/s ≈ 22 m/s（略慢於玩家步行）
 const AI_ATTACK_R    = 25;        // 觸發攻擊距離（公尺）
 const AI_ATTACK_CD   = 8;         // 攻擊冷卻（秒）
 const AI_MAX              = 17;       // AI 最多隻數（10巡邏守衛 + 3追跡者 + 4小偷）
-const THIEF_MAX           = 4;        // 小偷場上最多隻數（每收集一個寶藏生成一隻，上限4）
+const THIEF_MAX           = 3;        // 小偷場上最多隻數
+const THIEF_INVIS_DUR     = 5;        // 隱身持續秒數
+const THIEF_INVIS_CD      = 15;       // 隱身冷卻秒數
 const CHASER_SPAWN_DELAY  = 60;       // 第一隻追跡者出現（秒）
 const CHASER_WAVE_INTERVAL= 60;       // 追跡者追加間隔（秒）
 const CHASER_MAX          = 3;        // 追跡者最多隻數
@@ -1186,6 +1188,7 @@ function _spawnExplosionVfx(lat,lon,radiusM) {
 function _stunAI(ai, dur) {
     ai.combatStun=dur;
     ai.path=[]; ai.pathTimer=dur;
+    if(ai.invis) _thiefSetInvis(ai,false);   // 被炸中解除隱身
     const el=ai.marker.getElement();
     if(el) el.style.filter='saturate(0) brightness(1.5)';
     // persistent ⭐ orbit — removed when stun ends
@@ -1528,6 +1531,7 @@ function spawnAI(forceType, silent=false) {
         ai.facingLat=iLat+0.001; ai.facingLon=iLon;
     } else {
         ai.targetTId=null; ai.stealCD=0; ai._prevTargetTId=null; ai.targetMarker=null;
+        ai.invis=false; ai.invisTimer=0; ai.invisCD=0;
         thiefCount++;
     }
 
@@ -1711,9 +1715,27 @@ function _updateThiefMarker(ai) {
 }
 
 // ── 寶物小偷行為 ─────────────────────────────────────────
+function _thiefSetInvis(ai, on) {
+    ai.invis=on;
+    const op=on?0:1;
+    ai.marker.setOpacity(op);
+    if(ai.miniMarker) ai.miniMarker.setStyle({opacity:op, fillOpacity:on?0:0.9,
+        fillColor:ai.wanted?'#ff6f00':'#424242', color:'#fff'});
+    if(ai.targetMarker) ai.targetMarker.setOpacity(op);
+    if(ai.catchCircle) ai.catchCircle.setStyle({opacity:on?0:1, fillOpacity:on?0:0.06});
+}
 function tickThief(ai,dt,s) {
     if(ai.combatStun>0) return distM(pLat,pLon,ai.lat,ai.lon);
     if(ai.stealCD>0) ai.stealCD=Math.max(0,ai.stealCD-dt);
+    // ── 隱身技能 ─────────────────────────────────────────
+    if(ai.invis){
+        ai.invisTimer=Math.max(0,ai.invisTimer-dt);
+        if(ai.invisTimer===0){ _thiefSetInvis(ai,false); ai.invisCD=THIEF_INVIS_CD; }
+    } else {
+        if(ai.invisCD>0) ai.invisCD=Math.max(0,ai.invisCD-dt);
+        // 冷卻結束後平均每 8s 隨機發動一次
+        else if(Math.random()<dt*0.125){ _thiefSetInvis(ai,true); ai.invisTimer=THIEF_INVIS_DUR; showToast('👻 小偷隱身了！',1500); }
+    }
     if(!ai.targetTId||collected.has(ai.targetTId)){
         const cands=TREASURES.filter(t=>!collected.has(t.id));
         if(cands.length===0) return 9999;

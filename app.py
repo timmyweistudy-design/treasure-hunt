@@ -29,24 +29,46 @@ TREASURE_TIERS = [
     {"target_m": 1000, "points": 500},
 ]
 
+_MIN_TREASURE_SPREAD = 150  # metres — minimum distance between any two placed treasures
+
 def _assign_tiers(raw_pois, origin_lat, origin_lon):
     """
-    每層想像一個正方形圈（target_m 為半徑），
-    從圈上的店家隨機選一個；圈上沒有就逐漸往外擴再隨機選。
+    每層兩個寶藏盡量放在圈的對邊（最大化彼此距離），
+    所有寶藏間距 >= _MIN_TREASURE_SPREAD。
+    容差從 ±80m 遞增，每次先找距離夠遠的候選，沒有才放寬間距限制。
     """
     scored = [(haversine((origin_lat, origin_lon), (p["lat"], p["lon"])), i, p)
               for i, p in enumerate(raw_pois)]
     used = set()
     result = []
+
+    def _far_enough(p):
+        return all(haversine((p["lat"], p["lon"]), (t.lat, t.lon)) >= _MIN_TREASURE_SPREAD
+                   for t in result)
+
     for tier_idx, tier in enumerate(TREASURE_TIERS):
         target = tier["target_m"]
         chosen_i, chosen_p = None, None
+
         for tolerance in (80, 150, 250, 400, float('inf')):
-            pool = [(i, p) for d, i, p in scored
-                    if i not in used and abs(d - target) <= tolerance]
-            if pool:
+            raw_pool = [(i, p) for d, i, p in scored
+                        if i not in used and abs(d - target) <= tolerance]
+            if not raw_pool:
+                continue
+            # Prefer candidates that keep min spread; fall back if none qualify
+            pool = [(i, p) for i, p in raw_pool if _far_enough(p)] or raw_pool
+
+            # Odd index = 2nd of ring pair → pick furthest from 1st of pair
+            if tier_idx % 2 == 1 and result:
+                prev = result[-1]
+                chosen_i, chosen_p = max(
+                    pool,
+                    key=lambda x: haversine((prev.lat, prev.lon), (x[1]["lat"], x[1]["lon"]))
+                )
+            else:
                 chosen_i, chosen_p = random.choice(pool)
-                break
+            break
+
         if chosen_p:
             used.add(chosen_i)
             result.append(Treasure(

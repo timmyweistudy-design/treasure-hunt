@@ -578,7 +578,8 @@ const CHASER_WAVE_INTERVAL= 60;       // 追跡者追加間隔（秒）
 const CHASER_MAX          = 3;        // 追跡者最多隻數
 const ITEM_IVTL      = 4;         // 道具重生間隔（秒）
 const ITEM_LIFE      = 40;        // 道具存在時間（秒）
-const ITEM_MAX       = 10;        // 地圖上最多幾個道具
+const ITEM_MAX       = 20;        // 地圖上最多幾個道具
+const ITEM_MIN_DIST  = 100;       // 道具最小間距（公尺）
 const NAV_CELL       = 0.0004;    // A* 導航格尺寸 ≈ 44m
 const STUN_DURATION  = 3;         // 定身持續秒數（玩家被定住）
 const STUN_CD        = 30;        // 定身冷卻秒數（所有 AI 共用）
@@ -1375,29 +1376,34 @@ function tickCombatStun(dt) {
 // ── 道具系統 ──────────────────────────────────────────────
 function spawnItem() {
     if(Object.keys(items).length>=ITEM_MAX) return;
-    // 50% chance to spawn near an uncollected treasure, biased toward range item
     const uncollected=TREASURES.filter(t=>!collected.has(t.id));
-    let lat, lon, type;
-    if(uncollected.length>0 && Math.random()<0.5){
-        const tgt=uncollected[Math.floor(Math.random()*uncollected.length)];
-        // 150-300m so range boost is actually needed to reach from treasure
-        for(let i=0;i<8;i++){
+    const existingVals=Object.values(items);
+    let lat, lon, type, found=false;
+
+    // 最多嘗試 20 次找到合法位置（不在建物、不與現有道具太近）
+    for(let attempt=0;attempt<20;attempt++){
+        let cLat, cLon;
+        if(uncollected.length>0 && Math.random()<0.5){
+            const tgt=uncollected[Math.floor(Math.random()*uncollected.length)];
             const angle=Math.random()*Math.PI*2, rd=(150+Math.random()*150)/111111;
-            lat=Math.max(BOUNDS.s,Math.min(BOUNDS.n,tgt.lat+Math.cos(angle)*rd));
-            lon=Math.max(BOUNDS.w,Math.min(BOUNDS.e,tgt.lon+Math.sin(angle)*rd));
-            if(!isInBuilding(lat,lon)) break;
+            cLat=Math.max(BOUNDS.s,Math.min(BOUNDS.n,tgt.lat+Math.cos(angle)*rd));
+            cLon=Math.max(BOUNDS.w,Math.min(BOUNDS.e,tgt.lon+Math.sin(angle)*rd));
+        } else {
+            cLat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
+            cLon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
         }
-        const r=Math.random();
-        type=r<.1?'speed':r<.2?'star':r<.8?'range':r<.9?'freeze':'magnet';
-    } else {
-        for(let i=0;i<8;i++){
-            lat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
-            lon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
-            if(!isInBuilding(lat,lon)) break;
-        }
-        const r=Math.random();
-        type=r<.2?'speed':r<.4?'star':r<.6?'range':r<.8?'freeze':'magnet';
+        if(isInBuilding(cLat,cLon)) continue;
+        if(existingVals.some(it=>distM(cLat,cLon,it.lat,it.lon)<ITEM_MIN_DIST)) continue;
+        lat=cLat; lon=cLon; found=true; break;
     }
+    if(!found) return;   // 這次跳過，下次再試
+
+    const nearTreasure=uncollected.length>0&&distM(lat,lon,
+        uncollected.reduce((b,t)=>distM(lat,lon,t.lat,t.lon)<distM(lat,lon,b.lat,b.lon)?t:b).lat,
+        uncollected.reduce((b,t)=>distM(lat,lon,t.lat,t.lon)<distM(lat,lon,b.lat,b.lon)?t:b).lon)<300;
+    const r=Math.random();
+    type=nearTreasure?(r<.1?'speed':r<.2?'star':r<.8?'range':r<.9?'freeze':'magnet')
+                     :(r<.2?'speed':r<.4?'star':r<.6?'range':r<.8?'freeze':'magnet');
     const id='i'+(itemIdCtr++);
     const [emoji,bg]=type==='speed'?['⚡','#f57c00']:type==='star'?['⭐','#7b1fa2']:
                      type==='range'?['🔍','#00796b']:type==='freeze'?['❄️','#0288d1']:['🧲','#6a1b9a'];

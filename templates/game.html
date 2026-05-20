@@ -1244,9 +1244,10 @@ function spawnParticles(tLat, tLon) {
 // ── 主地圖 ────────────────────────────────────────────────
 const map = L.map('map', {
     keyboard: false,
-    zoomAnimation: false,   // 縮放不做動畫，避免 setView 觸發動畫中斷
-    fadeAnimation: false,   // tile 淡入淡出動畫關閉，tile 載入不閃
+    zoomAnimation: false,
+    fadeAnimation: false,
     markerZoomAnimation: false,
+    scrollWheelZoom: false,   // 滾輪改為切換道具槽
 }).setView(START, 17);
 // CartoDB Voyager（全球 CDN，比直連 OSM 更穩定）
 const _mainTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {

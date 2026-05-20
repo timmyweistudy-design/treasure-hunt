@@ -623,7 +623,7 @@ let chaserSpawnTimer=CHASER_SPAWN_DELAY, chaserWaveTimer=0, chaserCount=0, chase
 let navGrid=null;
 let routeLine=null, miniRouteLine=null;
 // 範圍道具 & 冰凍
-let rangeBoostTimer=0, aiFrozenTimer=0;
+let rangeBoostTimer=0, aiFrozenTimer=0, freezeVfxTimer=0;
 let decoyActive=false, decoyLat=0, decoyLon=0, decoyTimer=0, decoyCD=0, decoyMarker=null;
 let comboCount=0, comboTimer=0;
 const COMBO_WINDOW=22;
@@ -1340,7 +1340,7 @@ function tickCombatStun(dt) {
             ai.combatStun=Math.max(0,ai.combatStun-dt);
             if(ai.combatStun===0){
                 const el=ai.marker.getElement();
-                if(el) el.style.filter=aiFrozenTimer>0?'hue-rotate(150deg) brightness(1.4)':'';
+                if(el) el.style.filter=aiFrozenTimer>0?'hue-rotate(150deg) brightness(1.5) drop-shadow(0 0 10px rgba(80,180,255,.9))':'';
                 if(ai.stunLabel){ai.stunLabel.remove();ai.stunLabel=null;}
             }
         }
@@ -1432,10 +1432,19 @@ function applyItem(type,id) {
     else if(type==='range'){rangeBoostTimer=10;showToast('🔍 廣域道具！收集距離×3，持續10秒！',2200);playItem();}
     else if(type==='magnet'){magnetTimer=8;magnetAutoT=0;showToast('🧲 磁鐵道具！自動收集範圍內寶藏！8秒！',2500);playMagnet();}
     else{
-        aiFrozenTimer=7;
+        aiFrozenTimer=7; freezeVfxTimer=0;
+        const mapEl=document.getElementById('map');
         for(const ai of aiList){
             const el=ai.marker.getElement();
-            if(el) el.style.filter='hue-rotate(150deg) brightness(1.4)';
+            if(el) el.style.filter='hue-rotate(150deg) brightness(1.5) drop-shadow(0 0 10px rgba(80,180,255,.9))';
+            // 初始冰凍爆發 ❄️
+            const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
+            [0,1,2].forEach(i=>{
+                const sf=document.createElement('div');
+                sf.className='stun-label'; sf.textContent='❄️';
+                sf.style.cssText=`left:${pt.x+Math.round(Math.random()*22-11)-10}px;top:${pt.y-8}px;font-size:${15+i*3}px`;
+                mapEl.appendChild(sf); setTimeout(()=>sf.remove(),920);
+            });
         }
         showToast('❄️ 冰凍炸彈！所有守衛凍結7秒！',2500);
         playFreeze();
@@ -1801,6 +1810,21 @@ function tickEffects(dt) {
         for(const ai of aiList){
             const el=ai.marker.getElement();
             if(el) el.style.filter=ai.combatStun>0?'saturate(0) brightness(1.5)':'';
+        }
+    }
+    // 持續飄雪特效
+    if(aiFrozenTimer>0){
+        freezeVfxTimer=Math.max(0,freezeVfxTimer-dt);
+        if(freezeVfxTimer===0){
+            freezeVfxTimer=0.45;
+            const mapEl=document.getElementById('map');
+            for(const ai of aiList){
+                const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
+                const sf=document.createElement('div');
+                sf.className='stun-label'; sf.textContent='❄️';
+                sf.style.cssText=`left:${pt.x+Math.round(Math.random()*18-9)-10}px;top:${pt.y-8}px;font-size:14px`;
+                mapEl.appendChild(sf); setTimeout(()=>sf.remove(),920);
+            }
         }
     }
 

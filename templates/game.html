@@ -2227,6 +2227,25 @@ function ensureOutsideBuilding() {
     }
 }
 
+function relocatePortalsFromBuildings() {
+    const steps=[.00005,.00010,.00018,.00030,.00050,.00080];
+    const dirs=[[0,1],[1,0],[0,-1],[-1,0],[1,1],[-1,1],[1,-1],[-1,-1],
+                [2,1],[1,2],[-1,2],[-2,1],[-2,-1],[-1,-2],[1,-2],[2,-1]];
+    PORTALS.forEach(p=>{
+        if(!isInBuilding(p.lat,p.lon)) return;
+        for(const s of steps) for(const [dx,dy] of dirs){
+            const nl=Math.max(BOUNDS.s,Math.min(BOUNDS.n,p.lat+dy*s));
+            const no=Math.max(BOUNDS.w,Math.min(BOUNDS.e,p.lon+dx*s));
+            if(!isInBuilding(nl,no)){
+                p.lat=nl; p.lon=no;
+                if(p.marker) p.marker.setLatLng([nl,no]);
+                if(p.circle) p.circle.setLatLng([nl,no]);
+                return;
+            }
+        }
+    });
+}
+
 // ── 衝刺狀態機 ────────────────────────────────────────────
 let sprintBar=SPRINT_MAX, sprintCD=0, isSprinting=false, wasSprinting=false;
 function tickSprint(dt) {
@@ -2826,6 +2845,7 @@ async function loadBuildingsBackground(){
         if(subEl) subEl.textContent='';
         if(raw.length===0) return;
         loadBuildings(raw);
+        relocatePortalsFromBuildings();
         await new Promise(r=>setTimeout(r,0));   // yield — 讓 rAF 能在重計算間隙執行
         routeGrid=buildRouteGrid();
         await new Promise(r=>setTimeout(r,0));

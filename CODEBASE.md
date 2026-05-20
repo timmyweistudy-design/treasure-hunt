@@ -27,19 +27,18 @@
 
 ---
 
-### 2026-05-20 固定 10km×10km 邊界 + 全區建築碰撞
+### 2026-05-20 固定 5km×5km 邊界 + 全區建築碰撞（完整版）
 
-**邊界永遠是 10km×10km 正方形**
-- `app.py`：加入 `import math`；bounds 改為以玩家起點為中心計算
-  - `half_lat = 5000 / 111320`（≈ 0.04491 度）
-  - `half_lon = 5000 / (111320 × cos(lat))`（依緯度調整）
-  - 取代舊的「min/max 寶藏位置 + margin」動態計算，形狀固定不變
+**邊界永遠是 5km×5km 正方形**
+- `app.py`：`half_lat = 2500 / 111320`、`half_lon = 2500 / (111320 × cos(lat))`
+  - 以玩家起點為中心，形狀固定不變
 
-**邊界內所有房子都有碰撞**
-- `game.html`：建築物查詢已涵蓋整個 BOUNDS bbox，修好邊界後自動覆蓋全區
-  - Overpass query timeout 從 25s → 35s（10km×10km 資料量更大）
-  - fetch 超時從 27s → 38s
-  - `_parseOSMBuildings` 建築上限從 3000 → 5000
+**邊界內所有房子都有碰撞（完整）**
+- `game.html`
+  - `_parseOSMBuildings` 移除建築上限（原 3000→5000→無上限），確保全區覆蓋
+  - Overpass query 加 `out body qt;`（空間排序）代替 `out body;`，建築物按地理位置均勻返回
+  - query timeout 30s、fetch 超時 33s（5km×5km 資料量較小）
+  - 快取版本號 `bld3_` → `bld4_`（強制重新拉取新格式）
 
 ---
 

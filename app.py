@@ -110,9 +110,9 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
         optimal_route = solve_tsp_exact(player_coords, treasures)
         total_dist = calculate_total_distance(player_coords, optimal_route)
 
-        # 固定 10km×10km 正方形邊界，以起點為中心
-        half_lat = 5000.0 / 111320.0
-        half_lon = 5000.0 / (111320.0 * math.cos(math.radians(lat)))
+        # 固定 5km×5km 正方形邊界，以起點為中心
+        half_lat = 2500.0 / 111320.0
+        half_lon = 2500.0 / (111320.0 * math.cos(math.radians(lat)))
         bounds = {
             "s": lat - half_lat, "n": lat + half_lat,
             "w": lon - half_lon, "e": lon + half_lon,

@@ -70,7 +70,8 @@
             font-family: 'Orbitron', monospace; font-size: 11px; color: #aee1ff;
             letter-spacing: .5px; white-space: nowrap;
         }
-        .desc { color: #8aa8cc; font-size: 13.5px; line-height: 1.6; }
+        .desc { color: #8aa8cc; font-size: 13.5px; line-height: 1.65; }
+        .num { color: #ffd54f; font-weight: 700; }
 
         /* item grid */
         .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
@@ -81,13 +82,14 @@
         .item-card .icon { font-size: 1.6rem; margin-bottom: 6px; }
         .item-card .name { font-size: .88rem; font-weight: 700; color: #c8d8f0; margin-bottom: 4px; }
         .item-card .item-desc { font-size: 12.5px; color: #6888a8; line-height: 1.55; }
+        .item-card .item-desc .num { font-size: 12.5px; }
 
         /* enemy / score rows */
         .row-list { list-style: none; padding: 0; }
         .row-list li {
             display: flex; align-items: flex-start; gap: 12px;
             padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.04);
-            font-size: 13.5px; line-height: 1.55;
+            font-size: 13.5px; line-height: 1.55; color: #8aa8cc;
         }
         .row-list li:last-child { border-bottom: none; }
         .row-list .tag {
@@ -130,8 +132,12 @@
                 <td class="desc">移動角色（可斜向行走）</td>
             </tr>
             <tr>
+                <td><kbd>Shift</kbd> 長按</td>
+                <td class="desc">衝刺（速度 ×2）。衝刺槽最多 <span class="num">10 秒</span>，耗盡後冷卻 <span class="num">3 秒</span>才能再衝。</td>
+            </tr>
+            <tr>
                 <td><kbd>Space</kbd></td>
-                <td class="desc">收集最近的寶藏（需在收集範圍內）</td>
+                <td class="desc">收集最近的寶藏（需在收集範圍內）；也可穿越傳送門。</td>
             </tr>
             <tr>
                 <td><kbd>= / +</kbd></td>
@@ -150,7 +156,7 @@
         <table class="kbd-table">
             <tr>
                 <td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> <kbd>5</kbd></td>
-                <td class="desc">選取對應的道具槽</td>
+                <td class="desc">選取對應的道具槽（共 5 格）</td>
             </tr>
             <tr>
                 <td>滑鼠滾輪</td>
@@ -172,15 +178,24 @@
         <table class="kbd-table">
             <tr>
                 <td><kbd>E</kbd></td>
-                <td class="desc">進入手雷瞄準模式 — 移動滑鼠選定落點（橘色虛線圓），左鍵投擲，再按 <kbd>E</kbd> 或 <kbd>ESC</kbd> 取消。最大射程 200m，一次最多 2 顆，投出後自動充能。</td>
+                <td class="desc">
+                    <b>手雷</b> — 進入瞄準模式，移動滑鼠選定落點（橘色虛線圓），左鍵投擲，再按 <kbd>E</kbd> 或 <kbd>ESC</kbd> 取消。<br>
+                    最大射程 <span class="num">200m</span>・爆炸半徑 <span class="num">80m</span>・命中 AI 暈眩 <span class="num">4 秒</span><br>
+                    最多同時 <span class="num">2 顆</span>，每顆充能 <span class="num">20 秒</span>
+                </td>
             </tr>
             <tr>
                 <td><kbd>F</kbd></td>
-                <td class="desc">在腳下放置地雷 — AI 踩中時受到傷害並短暫失去行動力。最多 2 個地雷同時存在。</td>
+                <td class="desc">
+                    <b>地雷</b> — 在腳下埋設地雷，AI 進入 <span class="num">20m</span> 範圍觸發，暈眩 <span class="num">5 秒</span>。<br>
+                    最多同時 <span class="num">2 個</span>，每個充能 <span class="num">25 秒</span>，<span class="num">90 秒</span>後自動消除。
+                </td>
             </tr>
             <tr>
                 <td><kbd>R</kbd></td>
-                <td class="desc">丟出誘餌 — 讓附近 AI 轉向追逐誘餌 8 秒鐘。</td>
+                <td class="desc">
+                    <b>誘餌</b> — 在腳下丟出誘餌，附近 AI 轉向追逐誘餌，持續 <span class="num">6 秒</span>，冷卻 <span class="num">40 秒</span>。
+                </td>
             </tr>
         </table>
     </div>
@@ -192,27 +207,27 @@
             <div class="item-card">
                 <div class="icon">⚡</div>
                 <div class="name">加速靴</div>
-                <div class="item-desc">移動速度 ×2，持續 8 秒。</div>
+                <div class="item-desc">移動速度 ×<span class="num">2</span>，持續 <span class="num">8 秒</span>。</div>
             </div>
             <div class="item-card">
                 <div class="icon">⭐</div>
                 <div class="name">無敵星</div>
-                <div class="item-desc">無敵狀態，速度 ×1.5，持續 10 秒。不受 AI 傷害。</div>
+                <div class="item-desc">無敵狀態＋速度 ×<span class="num">1.5</span>，持續 <span class="num">10 秒</span>。期間不受任何 AI 傷害。</div>
             </div>
             <div class="item-card">
                 <div class="icon">🔍</div>
                 <div class="name">廣域雷達</div>
-                <div class="item-desc">收集範圍 ×3，持續 10 秒。遠距離按空白鍵即可收寶藏。</div>
+                <div class="item-desc">收集範圍 ×<span class="num">3</span>，持續 <span class="num">10 秒</span>。遠距離即可按空白鍵收寶藏。</div>
             </div>
             <div class="item-card">
                 <div class="icon">❄️</div>
                 <div class="name">冰凍炸彈</div>
-                <div class="item-desc">凍結所有 AI 7 秒，期間 AI 無法移動。</div>
+                <div class="item-desc">凍結所有 AI <span class="num">7 秒</span>，期間 AI 完全無法移動。</div>
             </div>
             <div class="item-card">
                 <div class="icon">🧲</div>
                 <div class="name">磁鐵</div>
-                <div class="item-desc">吸引 300m 內所有道具飛向你，持續 8 秒。吸來的道具自動存入空槽。</div>
+                <div class="item-desc"><span class="num">300m</span> 內所有道具飛向你，持續 <span class="num">8 秒</span>。吸來的道具自動存入空槽。</div>
             </div>
         </div>
     </div>
@@ -223,19 +238,19 @@
         <ul class="row-list">
             <li>
                 <span class="tag danger">👁️ 巡邏</span>
-                <span>在地圖上隨機遊走。碰到你會扣 <b>30 分</b>，並將你擊退。</span>
+                <span>在地圖上隨機遊走。你進入視野扇形範圍，被偵測到扣 <span class="num">-30 分</span>，並將你短暫定身。</span>
             </li>
             <li>
                 <span class="tag danger">👾 追跡</span>
-                <span>發現你後會使用 A* 演算法追蹤你到建築物邊緣。碰到你會扣 <b>50 分</b>。</span>
+                <span>發現你後用 A* 演算法追蹤，繞過建築物逼近。接觸到你扣 <span class="num">-50 分</span>，攻擊冷卻 <span class="num">8 秒</span>。遊戲開始 <span class="num">60 秒</span>後第一隻出現，每 <span class="num">60 秒</span>增加一隻，上限 <span class="num">3 隻</span>。</span>
             </li>
             <li>
                 <span class="tag danger">🦹 小偷</span>
-                <span>碰到你會偷走你最近的一個寶藏並移動到新位置，扣 <b>20 分</b>。</span>
+                <span>碰到你會偷走最近一個寶藏並移動到新位置，扣 <span class="num">-20 分</span>。偷竊後 <span class="num">12 秒</span>內按 <kbd>Space</kbd> 可追回（出現 🚨 通緝提示）。上限 <span class="num">3 隻</span>，有隱身能力（每 <span class="num">8 秒</span>隱身 <span class="num">5 秒</span>）。</span>
             </li>
         </ul>
         <div class="tip">
-            <b>提示：</b>無敵星 ⭐ 期間 AI 碰到你不會造成任何傷害。手雷 💣 和地雷 💥 命中 AI 可將其暫時消除。
+            <b>提示：</b>無敵星 ⭐ 期間 AI 碰到你不會造成任何傷害。手雷 💣 / 地雷 💥 命中 AI 可暈眩；誘餌 🎯 可讓 AI 分心。
         </div>
     </div>
 
@@ -245,23 +260,23 @@
         <ul class="row-list">
             <li>
                 <span class="tag gold">基礎分</span>
-                <span>收集寶藏時獲得該寶藏距出生點的 <b>公尺數</b> 作為分數（越遠的寶藏分越高）。</span>
+                <span>收集寶藏時，獲得該寶藏距出生點的 <b>公尺數</b> 作為分數。越遠的寶藏分數越高。</span>
             </li>
             <li>
                 <span class="tag gold">順序獎勵</span>
-                <span>按照 AI 建議的最佳路線依序收集，每個額外 <b>+50 分</b>。</span>
+                <span>按照 AI 建議的最佳路線依序收集，每個額外 <span class="num">+50 分</span>。</span>
             </li>
             <li>
                 <span class="tag gold">連擊加成</span>
-                <span>30 秒內連續收集 2 個以上寶藏，啟動連擊計分（分數倍增）。</span>
+                <span><span class="num">22 秒</span>內連續收集 2 個以上寶藏，啟動連擊，分數倍增。倒數顯示於右下 HUD。</span>
             </li>
             <li>
-                <span class="tag gold">黃金寶藏</span>
-                <span>隨機出現的金色寶藏 ✨，分數 ×3。</span>
+                <span class="tag gold">黃金寶藏 ✨</span>
+                <span>每 <span class="num">45 秒</span>隨機出現一個金色寶藏，限時 <span class="num">15 秒</span>內收集，分數 ×<span class="num">3</span>。</span>
             </li>
             <li>
                 <span class="tag danger">AI 扣分</span>
-                <span>被 AI 碰到依類型扣 20 / 30 / 50 分。</span>
+                <span>巡邏守衛 <span class="num">-30</span>・追跡者 <span class="num">-50</span>・小偷 <span class="num">-20</span>。分數最低為 0。</span>
             </li>
         </ul>
     </div>
@@ -272,19 +287,23 @@
         <ul class="row-list">
             <li>
                 <span class="tag green">傳送門</span>
-                <span>地圖上有兩個紫色傳送門，走進其中一個會瞬間移動到另一個。</span>
+                <span>地圖上有 <span class="num">4</span> 個傳送門，青藍色一對（tl↔br）、琥珀色一對（tr↔bl）。走進觸發半徑 <span class="num">40m</span> 按 <kbd>Space</kbd> 瞬間傳送到配對門。使用後冷卻 <span class="num">3 秒</span>。</span>
             </li>
             <li>
                 <span class="tag green">天氣系統</span>
-                <span>每 60 秒會隨機切換天氣：<b>晴天 ☀️</b>（正常）→ <b>濃霧 🌫️</b>（視野受限）→ <b>暴風雨 ⛈️</b>（移動變慢），各持續 30 秒。</span>
+                <span>每 <span class="num">60 秒</span>隨機切換天氣，持續 <span class="num">30 秒</span>後恢復晴天：☀️ 晴天（正常）・🌫️ 大霧（視野受限，AI 視野縮減）・⛈️ 雷雨（玩家速度 ×0.85，AI 速度 ×1.15）。</span>
             </li>
             <li>
-                <span class="tag green">傳呼警告</span>
-                <span>被多個 AI 同時鎖定時，右下角出現 🚨 通緝警告，按 <kbd>Space</kbd> 快速逃跑。</span>
+                <span class="tag green">🚨 通緝</span>
+                <span>小偷偷走寶藏後 <span class="num">12 秒</span>內，右下顯示通緝倒數。在時限內按 <kbd>Space</kbd> 靠近小偷可追回寶藏並消滅它。</span>
             </li>
             <li>
                 <span class="tag green">建築碰撞</span>
-                <span>玩家與 AI 均無法穿越建築物（灰色區域）。利用建築物甩掉追蹤 AI。</span>
+                <span>玩家與 AI 均無法穿越建築物（灰色區域）。可利用建築甩掉追跡者。</span>
+            </li>
+            <li>
+                <span class="tag green">時間壓力</span>
+                <span>剩餘時間 <span class="num">60 秒</span>內，AI 速度提升 ×1.2；剩 <span class="num">30 秒</span>內再提升至 ×1.4。畫面邊框出現紅色脈衝警示。</span>
             </li>
         </ul>
     </div>
@@ -303,27 +322,23 @@
             </li>
             <li>
                 <span class="tag">下方中央</span>
-                <span><b>道具欄</b>：5 個槽位，金色外框為當前選取槽，藍色外框表示有道具。</span>
+                <span><b>道具欄（5 格）</b>：金色外框為當前選取槽，藍色外框表示有道具存入。</span>
             </li>
             <li>
                 <span class="tag">下方左側</span>
-                <span><b>戰鬥技能狀態</b>：顯示手雷 💣 / 地雷 💥 充能狀態與誘餌 🎯 冷卻。</span>
+                <span><b>戰鬥技能狀態</b>：手雷 💣 / 地雷 💥 充能格數與倒數、誘餌 🎯 冷卻。</span>
             </li>
             <li>
                 <span class="tag">下方右側</span>
-                <span><b>天氣 / 連擊 / 通緝</b>：即時顯示當前天氣、連擊倍數與通緝倒數。</span>
+                <span><b>天氣 / 連擊 / 通緝</b>：即時顯示當前天氣、連擊倍數倒數（22s 窗口）、通緝倒數（12s 窗口）。</span>
             </li>
             <li>
                 <span class="tag">效果列</span>
-                <span>有效果作用中時顯示在地圖上方：速度 / 無敵 / 廣域 / 冰凍 / 眩暈 / 磁鐵。</span>
+                <span>有效果作用中才顯示於地圖上方：⚡速度・⭐無敵・🔍廣域・❄️冰凍・😵定身・🧲磁鐵。</span>
             </li>
         </ul>
     </div>
 
 </div>
-
-<script>
-    // Animate stars in hero (same as index.html)
-</script>
 </body>
 </html>

@@ -67,6 +67,16 @@
         /* wanted thief flash */
         @keyframes wanted-flash { 0%,100%{background:rgba(198,40,40,.45)} 50%{background:rgba(255,82,82,.75)} }
         .thief-dot.wanted { animation:wanted-flash .5s ease-in-out infinite; }
+        /* penalty score float */
+        .score-float.penalty { color:#ff5252!important;
+            text-shadow:0 2px 8px rgba(0,0,0,.9),0 0 10px rgba(255,82,82,.5)!important; }
+        /* compass wanted-thief override */
+        .compass-box.thief-alert { border-color:#ff6f00!important;
+            animation:vig-pulse .6s ease-in-out infinite; }
+        /* time-pressure vignette (on top of normal) */
+        #time-vignette { display:none;position:absolute;inset:0;pointer-events:none;z-index:987;
+            box-shadow:inset 0 0 120px rgba(255,100,0,.35);
+            animation:vig-pulse .6s ease-in-out infinite; }
         /* magnet pull */
         .item-badge.pulling {
             animation:magnet-pull .35s ease-in-out infinite !important;
@@ -391,6 +401,7 @@
 
 <div class="wrap">
     <div id="map"></div>
+    <div id="time-vignette"></div>
 
     <div class="sb">
         <div class="sb-body">
@@ -1097,6 +1108,13 @@ function _stunAI(ai, dur) {
     ai.path=[]; ai.pathTimer=dur;
     const el=ai.marker.getElement();
     if(el) el.style.filter='saturate(0) brightness(1.5)';
+    // floating ⭐ VFX
+    const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
+    const lbl=document.createElement('div');
+    lbl.className='stun-label'; lbl.textContent='⭐';
+    lbl.style.cssText=`left:${pt.x-10}px;top:${pt.y-30}px`;
+    document.getElementById('map').appendChild(lbl);
+    setTimeout(()=>lbl.remove(),900);
 }
 function throwGrenade() {
     if(!gameReady) return;
@@ -1354,6 +1372,7 @@ function applyScorePenalty(amount, msg) {
     el.textContent=score;
     el.classList.remove('score-pop'); void el.offsetWidth; el.classList.add('score-pop');
     showToast(msg,2500);
+    showPenaltyFloat(amount);
     fetch('/penalty',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({amount})}).catch(()=>{});
 }
@@ -1486,7 +1505,8 @@ function relocateTreasure(tId) {
 // ── 追跡者行為 ───────────────────────────────────────────
 function tickChaser(ai,dt,s) {
     if(ai.combatStun>0) return distM(pLat,pLon,ai.lat,ai.lon);
-    const cs=s*(ai.speedMult||1);  // 每隻追跡者依序加速 15%
+    const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
+    const cs=s*(ai.speedMult||1)*timePressure;
     if(invincTimer>0){
         const dLaP=ai.lat-pLat, dLoP=ai.lon-pLon;
         const lenP=Math.sqrt(dLaP*dLaP+dLoP*dLoP);
@@ -1606,7 +1626,8 @@ function tickThief(ai,dt,s) {
     while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
     const mLat=ai.path.length>0?ai.path[0][0]:tgt.lat, mLon=ai.path.length>0?ai.path[0][1]:tgt.lon;
     const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
-    const ts=ai.wanted?s*0.5:s;  // 通緝中速度降半，讓玩家有機會追上
+    const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
+    const ts=ai.wanted?s*0.5:s*timePressure;  // 通緝中速度降半，讓玩家有機會追上
     if(len>1e-6){ai.lat+=dLa/len*ts;ai.lon+=dLo/len*ts;}
     if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
@@ -2078,7 +2099,7 @@ function tickSprint(dt) {
         if(sprintBar===0){sprintCD=COOL_T;isSprinting=false;}
     } else {
         isSprinting=false;
-        if(sprintBar<SPRINT_MAX) sprintBar=Math.min(SPRINT_MAX,sprintBar+dt*.4);
+        if(sprintBar<SPRINT_MAX) sprintBar=Math.min(SPRINT_MAX,sprintBar+dt*.65);
     }
     if(isSprinting&&!wasSprinting) playSprint();
     wasSprinting=isSprinting;
@@ -2183,6 +2204,17 @@ function showScoreFloat(lat, lon, pts) {
     setTimeout(()=>div.remove(), 950);
 }
 
+// 處罰浮動文字（紅色，從玩家頭上飄出）
+function showPenaltyFloat(amount) {
+    const pt=map.latLngToContainerPoint([pLat,pLon]);
+    const div=document.createElement('div');
+    div.className='score-float penalty';
+    div.textContent=`-${amount}`;
+    div.style.cssText=`left:${pt.x-24}px;top:${pt.y-10}px`;
+    document.getElementById('map').appendChild(div);
+    setTimeout(()=>div.remove(), 950);
+}
+
 // 磁鐵拉動動畫
 function tickPullingItems(dt) {
     for(const [id,pull] of pullingItems){
@@ -2280,6 +2312,18 @@ function loop(ts) {
                     pushTrail(dt);
                 }
             }
+            // 自動拾取：靠近道具自動撿（不需按Space）
+            if(!magnetTimer){
+                const autoR=effectiveR();
+                for(const [id,item] of Object.entries(items)){
+                    if(distM(pLat,pLon,item.lat,item.lon)<=autoR) applyItem(item.type,id);
+                }
+            }
+            // 時間壓力：倒數 60s 以內顯示紅邊特效
+            if(uiFrame){
+                const vig=document.getElementById('time-vignette');
+                if(vig) vig.style.display=remaining<=60&&remaining>0?'block':'none';
+            }
             // 相機 lerp k=40：每幀微移（<0.2px）比大跳更滑；noMoveStart 省事件鏈
             {const k=1-Math.exp(-40*dt);
             camLat+=(pLat-camLat)*k; camLon+=(pLon-camLon)*k;
@@ -2317,18 +2361,39 @@ function effectiveR(){return rangeBoostTimer>0?CLCT_R*3:CLCT_R;}
 
 // ── 更新距離、羅盤、接近環 ────────────────────────────────
 function updateDistances() {
-    const nextId=OPTIMAL.find(id=>!collected.has(id));
-    const nextT =nextId?TREASURES.find(t=>t.id===nextId):null;
+    const wantedThief=aiList.find(ai=>ai.type==='thief'&&ai.wanted);
+    const compassBox=document.querySelector('.compass-box');
+    const arrowEl=document.getElementById('compass-arrow');
+    const nameEl=document.getElementById('compass-name');
+    const distEl=document.getElementById('compass-dist');
 
-    if(nextT){
-        const d  =Math.round(distM(pLat,pLon,nextT.lat,nextT.lon));
-        const deg=bearingDeg(pLat,pLon,nextT.lat,nextT.lon);
-        document.getElementById('compass-arrow').style.transform=`rotate(${deg}deg)`;
-        document.getElementById('compass-name').textContent=nextT.name;
-        document.getElementById('compass-dist').textContent=d+'m';
+    if(wantedThief){
+        // 通緝中：羅盤改指向小偷
+        const d=Math.round(distM(pLat,pLon,wantedThief.lat,wantedThief.lon));
+        const deg=bearingDeg(pLat,pLon,wantedThief.lat,wantedThief.lon);
+        arrowEl.style.transform=`rotate(${deg}deg)`;
+        arrowEl.style.color='#ff6f00';
+        nameEl.textContent='🚨 抓小偷！Space！';
+        nameEl.style.color='#ff6f00';
+        distEl.textContent=d+'m';
+        distEl.style.color='#ff6f00';
+        if(compassBox) compassBox.classList.add('thief-alert');
     } else {
-        document.getElementById('compass-name').textContent='全部找到了！🎉';
-        document.getElementById('compass-dist').textContent='';
+        // 正常：指向下一個寶藏
+        arrowEl.style.color=''; nameEl.style.color=''; distEl.style.color='';
+        if(compassBox) compassBox.classList.remove('thief-alert');
+        const nextId=OPTIMAL.find(id=>!collected.has(id));
+        const nextT =nextId?TREASURES.find(t=>t.id===nextId):null;
+        if(nextT){
+            const d  =Math.round(distM(pLat,pLon,nextT.lat,nextT.lon));
+            const deg=bearingDeg(pLat,pLon,nextT.lat,nextT.lon);
+            arrowEl.style.transform=`rotate(${deg}deg)`;
+            nameEl.textContent=nextT.name;
+            distEl.textContent=d+'m';
+        } else {
+            nameEl.textContent='全部找到了！🎉';
+            distEl.textContent='';
+        }
     }
 
     // 接近環（2×有效收集半徑的虛線圓，提示快到了）

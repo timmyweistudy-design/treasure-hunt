@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-20（戰鬥系統 + VFX修正）**
+> **最後更新：2026-05-20（遊戲優化 Pass）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,32 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-20 遊戲優化 Pass
+
+**時間壓力系統**
+- `tickChaser` / `tickThief`：倒數<60s 時速度×1.2，<30s 時速度×1.4
+- 通緝中小偷維持50%減速（timePressure 不疊加）
+- `#time-vignette` div：倒數<60s 顯示紅色邊框脈動特效，>60s 或遊戲結束隱藏
+
+**暈眩 ⭐ VFX**
+- `_stunAI(ai,dur)`：暈眩觸發時在 AI 頭上 spawn 浮動 ⭐ emoji（0.9s 消失）
+
+**衝刺回充加速**
+- `sprintBar+dt*.4` → `sprintBar+dt*.65`（快63%回充）
+
+**自動撿取道具**
+- 主迴圈加入自動撿取：每幀偵測 `effectiveR()` 範圍內道具，自動執行 `applyItem()`
+- 磁鐵模式啟動時跳過（磁鐵有自己的動畫拾取邏輯）
+
+**羅盤優化（前次優化）**
+- 通緝小偷存在時：羅盤改指向小偷，橘色顯示，顯示距離
+- 無小偷時：照原本邏輯指向下一個寶藏
+
+**處罰浮動文字（前次優化）**
+- `showPenaltyFloat(amount)`：被扣分時玩家頭上出現紅色 `-N` 浮動文字
 
 ---
 

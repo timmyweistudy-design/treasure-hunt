@@ -566,8 +566,10 @@ const MINE_CHARGES      = 2;      // 地雷最大數量
 const MINE_RECHARGE     = 25;     // 地雷充能秒數
 const MINE_RADIUS       = 20;     // 地雷觸發半徑（公尺）
 const MINE_STUN_DUR     = 5;      // 地雷暈眩時間（秒）
-const THIEF_WANTED_DUR  = 8;      // 小偷通緝窗口時間（秒）
-const CATCH_R           = 30;     // 抓小偷距離（公尺）
+const THIEF_WANTED_DUR  = 12;     // 小偷通緝窗口時間（秒）
+const CATCH_R           = 80;     // 抓小偷距離（公尺）
+const GRENADE_HIT_R     = 12;     // 手雷飛行路徑直接命中半徑（公尺）
+const MINE_LIFETIME     = 90;     // 地雷自動消除時間（秒）
 
 // ── 遊戲狀態 ──────────────────────────────────────────────
 let pLat = START[0], pLon = START[1];
@@ -1128,17 +1130,25 @@ function tickGrenades(dt) {
         const e=g.progress*(2-g.progress);
         const lat=g.lat+(g.tLat-g.lat)*e, lon=g.lon+(g.tLon-g.lon)*e;
         g.marker.setLatLng([lat,lon]);
-        if(g.progress>=1){
+        // 飛行路徑直接命中：飛過 AI 附近即爆炸
+        let directHit=false;
+        if(g.progress<1){
+            for(const ai of aiList){
+                if(distM(lat,lon,ai.lat,ai.lon)<=GRENADE_HIT_R){directHit=true;break;}
+            }
+        }
+        if(g.progress>=1||directHit){
+            const eLat=directHit?lat:g.tLat, eLon=directHit?lon:g.tLon;
             map.removeLayer(g.marker);
             if(g.preview) map.removeLayer(g.preview);
             grenades.splice(i,1);
-            _spawnExplosionVfx(g.tLat,g.tLon,GRENADE_RADIUS);
+            _spawnExplosionVfx(eLat,eLon,GRENADE_RADIUS);
             playExplosion();
             let hit=0;
             for(const ai of aiList){
-                if(distM(g.tLat,g.tLon,ai.lat,ai.lon)<=GRENADE_RADIUS){ _stunAI(ai,GRENADE_STUN_DUR); hit++; }
+                if(distM(eLat,eLon,ai.lat,ai.lon)<=GRENADE_RADIUS){ _stunAI(ai,GRENADE_STUN_DUR); hit++; }
             }
-            if(hit>0) showToast(`💣 手雷命中 ${hit} 隻敵人！暈眩 ${GRENADE_STUN_DUR}s！`,2500);
+            if(hit>0) showToast(`💣 ${directHit?'直接命中！':'手雷爆炸！'}${hit} 隻敵人暈眩 ${GRENADE_STUN_DUR}s！`,2500);
         }
     }
     // recharge
@@ -1168,7 +1178,7 @@ function placeMine() {
         radius:MINE_RADIUS,color:'#c62828',weight:1.5,
         fillColor:'#c62828',fillOpacity:.07,dashArray:'4 3',interactive:false
     }).addTo(map);
-    mines.push({lat:mLat,lon:mLon,marker:mMarker,circle:mCircle,armed:false,armTimer:0.8});
+    mines.push({lat:mLat,lon:mLon,marker:mMarker,circle:mCircle,armed:false,armTimer:0.8,life:MINE_LIFETIME});
     playMinePlace();
     showToast('💥 地雷已佈置！',800);
 }
@@ -1176,6 +1186,9 @@ function tickMines(dt) {
     for(let i=mines.length-1;i>=0;i--){
         const m=mines[i];
         if(!m.armed){ m.armTimer=Math.max(0,m.armTimer-dt); if(m.armTimer===0) m.armed=true; continue; }
+        // 自動到期
+        m.life=Math.max(0,m.life-dt);
+        if(m.life===0){ map.removeLayer(m.marker); if(m.circle) map.removeLayer(m.circle); mines.splice(i,1); continue; }
         let triggered=false;
         for(const ai of aiList){
             if(ai.combatStun>0) continue;
@@ -1579,11 +1592,12 @@ function tickThief(ai,dt,s) {
     while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
     const mLat=ai.path.length>0?ai.path[0][0]:tgt.lat, mLon=ai.path.length>0?ai.path[0][1]:tgt.lon;
     const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
-    if(len>1e-6){ai.lat+=dLa/len*s;ai.lon+=dLo/len*s;}
+    const ts=ai.wanted?s*0.5:s;  // 通緝中速度降半，讓玩家有機會追上
+    if(len>1e-6){ai.lat+=dLa/len*ts;ai.lon+=dLo/len*ts;}
     if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);
-        applyScorePenalty(20,`🦹 小偷把「${name}」搬走了！-20分！🚨 8秒內按Space反制！`);
+        applyScorePenalty(20,`🦹 小偷把「${name}」搬走了！-20分！🚨 ${THIEF_WANTED_DUR}秒內按Space反制！`);
         playThiefSteal();
         ai.wanted=true; ai.wantedTimer=THIEF_WANTED_DUR; ai.stolenAmt=20;
         const dot=ai.marker.getElement()?.querySelector('.thief-dot');
@@ -1852,7 +1866,7 @@ function runAstar(fLat,fLon,tLat,tLon){
 
 // ── 建築物載入後重算最佳路徑（細格 A*，22m 解析度）──────
 // Adaptive: keep grid ≤180×180 cells; min 11m, max 33m per cell
-const ROUTE_CELL = Math.max(0.0001, Math.max((BOUNDS.n-BOUNDS.s)/180,(BOUNDS.e-BOUNDS.w)/180));
+const ROUTE_CELL = Math.max(0.00008, Math.max((BOUNDS.n-BOUNDS.s)/360,(BOUNDS.e-BOUNDS.w)/360));
 let routeGrid = null;  // built once after buildings load, reused for all route updates
 
 function buildRouteGrid(){
@@ -1930,27 +1944,38 @@ function snapToUnblocked(rg, lat, lon){
     return [lat,lon];
 }
 
-// 視線判斷：沿直線取樣，確認不穿過任何建築
-function lineOfSightClear(p1,p2){
-    const dLa=p2[0]-p1[0],dLo=p2[1]-p1[1];
-    const dist=Math.hypot(dLa,dLo);
-    if(dist<ROUTE_CELL*0.5) return true;
-    const steps=Math.ceil(dist/(ROUTE_CELL*0.35))+1;
-    for(let i=1;i<steps;i++){
-        const t=i/steps;
-        if(isInBuilding(p1[0]+dLa*t,p1[1]+dLo*t)) return false;
+// Bresenham 格線視線判斷：逐格檢查，不會漏掉格線間的建築
+function lineOfSightClearGrid(rg,r1,c1,r2,c2){
+    const {cols,blocked}=rg;
+    let x=c1,y=r1;
+    const dx=Math.abs(c2-c1),dy=Math.abs(r2-r1);
+    const sx=c1<c2?1:-1,sy=r1<r2?1:-1;
+    let err=dx-dy;
+    for(;;){
+        if(blocked[y*cols+x]) return false;
+        if(x===c2&&y===r2) break;
+        const e2=2*err;
+        if(e2>-dy){err-=dy;x+=sx;}
+        if(e2<dx){err+=dx;y+=sy;}
     }
     return true;
 }
-// 路徑平滑：跳過可直接連線的中間點（去除 A* 鋸齒）
-function smoothRoutePath(path){
+// 路徑平滑：以 Bresenham 格線判斷視線，逐格精確，不漏建築
+function smoothRoutePath(path,rg){
     if(path.length<=2) return path;
+    const {rows,cols}=rg;
+    const toRC=(lat,lon)=>[
+        Math.max(0,Math.min(rows-1,Math.round((lat-BOUNDS.s)/ROUTE_CELL))),
+        Math.max(0,Math.min(cols-1,Math.round((lon-BOUNDS.w)/ROUTE_CELL)))
+    ];
     const res=[path[0]];
     let i=0;
     while(i<path.length-1){
         let far=i+1;
+        const [ri,ci]=toRC(path[i][0],path[i][1]);
         for(let j=path.length-1;j>i+1;j--){
-            if(lineOfSightClear(path[i],path[j])){far=j;break;}
+            const [rj,cj]=toRC(path[j][0],path[j][1]);
+            if(lineOfSightClearGrid(rg,ri,ci,rj,cj)){far=j;break;}
         }
         res.push(path[far]);
         i=far;
@@ -1975,7 +2000,7 @@ function rebuildOptimalRouteAstar() {
     let all=[];
     for(let i=0;i<wpts.length-1;i++){
         const seg=runRouteAstar(routeGrid,wpts[i][0],wpts[i][1],wpts[i+1][0],wpts[i+1][1]);
-        if(seg.length>0) all=all.concat(smoothRoutePath(seg));
+        if(seg.length>0) all=all.concat(smoothRoutePath(seg,routeGrid));
         else all.push(rawWpts[i],rawWpts[i+1]);
     }
     if(all.length<2) return;
@@ -2196,7 +2221,11 @@ function collectNearest() {
         if(d<eR&&d<nd){nearest=t;nd=d;}
     });
     if(nearest){collect(nearest.id,nearest.lat,nearest.lon);got=true;}
-    if(!got) showToast('📍 附近沒有寶藏或道具，走近一點！',1800);
+    if(!got){
+        const wt=aiList.find(ai=>ai.type==='thief'&&ai.wanted);
+        if(wt) showToast(`🚨 小偷在 ${Math.round(distM(pLat,pLon,wt.lat,wt.lon))}m 外！走近後按Space！`,1800);
+        else showToast('📍 附近沒有寶藏或道具，走近一點！',1800);
+    }
 }
 
 // ── 主迴圈 ────────────────────────────────────────────────

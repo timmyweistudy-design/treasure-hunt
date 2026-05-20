@@ -2312,13 +2312,6 @@ function loop(ts) {
                     pushTrail(dt);
                 }
             }
-            // 自動拾取：靠近道具自動撿（不需按Space）
-            if(!magnetTimer){
-                const autoR=effectiveR();
-                for(const [id,item] of Object.entries(items)){
-                    if(distM(pLat,pLon,item.lat,item.lon)<=autoR) applyItem(item.type,id);
-                }
-            }
             // 時間壓力：倒數 60s 以內顯示紅邊特效
             if(uiFrame){
                 const vig=document.getElementById('time-vignette');

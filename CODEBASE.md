@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-20（遊戲優化 Pass）**
+> **最後更新：2026-05-20（寶藏系統重構 + 小偷隱身）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,58 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-20 寶藏系統重構 + 小偷隱身 + 任意門 + 冰凍 VFX
+
+**寶藏距離分層（10 個寶藏，5 距離環各 2 個）**
+- `config.py`：`treasure_count` 改為 10
+- `app.py` 新增 `TREASURE_TIERS`（10 個 tier，每 2 個共用同一距離環）：
+  - 200m×2（100分）、450m×2（200分）、700m×2（300分）、850m×2（400分）、1000m×2（500分）
+- `app.py` 新增 `_assign_tiers(raw_pois, origin_lat, origin_lon)`：
+  - 計算所有 POI 到起點 Haversine 距離，按各 tier 目標距離貪婪分配
+  - 容差從 ±80m 遞增至 ±150m → ±250m → ±400m → 無限，從每個容差池**隨機選取**
+- `game/map_api.py` 新增 `fetch_poi_all(lat,lon)`：搜索半徑 ±0.012°，含 cafe/museum/library/attraction/park/restaurant/convenience/school 所有有名 POI，回傳 `{lat,lon,name,category}` 簡單 dict
+- `_prepare_game` 改用 `fetch_poi_all()` + `_assign_tiers()`，城市快取儲存 `raw_pois` 而非 Treasure 物件
+
+**小偷刷新位置同步分層**
+- `relocateTreasure(t)`：計算 `TIER_DISTS[t.points]`（100→200m, 200→450m, … 500→1000m），在該距離 ±80m 隨機方向刷新於 `ORIGIN_LAT/ORIGIN_LON` 為圓心的位置
+
+**小偷上限 & 隱身技能**
+- `THIEF_MAX = 3`（原為 4）
+- 新增常數：`THIEF_INVIS_DUR=5`、`THIEF_INVIS_CD=15`
+- `_thiefSetInvis(ai, on)`：一次更新 marker/miniMarker/targetMarker/catchCircle 的透明度
+- `tickThief` 頂部：隨機觸發隱身（約每 8s 機率觸發，`dt*0.125`），持續 5s，冷卻 15s
+- 被炸中（`_stunAI`）自動解除隱身：`if(ai.invis) _thiefSetInvis(ai,false)`
+- AI 新增欄位：`invis:false, invisTimer:0, invisCD:0`
+
+**暈眩 ⭐ 持續旋轉（修正）**
+- `_stunAI(ai,dur)`：在地圖 DOM spawn `.stun-orbit` div，定位於 `pt.y-38`（頭上 38px）
+- `ai.stunLabel` 儲存 div 參考，`aiFrame` 每幀更新位置跟隨 AI 移動
+- `tickCombatStun` 暈眩結束時呼叫 `ai.stunLabel.remove()`
+- CSS：`@keyframes stun-spin`（0.75s linear infinite，旋轉+縮放）、`.stun-orbit`（z-index 10000，文字陰影）
+
+**任意門系統**
+- `PORTALS`：4 個傳送門，分別位於 BOUNDS 四個象限中心（tl/tr/bl/br）
+- 對角線配對：`tl↔br`、`tr↔bl`
+- `PORTAL_R=40`（m）、`PORTAL_CD=3`（s）
+- `useNearestPortal()`：找最近 ≤40m 傳送門，傳送玩家並更新 camLat/camLon，顯示 toast + 粒子特效
+- 整合到 `collectNearest()`（Space 鍵）：先嘗試傳送門，再處理寶藏收集/逮捕
+
+**冰凍 VFX：藍色 + ❄️ 特效**
+- 凍結 filter 改為：`sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(...)` — 先歸一化顏色再旋轉，確保任何 marker 都呈現藍色
+- 每 0.45s 在所有 AI 頭上 spawn ❄️ emoji（隨機 ±9px 偏移），0.92s 後移除
+
+**道具（items）優化**
+- `ITEM_MAX=20`（原為 10）、`ITEM_MIN_DIST=100`（m）、`ITEM_IVTL=1`（s，生成間隔）
+- 生成時最多嘗試 20 次，若落在建築內或距現有道具 <100m 則捨棄
+- 廣域（range）道具機率降低：寶藏附近 25%（原 60%），一般區域維持 20%
+- `CHASER_MAX=3`（追蹤者上限不變，修正文件記錄）
+
+**`nextId` ReferenceError 修正**
+- `updateDistances()` 中 `nextId` 原在 `else` 分支宣告，但 `TREASURES.forEach` 在 if/else 外使用
+- 修正：將 `const nextId=OPTIMAL.find(id=>!collected.has(id))` 提升至 if/else 之前
 
 ---
 

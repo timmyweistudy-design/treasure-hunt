@@ -1340,7 +1340,7 @@ function tickCombatStun(dt) {
             ai.combatStun=Math.max(0,ai.combatStun-dt);
             if(ai.combatStun===0){
                 const el=ai.marker.getElement();
-                if(el) el.style.filter=aiFrozenTimer>0?'hue-rotate(150deg) brightness(1.5) drop-shadow(0 0 10px rgba(80,180,255,.9))':'';
+                if(el) el.style.filter=aiFrozenTimer>0?'sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))':'';
                 if(ai.stunLabel){ai.stunLabel.remove();ai.stunLabel=null;}
             }
         }
@@ -1436,7 +1436,7 @@ function applyItem(type,id) {
         const mapEl=document.getElementById('map');
         for(const ai of aiList){
             const el=ai.marker.getElement();
-            if(el) el.style.filter='hue-rotate(150deg) brightness(1.5) drop-shadow(0 0 10px rgba(80,180,255,.9))';
+            if(el) el.style.filter='sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))';
             // 初始冰凍爆發 ❄️
             const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
             [0,1,2].forEach(i=>{

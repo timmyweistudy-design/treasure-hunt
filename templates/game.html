@@ -54,6 +54,20 @@
             0%   { opacity:1; transform:translateY(0) scale(1); }
             100% { opacity:0; transform:translateY(-65px) scale(1.3); }
         }
+        /* ── Combat effects ── */
+        .mine-marker { width:20px;height:20px;background:#c62828;border-radius:50%;
+                       border:3px solid #fff;display:flex;align-items:center;justify-content:center;
+                       font-size:11px;line-height:1;animation:mine-pulse .7s ease-in-out infinite; }
+        @keyframes mine-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(198,40,40,.6)} 50%{box-shadow:0 0 0 8px rgba(198,40,40,0)} }
+        .grenade-projectile { width:14px;height:14px;font-size:12px;line-height:14px;
+                              text-align:center; filter:drop-shadow(0 1px 4px rgba(0,0,0,.7)); }
+        .ai-stunned { filter:saturate(0) brightness(1.4) !important; }
+        @keyframes explosion-ring { 0%{opacity:.85;transform:scale(0)} 100%{opacity:0;transform:scale(1)} }
+        .stun-label { position:absolute;z-index:9999;pointer-events:none;font-size:18px;
+                      animation:float-up .9s ease-out forwards; }
+        /* wanted thief flash */
+        @keyframes wanted-flash { 0%,100%{background:rgba(198,40,40,.45)} 50%{background:rgba(255,82,82,.75)} }
+        .thief-dot.wanted { animation:wanted-flash .5s ease-in-out infinite; }
         /* magnet pull */
         .item-badge.pulling {
             animation:magnet-pull .35s ease-in-out infinite !important;
@@ -370,6 +384,9 @@
         <span class="eff-chip" id="chip-decoy"><span id="decoy-label">🎯 誘餌</span> <span id="decoy-t">6</span>s</span>
         <span class="eff-chip" id="chip-combo">🔥 連擊×<span id="combo-count">2</span> <span id="combo-t">22</span>s</span>
         <span class="eff-chip" id="chip-ai"><span id="ai-count-txt"></span> <span id="ai-dist">—</span>m</span>
+        <span class="eff-chip" id="chip-grenade" style="display:inline-block">💣 <span id="grenade-chr">●●</span> <span id="grenade-cd-txt"></span></span>
+        <span class="eff-chip" id="chip-mine" style="display:inline-block">💥 <span id="mine-chr">●●</span> <span id="mine-cd-txt"></span></span>
+        <span class="eff-chip" id="chip-wanted" style="display:none;background:rgba(198,40,40,.55)">🚨 通緝！<span id="wanted-t">8</span>s 按Space！</span>
     </div>
 </div>
 
@@ -424,8 +441,10 @@
                 <div class="kbd-box">
                     <b>移動</b>：<span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> / <span class="key">↑↓←→</span><br>
                     <span class="key">Shift</span> 衝刺 10s・冷卻3s<br>
-                    <span class="key">Space</span> 收集 / 撿道具<br>
+                    <span class="key">Space</span> 收集 / 撿道具 / 抓小偷<br>
                     <span class="key">Q</span> 誘餌（AI追6s・冷卻40s）<br>
+                    <span class="key">E</span> 💣手雷（2顆・80m暈眩4s・充能20s）<br>
+                    <span class="key">F</span> 💥地雷（2個・20m觸發暈眩5s・充能25s）<br>
                     <b>道具</b>：⚡速×2(5s) ⭐無敵(5s) 🔍廣域×3(10s) ❄️凍AI(7s) 🧲磁鐵(8s)<br>
                     <b>扣分</b>：👾追跡 <b>-50</b>・👁️巡邏 <b>-30</b>・🦹小偷 <b>-20</b><br>
                     🔥 22秒速收2+寶藏＝連擊獎勵<br>
@@ -540,6 +559,16 @@ const GOLDEN_MULT    = 3;         // 黃金寶藏分數倍率
 const PATROLLER_FOV_LEN = 120;    // 巡邏守衛視野長度（公尺）
 const PATROLLER_FOV_HW  = 20;     // 巡邏守衛視野半寬（公尺）
 const THIEF_STEAL_R     = 20;     // 小偷偷竊觸發距離（公尺）
+const GRENADE_CHARGES   = 2;      // 手雷最大數量
+const GRENADE_RECHARGE  = 20;     // 手雷充能秒數
+const GRENADE_RADIUS    = 80;     // 手雷爆炸半徑（公尺）
+const GRENADE_STUN_DUR  = 4;      // 手雷暈眩時間（秒）
+const MINE_CHARGES      = 2;      // 地雷最大數量
+const MINE_RECHARGE     = 25;     // 地雷充能秒數
+const MINE_RADIUS       = 20;     // 地雷觸發半徑（公尺）
+const MINE_STUN_DUR     = 5;      // 地雷暈眩時間（秒）
+const THIEF_WANTED_DUR  = 8;      // 小偷通緝窗口時間（秒）
+const CATCH_R           = 30;     // 抓小偷距離（公尺）
 
 // ── 遊戲狀態 ──────────────────────────────────────────────
 let pLat = START[0], pLon = START[1];
@@ -571,6 +600,16 @@ let magnetTimer=0, magnetAutoT=0, magnetCircle=null;
 const MAGNET_R = CLCT_R * 8;  // 400m magnet radius (vs 50m normal collect)
 const pullingItems = new Map(); // id → {type, marker, sLat, sLon, progress} for pull animation
 let goldenId=null, goldenTimer=0, goldenCycle=GOLDEN_INTERVAL, goldenRing=null;
+// 戰鬥：手雷
+let grenadeCharges=GRENADE_CHARGES, grenadeRechargeCooldown=0, grenadeRechargeQueue=0;
+const grenades=[];  // {lat,lon,tLat,tLon,progress,marker}
+// 戰鬥：地雷
+let mineCharges=MINE_CHARGES, mineRechargeCooldown=0, mineRechargeQueue=0;
+const mines=[];     // {lat,lon,marker}
+// 最後移動方向（供手雷投擲方向使用）
+let lastDx=0, lastDy=1;
+// 通緝計時器（最大通緝剩餘時間，供 HUD 顯示）
+let wantedMaxTimer=0;
 const inFlight=new Set();
 let ticker      = null;
 let countdownStarted = false;
@@ -761,6 +800,47 @@ function playThiefSteal() {
         g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+0.35);
         o.connect(g); g.connect(ctx.destination);
         o.start(ctx.currentTime); o.stop(ctx.currentTime+0.35);
+    });
+}
+
+function playExplosion() {
+    snd(ctx => {
+        const b=ctx.createOscillator(), bg=ctx.createGain();
+        b.type='sawtooth'; b.frequency.setValueAtTime(120,ctx.currentTime);
+        b.frequency.exponentialRampToValueAtTime(28,ctx.currentTime+0.45);
+        bg.gain.setValueAtTime(.5,ctx.currentTime);
+        bg.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+0.5);
+        b.connect(bg); bg.connect(ctx.destination);
+        b.start(ctx.currentTime); b.stop(ctx.currentTime+0.5);
+        const buf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*0.3),ctx.sampleRate);
+        const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+        const src=ctx.createBufferSource(), ng=ctx.createGain();
+        ng.gain.setValueAtTime(.32,ctx.currentTime);
+        ng.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+0.3);
+        src.buffer=buf; src.connect(ng); ng.connect(ctx.destination); src.start(ctx.currentTime);
+    });
+}
+function playMinePlace() {
+    snd(ctx => {
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.type='sine'; o.frequency.setValueAtTime(900,ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(400,ctx.currentTime+0.12);
+        g.gain.setValueAtTime(.18,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+0.15);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime+0.15);
+    });
+}
+function playThiefCaught() {
+    snd(ctx => {
+        [[800,.0],[1050,.09],[1300,.18],[1700,.28]].forEach(([freq,t]) => {
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='sine'; o.frequency.value=freq;
+            g.gain.setValueAtTime(.22,ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+t+.22);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.22);
+        });
     });
 }
 
@@ -991,6 +1071,173 @@ function tickGolden(dt) {
     }
 }
 
+// ── 戰鬥系統 ──────────────────────────────────────────────
+function _spawnExplosionVfx(lat,lon) {
+    const pt=map.latLngToContainerPoint([lat,lon]);
+    const ring=document.createElement('div');
+    ring.style.cssText=`position:absolute;left:${pt.x}px;top:${pt.y}px;width:0;height:0;
+        border-radius:50%;background:rgba(255,120,0,.55);z-index:9990;pointer-events:none;
+        transform:translate(-50%,-50%);animation:explosion-ring .5s ease-out forwards;`;
+    const sz=map.latLngToContainerPoint([lat+GRENADE_RADIUS/111111,lon]);
+    const pxR=Math.abs(pt.y-sz.y)*2;
+    ring.style.width=pxR+'px'; ring.style.height=pxR+'px';
+    document.getElementById('map').appendChild(ring);
+    setTimeout(()=>ring.remove(),520);
+    // stun label
+    const lbl=document.createElement('div');
+    lbl.className='stun-label';
+    lbl.textContent='💥';
+    lbl.style.cssText=`left:${pt.x-12}px;top:${pt.y-10}px;`;
+    document.getElementById('map').appendChild(lbl);
+    setTimeout(()=>lbl.remove(),920);
+}
+function _stunAI(ai, dur) {
+    ai.combatStun=dur;
+    ai.path=[]; ai.pathTimer=dur;
+    const el=ai.marker.getElement();
+    if(el) el.querySelector('[class$="-dot"]')?.classList.add('ai-stunned');
+    if(el) el.classList.add('ai-stunned');
+}
+function throwGrenade() {
+    if(!gameReady) return;
+    if(grenadeCharges<=0){ showToast('💣 手雷充能中…',1200); return; }
+    grenadeCharges--;
+    if(grenadeRechargeQueue===0) { grenadeRechargeCooldown=GRENADE_RECHARGE; }
+    grenadeRechargeQueue++;
+    // 投擲目標 = 玩家位置 + 最後移動方向 × ~200m
+    const normLen=Math.hypot(lastDx,lastDy)||1;
+    const deg200=200/111111;
+    const tLat=pLat+(lastDy/normLen)*deg200;
+    const tLon=pLon+(lastDx/normLen)*deg200*(1/Math.cos(pLat*Math.PI/180));
+    const gMarker=L.marker([pLat,pLon],{
+        icon:L.divIcon({html:'<div class="grenade-projectile">💣</div>',className:'',iconSize:[14,14],iconAnchor:[7,7]}),
+        zIndexOffset:980,interactive:false
+    }).addTo(map);
+    grenades.push({lat:pLat,lon:pLon,tLat,tLon,progress:0,marker:gMarker});
+    showToast('💣 手雷投出！',800);
+}
+function tickGrenades(dt) {
+    for(let i=grenades.length-1;i>=0;i--){
+        const g=grenades[i];
+        g.progress=Math.min(1,g.progress+dt/0.55);
+        const e=g.progress*(2-g.progress);
+        const lat=g.lat+(g.tLat-g.lat)*e, lon=g.lon+(g.tLon-g.lon)*e;
+        g.marker.setLatLng([lat,lon]);
+        if(g.progress>=1){
+            map.removeLayer(g.marker);
+            grenades.splice(i,1);
+            _spawnExplosionVfx(g.tLat,g.tLon);
+            playExplosion();
+            let hit=0;
+            for(const ai of aiList){
+                if(distM(g.tLat,g.tLon,ai.lat,ai.lon)<=GRENADE_RADIUS){ _stunAI(ai,GRENADE_STUN_DUR); hit++; }
+            }
+            if(hit>0) showToast(`💣 手雷命中 ${hit} 隻敵人！暈眩 ${GRENADE_STUN_DUR}s！`,2500);
+        }
+    }
+    // recharge
+    if(grenadeRechargeQueue>0&&grenadeCharges<GRENADE_CHARGES){
+        grenadeRechargeCooldown=Math.max(0,grenadeRechargeCooldown-dt);
+        if(grenadeRechargeCooldown===0){
+            grenadeCharges=Math.min(GRENADE_CHARGES,grenadeCharges+1);
+            grenadeRechargeQueue--;
+            if(grenadeRechargeQueue>0) grenadeRechargeCooldown=GRENADE_RECHARGE;
+            showToast('💣 手雷充能完畢！',1200);
+        }
+    }
+}
+function placeMine() {
+    if(!gameReady) return;
+    if(mineCharges<=0){ showToast('💥 地雷充能中…',1200); return; }
+    mineCharges--;
+    if(mineRechargeQueue===0) { mineRechargeCooldown=MINE_RECHARGE; }
+    mineRechargeQueue++;
+    const mLat=pLat, mLon=pLon;
+    const mMarker=L.marker([mLat,mLon],{
+        icon:L.divIcon({html:'<div class="mine-marker">💥</div>',className:'',iconSize:[20,20],iconAnchor:[10,10]}),
+        zIndexOffset:490,interactive:false
+    }).addTo(map);
+    mines.push({lat:mLat,lon:mLon,marker:mMarker,armed:false,armTimer:0.8});
+    playMinePlace();
+    showToast('💥 地雷已佈置！',800);
+}
+function tickMines(dt) {
+    for(let i=mines.length-1;i>=0;i--){
+        const m=mines[i];
+        if(!m.armed){ m.armTimer=Math.max(0,m.armTimer-dt); if(m.armTimer===0) m.armed=true; continue; }
+        let triggered=false;
+        for(const ai of aiList){
+            if(ai.combatStun>0) continue;
+            if(distM(m.lat,m.lon,ai.lat,ai.lon)<=MINE_RADIUS){
+                _stunAI(ai,MINE_STUN_DUR);
+                showToast(`💥 地雷觸發！${ai.type==='chaser'?'👾追跡者':ai.type==='patroller'?'👁️巡邏守衛':'🦹小偷'}暈眩 ${MINE_STUN_DUR}s！`,2500);
+                playExplosion();
+                _spawnExplosionVfx(m.lat,m.lon);
+                triggered=true;
+                break;
+            }
+        }
+        if(triggered){ map.removeLayer(m.marker); mines.splice(i,1); }
+    }
+    // recharge
+    if(mineRechargeQueue>0&&mineCharges<MINE_CHARGES){
+        mineRechargeCooldown=Math.max(0,mineRechargeCooldown-dt);
+        if(mineRechargeCooldown===0){
+            mineCharges=Math.min(MINE_CHARGES,mineCharges+1);
+            mineRechargeQueue--;
+            if(mineRechargeQueue>0) mineRechargeCooldown=MINE_RECHARGE;
+            showToast('💥 地雷充能完畢！',1200);
+        }
+    }
+}
+function catchWantedThief() {
+    for(let i=aiList.length-1;i>=0;i--){
+        const ai=aiList[i];
+        if(ai.type!=='thief'||!ai.wanted) continue;
+        if(distM(pLat,pLon,ai.lat,ai.lon)>CATCH_R) continue;
+        const bonus=ai.stolenAmt+50;
+        score=Math.max(0,score+bonus);
+        document.getElementById('score').textContent=score;
+        fetch('/collect',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({treasure_id:'__thief_catch__',bonus})}).catch(()=>{});
+        showToast(`🎉 小偷被抓！找回 ${ai.stolenAmt} 分＋獎勵 50 分！`,3500);
+        playThiefCaught();
+        spawnParticles(ai.lat,ai.lon);
+        if(ai.marker) map.removeLayer(ai.marker);
+        if(ai.miniMarker) ai.miniMarker.remove();
+        if(ai.targetMarker) map.removeLayer(ai.targetMarker);
+        if(ai.fovPoly) map.removeLayer(ai.fovPoly);
+        aiList.splice(i,1);
+        thiefCount=Math.max(0,thiefCount-1);
+        wantedMaxTimer=0;
+        return true;
+    }
+    return false;
+}
+// 更新 AI combatStun（每幀遞減）
+function tickCombatStun(dt) {
+    for(const ai of aiList){
+        if(ai.combatStun>0){
+            ai.combatStun=Math.max(0,ai.combatStun-dt);
+            if(ai.combatStun===0){
+                const el=ai.marker.getElement();
+                if(el){ el.classList.remove('ai-stunned'); el.querySelector('[class$="-dot"]')?.classList.remove('ai-stunned'); }
+            }
+        }
+        if(ai.wanted&&ai.wantedTimer>0){
+            ai.wantedTimer=Math.max(0,ai.wantedTimer-dt);
+            if(ai.wantedTimer===0){
+                ai.wanted=false;
+                const dot=ai.marker.getElement()?.querySelector('.thief-dot');
+                if(dot) dot.classList.remove('wanted');
+            }
+        }
+    }
+    // 更新通緝最大倒數（供 HUD）
+    wantedMaxTimer=0;
+    for(const ai of aiList){ if(ai.wanted&&ai.wantedTimer>wantedMaxTimer) wantedMaxTimer=ai.wantedTimer; }
+}
+
 // ── 道具系統 ──────────────────────────────────────────────
 function spawnItem() {
     if(Object.keys(items).length>=ITEM_MAX) return;
@@ -1114,7 +1361,8 @@ function spawnAI(forceType, silent=false) {
         radius:6,color:'#fff',fillColor:miniColor,fillOpacity:1,weight:2
     }).addTo(miniMap);
 
-    const ai={type,lat:iLat,lon:iLon,marker,miniMarker,attackCD:0,path:[],pathTimer:aiList.length*0.4};
+    const ai={type,lat:iLat,lon:iLon,marker,miniMarker,attackCD:0,path:[],pathTimer:aiList.length*0.4,
+              combatStun:0,wanted:false,wantedTimer:0,stolenAmt:0};
     if(type==='chaser'){
         ai.speedMult=1+chaserCount*0.15;  // 1.0×、1.15×、1.30× 依次加速
         chaserCount++;
@@ -1198,6 +1446,7 @@ function relocateTreasure(tId) {
 
 // ── 追跡者行為 ───────────────────────────────────────────
 function tickChaser(ai,dt,s) {
+    if(ai.combatStun>0) return distM(pLat,pLon,ai.lat,ai.lon);
     const cs=s*(ai.speedMult||1);  // 每隻追跡者依序加速 15%
     if(invincTimer>0){
         const dLaP=ai.lat-pLat, dLoP=ai.lon-pLon;
@@ -1228,6 +1477,7 @@ function tickChaser(ai,dt,s) {
 
 // ── 巡邏守衛行為 ─────────────────────────────────────────
 function tickPatroller(ai,dt,s) {
+    if(ai.combatStun>0) return distM(pLat,pLon,ai.lat,ai.lon);
     if(ai.alertCD>0) ai.alertCD=Math.max(0,ai.alertCD-dt);
     if(ai.alertTimer>0){
         ai.alertTimer=Math.max(0,ai.alertTimer-dt);
@@ -1298,6 +1548,7 @@ function _updateThiefMarker(ai) {
 
 // ── 寶物小偷行為 ─────────────────────────────────────────
 function tickThief(ai,dt,s) {
+    if(ai.combatStun>0) return distM(pLat,pLon,ai.lat,ai.lon);
     if(ai.stealCD>0) ai.stealCD=Math.max(0,ai.stealCD-dt);
     if(!ai.targetTId||collected.has(ai.targetTId)){
         const cands=TREASURES.filter(t=>!collected.has(t.id));
@@ -1320,8 +1571,11 @@ function tickThief(ai,dt,s) {
     if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);
-        applyScorePenalty(20,`🦹 小偷把「${name}」搬走了！-20分！`);
+        applyScorePenalty(20,`🦹 小偷把「${name}」搬走了！-20分！🚨 8秒內按Space反制！`);
         playThiefSteal();
+        ai.wanted=true; ai.wantedTimer=THIEF_WANTED_DUR; ai.stolenAmt=20;
+        const dot=ai.marker.getElement()?.querySelector('.thief-dot');
+        if(dot) dot.classList.add('wanted');
         if(ai.targetMarker){map.removeLayer(ai.targetMarker);ai.targetMarker=null;}
         ai.targetTId=null; ai._prevTargetTId=null;
         ai.stealCD=15; ai.path=[]; ai.pathTimer=0;
@@ -1485,10 +1739,24 @@ function tickEffects(dt) {
         cChip.style.backgroundImage='';
     }
 
-    document.getElementById('eff-row').style.display=
-        (speedBoostTimer>0||invincTimer>0||rangeBoostTimer>0||aiFrozenTimer>0||
-         stunTimer>0||magnetTimer>0||
-         decoyActive||decoyCD>0||comboCount>=2||aiList.length>0)?'flex':'none';
+    // 手雷 chip（常駐）
+    const gChr=document.getElementById('grenade-chr');
+    const gCdTxt=document.getElementById('grenade-cd-txt');
+    if(gChr) gChr.textContent='●'.repeat(grenadeCharges)+'○'.repeat(GRENADE_CHARGES-grenadeCharges);
+    if(gCdTxt) gCdTxt.textContent=grenadeRechargeCooldown>0?`(${Math.ceil(grenadeRechargeCooldown)}s)`:'';
+    // 地雷 chip（常駐）
+    const mChr=document.getElementById('mine-chr');
+    const mCdTxt=document.getElementById('mine-cd-txt');
+    if(mChr) mChr.textContent='●'.repeat(mineCharges)+'○'.repeat(MINE_CHARGES-mineCharges);
+    if(mCdTxt) mCdTxt.textContent=mineRechargeCooldown>0?`(${Math.ceil(mineRechargeCooldown)}s)`:'';
+    // 通緝 chip
+    const wChip=document.getElementById('chip-wanted');
+    if(wChip){
+        wChip.style.display=wantedMaxTimer>0?'inline-block':'none';
+        if(wantedMaxTimer>0) document.getElementById('wanted-t').textContent=Math.ceil(wantedMaxTimer);
+    }
+
+    document.getElementById('eff-row').style.display='flex';  // 手雷/地雷常駐，eff-row 永遠顯示
 }
 
 // ── A* 路徑規劃（供 AI 追跡者使用）──────────────────────
@@ -1846,6 +2114,8 @@ document.addEventListener('keydown', e=>{
     if(MOVE_KEYS.has(k)) e.preventDefault();
     if(k===' '){e.preventDefault();collectNearest();return;}
     if(k==='q'){e.preventDefault();dropDecoy();return;}
+    if(k==='e'){e.preventDefault();throwGrenade();return;}
+    if(k==='f'){e.preventDefault();placeMine();return;}
     keys[k]=true;
 });
 document.addEventListener('keyup', e=>{
@@ -1893,9 +2163,10 @@ function tickPullingItems(dt) {
     }
 }
 
-// Space：收集最近寶藏 / 撿道具
+// Space：收集最近寶藏 / 撿道具 / 抓通緝小偷
 function collectNearest() {
     if(!gameReady) return;
+    if(catchWantedThief()) return;
     let got=false;
     const eR=effectiveR();
     // 撿附近所有道具
@@ -1929,6 +2200,9 @@ function loop(ts) {
             tickItems(dt);
             tickDecoy(dt);
             tickGolden(dt);
+            tickGrenades(dt);
+            tickMines(dt);
+            tickCombatStun(dt);
             tickAI(dt);
             // 🧲 磁鐵：把 400m 內道具拉向玩家（動畫吸引）
             if(magnetTimer>0){
@@ -1950,6 +2224,7 @@ function loop(ts) {
                 if(keys['ArrowRight']||keys['d']) dx+=1;
                 if(keys['ArrowLeft'] ||keys['a']) dx-=1;
                 if(dx||dy){
+                    lastDx=dx; lastDy=dy;  // 記錄移動方向供手雷投擲使用
                     const n=Math.hypot(dx,dy);
                     const spd=(isSprinting?SPRINT_SPD:WALK_SPD)*(speedBoostTimer>0?2:1);
                     tryMove(dx/n*spd*dt, dy/n*spd*dt);

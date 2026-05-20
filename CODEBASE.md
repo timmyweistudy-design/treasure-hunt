@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-20**
+> **最後更新：2026-05-20（戰鬥系統）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,40 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-20 戰鬥系統（手雷 + 地雷 + 小偷反制）
+
+**新增按鍵**
+- `E` — 💣手雷：2顆儲量，充能 20s/顆；向最後移動方向投出約 200m，到達後爆炸 80m 內所有 AI 暈眩 4s
+- `F` — 💥地雷：2個儲量，充能 25s/個；放置在玩家腳下，首個踏入 20m 的 AI 暈眩 5s 並觸發爆炸移除
+- `Space`（擴充）— 小偷偷竊後 8 秒內按 Space，若距離 ≤30m 可逮捕，找回扣分 +50 獎勵
+
+**新增函式（templates/game.html）**
+- `throwGrenade()` — 消耗手雷，建立飛行中手雷物件（55 格動畫），抵達後呼叫 `_spawnExplosionVfx` + `_stunAI`
+- `placeMine()` — 消耗地雷，建立地雷 marker（0.8s 武裝延遲），觸發時爆炸暈眩
+- `tickGrenades(dt)` — 每幀推進手雷飛行動畫，並管理充能計時器
+- `tickMines(dt)` — 每幀偵測 AI 踩雷，並管理充能計時器
+- `catchWantedThief()` — 逮捕通緝小偷，返回 true 表示成功
+- `tickCombatStun(dt)` — 遞減所有 AI 的 `combatStun` 計時器，清除暈眩樣式 + 管理 `wantedTimer`
+- `_stunAI(ai, dur)` — 設定 `ai.combatStun=dur`，清空路徑，加 `ai-stunned` CSS class
+- `_spawnExplosionVfx(lat,lon)` — 地圖上建立爆炸環 DOM 動畫
+
+**新增常數**
+- `GRENADE_CHARGES=2, GRENADE_RECHARGE=20, GRENADE_RADIUS=80, GRENADE_STUN_DUR=4`
+- `MINE_CHARGES=2, MINE_RECHARGE=25, MINE_RADIUS=20, MINE_STUN_DUR=5`
+- `THIEF_WANTED_DUR=8, CATCH_R=30`
+
+**AI 新增欄位**（所有型別）
+- `combatStun:0` — 暈眩剩餘秒數；>0 時 tickChaser/tickPatroller/tickThief 立即 return
+- `wanted:false, wantedTimer:0` — 通緝狀態；小偷偷竊後設 true，8s 內玩家可逮捕
+- `stolenAmt:0` — 被盜分數（供逮捕時還給玩家）
+
+**HUD 新增**
+- `chip-grenade`（常駐）：💣 ●● 顯示儲量，充能中顯示倒數秒
+- `chip-mine`（常駐）：💥 ●● 顯示儲量，充能中顯示倒數秒
+- `chip-wanted`：🚨 通緝！Xs 按Space！（小偷偷竊後 8 秒顯示）
 
 ---
 

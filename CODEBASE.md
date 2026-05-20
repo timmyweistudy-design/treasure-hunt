@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-20（寶藏系統重構 + 小偷隱身）**
+> **最後更新：2026-05-20（天氣系統 + 寶藏分層優化 + 道具 & AI 平衡調整）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,51 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-20 天氣系統 + 道具平衡 + AI 調整 + POI 擴展
+
+**天氣系統**
+- 每 90 秒隨機觸發大霧或雷雨，持續 30 秒後恢復晴天
+- `weatherType`（sunny/fog/storm）、`weatherTimer`、`weatherCD` 三個狀態變數
+- `setWeather(type)` / `tickWeather(dt)` 管理切換與倒數
+- 大霧：白色半透明覆蓋（opacity 22%，blur 1.5px）+ patroller FOV 縮至 35%（`currentFovLen()`）
+- 雷雨：深藍覆蓋 + CSS 斜線雨動畫 + 閃電 keyframe；AI 速度 ×1.15，玩家速度 ×0.85
+- HUD `chip-weather` 常駐顯示天氣及倒數
+
+**天氣音效**
+- 晴天：每 8-20s 隨機小鳥叫（兩段頻率掃音）
+- 大霧：切換時低沉 whoosh + 持續低頻風聲（lowpass 白噪音）
+- 雷雨：切換時隆隆聲 + 持續雨聲（bandpass 白噪音）+ 每 12-22s 隨機打雷
+- 恢復晴天：清脆兩音提示
+- `_startAmbient()` / `_stopAmbient()`：環境音節點管理，靜音鍵同步停止/恢復
+
+**傳送門優化**
+- 建築物載入後呼叫 `relocatePortalsFromBuildings()`，偵測碰撞箱並螺旋外移至空地
+- 傳送門虛線圓跟隨 AI 移動：`aiFrame` 每幀更新 `ai.stunRing.setLatLng()`
+
+**定身技能調整**
+- `STUN_DURATION` 3s → 1s，`STUN_CD` 30s → 10s，`STUN_R` 65m → 30m
+- 巡邏守衛 & 追跡者生成時加紅色虛線範圍圓（`ai.stunRing`），AI 死亡時移除
+
+**POI 擴展（game/map_api.py）**
+- `fetch_poi_all` 改用 `nwr`（node+way+relation）+ `out center;`：公園、廟宇、學校等多邊形地標全納入
+- 查詢逾時 per_timeout 5s → 20s，search radius 0.012° → 0.015°
+- 4 查詢合併為 2（使用 `~` 正則）
+
+**寶藏分層精化（app.py）**
+- 篩選梯度：±50m → ±100m → ±150m … → ±450m → ∞（每步 50m）
+- `min_d = target * 0.5`：禁止選距起點不足目標一半的 POI
+- 同環第 2 個寶藏改用 dot-product opposition（相對起點方向最反向），確保對邊
+
+**道具平衡**
+- ⭐ 無敵星星：5s → 10s，新增速度 ×1.5，機率減半
+- ⚡ 加速道具：5s → 8s
+- 🧲 磁鐵範圍：CLCT_R × 8（400m）→ × 6（300m）
+
+**AI 生成優化**
+- 巡邏守衛：20 次採樣取最佳（最大化距起點 >300m 且距其他守衛 >250m）
 
 ---
 

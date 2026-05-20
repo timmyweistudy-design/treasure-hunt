@@ -784,7 +784,12 @@ function spawnParticles(tLat, tLon) {
 }
 
 // ── 主地圖 ────────────────────────────────────────────────
-const map = L.map('map', { keyboard: false }).setView(START, 17);
+const map = L.map('map', {
+    keyboard: false,
+    zoomAnimation: false,   // 縮放不做動畫，避免 setView 觸發動畫中斷
+    fadeAnimation: false,   // tile 淡入淡出動畫關閉，tile 載入不閃
+    markerZoomAnimation: false,
+}).setView(START, 17);
 // CartoDB Voyager（全球 CDN，比直連 OSM 更穩定）
 const _mainTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> © <a href="https://carto.com">CARTO</a>',
@@ -816,6 +821,11 @@ pMarker.update = function(){
     }
     return this;
 };
+// 讓瀏覽器提前為 marker 建立獨立 GPU compositing layer，減少每幀合成開銷
+pMarker.on('add',()=>{
+    const el=pMarker.getElement();
+    if(el) el.style.willChange='transform';
+});
 const pCircle = L.circle(START, {
     radius: CLCT_R, color: '#1a73e8', weight: 1.5, fillColor: '#1a73e8', fillOpacity: .06
 }).addTo(map);
@@ -1810,7 +1820,7 @@ function tryMove(dLon,dLat) {
     }
     blockFlash=0;
     pMarker.setLatLng([pLat,pLon]);
-    if(aiFrame) pCircle.setLatLng([pLat,pLon]);  // 30fps 足夠，省 SVG 重繪
+    pCircle.setLatLng([pLat,pLon]);
 }
 
 // uiFrame=每4幀(~15fps)觸發UI更新; aiFrame=每2幀(~30fps)更新AI標記
@@ -1946,12 +1956,10 @@ function loop(ts) {
                     pushTrail(dt);
                 }
             }
-            // 相機：只在玩家移動超過 0.5px 時才 setView（避免每幀觸發 Leaflet DOM 重排）
-            {const _px=map.project([pLat,pLon]),_cx=map.project([camLat,camLon]);
-            if(Math.abs(_px.x-_cx.x)>0.5||Math.abs(_px.y-_cx.y)>0.5){
-                camLat=pLat;camLon=pLon;
-                map.setView([camLat,camLon],map.getZoom(),{animate:false,noMoveStart:true});
-            }}
+            // 相機 lerp k=40：每幀微移（<0.2px）比大跳更滑；noMoveStart 省事件鏈
+            {const k=1-Math.exp(-40*dt);
+            camLat+=(pLat-camLat)*k; camLon+=(pLon-camLon)*k;
+            map.setView([camLat,camLon],map.getZoom(),{animate:false,noMoveStart:true});}
             if(uiFrame){ updateMiniMap(); updateDistances(); }
             if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); } }
         } catch(e) {

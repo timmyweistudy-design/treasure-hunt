@@ -27,6 +27,21 @@
 
 ---
 
+### 2026-05-20 動態邊界 + 移動再優化
+
+**動態正方形邊界（恰好框住最遠寶藏）**
+- `app.py`：計算每個寶藏到起點的 Chebyshev 距離（m），取最大值 ×1.20 作為 half_m
+- 限制 400m–3000m，確保遊戲體驗不會過大或過小
+
+**移動更絲滑**
+- 相機從 threshold(0.5px) 改回 lerp k=40：每幀移動 <0.2px（連續微移比大跳更滑）
+- pCircle 回 60fps（每幀更新）
+- `pMarker.on('add')` 設 `willChange:'transform'`，瀏覽器提前建立 GPU compositing layer
+- `L.map` 加 `zoomAnimation:false, fadeAnimation:false, markerZoomAnimation:false`：
+  關閉 Leaflet 內建動畫，避免每幀 `setView` 觸發動畫中斷造成卡頓
+
+---
+
 ### 2026-05-20 2.5km×2.5km 邊界 + 移動絲滑根本修復
 
 **邊界縮為 2.5km×2.5km**

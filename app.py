@@ -110,9 +110,17 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
         optimal_route = solve_tsp_exact(player_coords, treasures)
         total_dist = calculate_total_distance(player_coords, optimal_route)
 
-        # 固定 2.5km×2.5km 正方形邊界，以起點為中心
-        half_lat = 1250.0 / 111320.0
-        half_lon = 1250.0 / (111320.0 * math.cos(math.radians(lat)))
+        # 動態正方形邊界：以起點為中心、恰好框住最遠寶藏（+20% margin）
+        cos_lat = math.cos(math.radians(lat))
+        dists_m = []
+        for t in treasures:
+            dlat_m = abs(t.lat - lat) * 111320
+            dlon_m = abs(t.lon - lon) * (111320 * cos_lat)
+            dists_m.append(max(dlat_m, dlon_m))
+        half_m = max(dists_m) * 1.20 if dists_m else 800.0
+        half_m = max(400.0, min(3000.0, half_m))   # 最小 400m、最大 3km
+        half_lat = half_m / 111320.0
+        half_lon = half_m / (111320.0 * cos_lat)
         bounds = {
             "s": lat - half_lat, "n": lat + half_lat,
             "w": lon - half_lon, "e": lon + half_lon,

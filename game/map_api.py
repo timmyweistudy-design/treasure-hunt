@@ -225,23 +225,37 @@ class MapAPI:
 
     @staticmethod
     def fetch_poi_all(lat: float, lon: float) -> list:
-        """Return all named POIs (landmarks, attractions, shops, etc.) as {lat,lon,name,category}."""
-        d = 0.012
+        """
+        Return all named POIs as {lat,lon,name,category}.
+        Uses nwr (node+way+relation) with out center so parks, temples,
+        schools mapped as polygons are all included.
+        """
+        d = 0.015   # ±1670 m — covers 1000 m tier with margin
         bb = f"{lat-d},{lon-d},{lat+d},{lon+d}"
         queries = [
-            # 觀光地標、景點、觀景台、藝術裝置、紀念碑
-            f'[out:json][timeout:10];(node["tourism"="attraction"]({bb});node["tourism"="museum"]({bb});node["tourism"="viewpoint"]({bb});node["tourism"="artwork"]({bb});node["tourism"="monument"]({bb});node["tourism"="gallery"]({bb});node["tourism"="theme_park"]({bb}););out body;',
-            # 歷史地標、廟宇、古蹟
-            f'[out:json][timeout:10];(node["historic"]({bb});node["amenity"="place_of_worship"]({bb});node["amenity"="theatre"]({bb});node["amenity"="cinema"]({bb}););out body;',
-            # 公園、自然景觀、山峰
-            f'[out:json][timeout:10];(node["leisure"="park"]({bb});node["leisure"="nature_reserve"]({bb});node["natural"="peak"]({bb});node["natural"="waterfall"]({bb}););out body;',
-            # 咖啡廳、圖書館、學校、餐廳
-            f'[out:json][timeout:10];(node["amenity"="cafe"]({bb});node["amenity"="library"]({bb});node["amenity"="school"]({bb});node["amenity"="restaurant"]({bb}););out body;',
+            # 景點、地標、觀景台、博物館、藝術、廟宇、歷史古蹟
+            (f'[out:json][timeout:18];'
+             f'(nwr["tourism"~"attraction|museum|viewpoint|artwork|monument|gallery|theme_park"]({bb});'
+             f'nwr["historic"]({bb});'
+             f'nwr["amenity"~"place_of_worship|theatre|cinema"]({bb});'
+             f');out center;'),
+            # 公園、自然、學校、圖書館、咖啡廳、餐廳
+            (f'[out:json][timeout:18];'
+             f'(nwr["leisure"~"park|nature_reserve|garden"]({bb});'
+             f'nwr["natural"~"peak|waterfall|beach"]({bb});'
+             f'nwr["amenity"~"library|school|cafe|restaurant"]({bb});'
+             f');out center;'),
         ]
         elements = []
         for q in queries:
             try:
-                elements += MapAPI._query_overpass(q)
+                els = _parallel_post(
+                    q,
+                    handler=lambda j: j.get("elements", []),
+                    per_timeout=20, total_timeout=22,
+                )
+                if els:
+                    elements += els
             except Exception:
                 pass
         result = []
@@ -251,11 +265,19 @@ class MapAPI:
             name = tags.get("name", "")
             if not name or name in seen:
                 continue
+            # node → direct lat/lon; way/relation → center object
+            if e.get("type") == "node":
+                elat, elon = e.get("lat"), e.get("lon")
+            else:
+                center = e.get("center", {})
+                elat, elon = center.get("lat"), center.get("lon")
+            if elat is None or elon is None:
+                continue
             seen.add(name)
             category = (tags.get("tourism") or tags.get("historic") or
                         tags.get("natural") or tags.get("amenity") or
                         tags.get("leisure", "place"))
-            result.append({"lat": e["lat"], "lon": e["lon"], "name": name, "category": category})
+            result.append({"lat": elat, "lon": elon, "name": name, "category": category})
         return result
 
     @staticmethod

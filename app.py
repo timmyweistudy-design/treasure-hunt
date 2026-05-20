@@ -58,12 +58,18 @@ def _assign_tiers(raw_pois, origin_lat, origin_lon):
             # Prefer candidates that keep min spread; fall back if none qualify
             pool = [(i, p) for i, p in raw_pool if _far_enough(p)] or raw_pool
 
-            # Odd index = 2nd of ring pair → pick furthest from 1st of pair
+            # Odd index = 2nd of ring pair → pick most opposite side of the ring.
+            # Strategy: maximise the angle from origin between the two picks,
+            # i.e. minimise their dot-product of direction-vectors from origin.
+            # This puts them on opposite edges of the imaginary square.
             if tier_idx % 2 == 1 and result:
                 prev = result[-1]
+                dprev_lat = prev.lat - origin_lat
+                dprev_lon = prev.lon - origin_lon
                 chosen_i, chosen_p = max(
                     pool,
-                    key=lambda x: haversine((prev.lat, prev.lon), (x[1]["lat"], x[1]["lon"]))
+                    key=lambda x: -(dprev_lat * (x[1]["lat"] - origin_lat) +
+                                    dprev_lon * (x[1]["lon"] - origin_lon))
                 )
             else:
                 chosen_i, chosen_p = random.choice(pool)

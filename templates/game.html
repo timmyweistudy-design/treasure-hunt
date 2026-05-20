@@ -61,7 +61,6 @@
         @keyframes mine-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(198,40,40,.6)} 50%{box-shadow:0 0 0 8px rgba(198,40,40,0)} }
         .grenade-projectile { width:14px;height:14px;font-size:12px;line-height:14px;
                               text-align:center; filter:drop-shadow(0 1px 4px rgba(0,0,0,.7)); }
-        .ai-stunned { filter:saturate(0) brightness(1.4) !important; }
         @keyframes explosion-ring { 0%{opacity:.85;transform:scale(0)} 100%{opacity:0;transform:scale(1)} }
         .stun-label { position:absolute;z-index:9999;pointer-events:none;font-size:18px;
                       animation:float-up .9s ease-out forwards; }
@@ -1072,22 +1071,24 @@ function tickGolden(dt) {
 }
 
 // ── 戰鬥系統 ──────────────────────────────────────────────
-function _spawnExplosionVfx(lat,lon) {
+function _spawnExplosionVfx(lat,lon,radiusM) {
     const pt=map.latLngToContainerPoint([lat,lon]);
+    const pt2=map.latLngToContainerPoint([lat+radiusM/111111,lon]);
+    const pxR=Math.max(10,Math.abs(pt2.y-pt.y));
+    // 用 left/top 定中心，不用 transform translate，避免與 keyframe transform 衝突
     const ring=document.createElement('div');
-    ring.style.cssText=`position:absolute;left:${pt.x}px;top:${pt.y}px;width:0;height:0;
-        border-radius:50%;background:rgba(255,120,0,.55);z-index:9990;pointer-events:none;
-        transform:translate(-50%,-50%);animation:explosion-ring .5s ease-out forwards;`;
-    const sz=map.latLngToContainerPoint([lat+GRENADE_RADIUS/111111,lon]);
-    const pxR=Math.abs(pt.y-sz.y)*2;
-    ring.style.width=pxR+'px'; ring.style.height=pxR+'px';
+    ring.style.cssText=`position:absolute;left:${pt.x-pxR}px;top:${pt.y-pxR}px;
+        width:${pxR*2}px;height:${pxR*2}px;border-radius:50%;
+        background:rgba(255,120,0,.45);border:3px solid rgba(255,190,0,.9);
+        z-index:9990;pointer-events:none;transform-origin:center center;
+        animation:explosion-ring .55s ease-out forwards;`;
     document.getElementById('map').appendChild(ring);
-    setTimeout(()=>ring.remove(),520);
-    // stun label
+    setTimeout(()=>ring.remove(),580);
     const lbl=document.createElement('div');
     lbl.className='stun-label';
     lbl.textContent='💥';
-    lbl.style.cssText=`left:${pt.x-12}px;top:${pt.y-10}px;`;
+    lbl.style.left=`${pt.x-12}px`;
+    lbl.style.top=`${pt.y-20}px`;
     document.getElementById('map').appendChild(lbl);
     setTimeout(()=>lbl.remove(),920);
 }
@@ -1095,8 +1096,7 @@ function _stunAI(ai, dur) {
     ai.combatStun=dur;
     ai.path=[]; ai.pathTimer=dur;
     const el=ai.marker.getElement();
-    if(el) el.querySelector('[class$="-dot"]')?.classList.add('ai-stunned');
-    if(el) el.classList.add('ai-stunned');
+    if(el) el.style.filter='saturate(0) brightness(1.5)';
 }
 function throwGrenade() {
     if(!gameReady) return;
@@ -1113,7 +1113,12 @@ function throwGrenade() {
         icon:L.divIcon({html:'<div class="grenade-projectile">💣</div>',className:'',iconSize:[14,14],iconAnchor:[7,7]}),
         zIndexOffset:980,interactive:false
     }).addTo(map);
-    grenades.push({lat:pLat,lon:pLon,tLat,tLon,progress:0,marker:gMarker});
+    // 落點預覽圈（飛行中可見爆炸範圍）
+    const gPreview=L.circle([tLat,tLon],{
+        radius:GRENADE_RADIUS,color:'#ff9800',weight:1.5,
+        fillColor:'#ff9800',fillOpacity:.08,dashArray:'5 3',interactive:false
+    }).addTo(map);
+    grenades.push({lat:pLat,lon:pLon,tLat,tLon,progress:0,marker:gMarker,preview:gPreview});
     showToast('💣 手雷投出！',800);
 }
 function tickGrenades(dt) {
@@ -1125,8 +1130,9 @@ function tickGrenades(dt) {
         g.marker.setLatLng([lat,lon]);
         if(g.progress>=1){
             map.removeLayer(g.marker);
+            if(g.preview) map.removeLayer(g.preview);
             grenades.splice(i,1);
-            _spawnExplosionVfx(g.tLat,g.tLon);
+            _spawnExplosionVfx(g.tLat,g.tLon,GRENADE_RADIUS);
             playExplosion();
             let hit=0;
             for(const ai of aiList){
@@ -1157,7 +1163,12 @@ function placeMine() {
         icon:L.divIcon({html:'<div class="mine-marker">💥</div>',className:'',iconSize:[20,20],iconAnchor:[10,10]}),
         zIndexOffset:490,interactive:false
     }).addTo(map);
-    mines.push({lat:mLat,lon:mLon,marker:mMarker,armed:false,armTimer:0.8});
+    // 觸發範圍圈（讓玩家看到地雷的影響半徑）
+    const mCircle=L.circle([mLat,mLon],{
+        radius:MINE_RADIUS,color:'#c62828',weight:1.5,
+        fillColor:'#c62828',fillOpacity:.07,dashArray:'4 3',interactive:false
+    }).addTo(map);
+    mines.push({lat:mLat,lon:mLon,marker:mMarker,circle:mCircle,armed:false,armTimer:0.8});
     playMinePlace();
     showToast('💥 地雷已佈置！',800);
 }
@@ -1172,12 +1183,12 @@ function tickMines(dt) {
                 _stunAI(ai,MINE_STUN_DUR);
                 showToast(`💥 地雷觸發！${ai.type==='chaser'?'👾追跡者':ai.type==='patroller'?'👁️巡邏守衛':'🦹小偷'}暈眩 ${MINE_STUN_DUR}s！`,2500);
                 playExplosion();
-                _spawnExplosionVfx(m.lat,m.lon);
+                _spawnExplosionVfx(m.lat,m.lon,MINE_RADIUS);
                 triggered=true;
                 break;
             }
         }
-        if(triggered){ map.removeLayer(m.marker); mines.splice(i,1); }
+        if(triggered){ map.removeLayer(m.marker); if(m.circle) map.removeLayer(m.circle); mines.splice(i,1); }
     }
     // recharge
     if(mineRechargeQueue>0&&mineCharges<MINE_CHARGES){
@@ -1221,7 +1232,8 @@ function tickCombatStun(dt) {
             ai.combatStun=Math.max(0,ai.combatStun-dt);
             if(ai.combatStun===0){
                 const el=ai.marker.getElement();
-                if(el){ el.classList.remove('ai-stunned'); el.querySelector('[class$="-dot"]')?.classList.remove('ai-stunned'); }
+                // 恢復顏色：若仍在冰凍狀態保留藍色，否則清除 filter
+                if(el) el.style.filter=aiFrozenTimer>0?'hue-rotate(150deg) brightness(1.4)':'';
             }
         }
         if(ai.wanted&&ai.wantedTimer>0){
@@ -1669,7 +1681,10 @@ function tickEffects(dt) {
     const wasFreeze=aiFrozenTimer>0;
     if(wasFreeze) aiFrozenTimer=Math.max(0,aiFrozenTimer-dt);
     if(wasFreeze&&aiFrozenTimer===0){
-        for(const ai of aiList){const el=ai.marker.getElement();if(el) el.style.filter='';}
+        for(const ai of aiList){
+            const el=ai.marker.getElement();
+            if(el) el.style.filter=ai.combatStun>0?'saturate(0) brightness(1.5)':'';
+        }
     }
 
     if(stunCD>0) stunCD=Math.max(0,stunCD-dt);

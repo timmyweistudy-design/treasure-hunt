@@ -27,6 +27,19 @@
 
 ---
 
+### 2026-05-20 2.5km×2.5km 邊界 + 移動絲滑根本修復
+
+**邊界縮為 2.5km×2.5km**
+- `app.py`：half = 1250m
+
+**移動真正絲滑（根本原因修復）**
+- 根本原因：Leaflet `latLngToLayerPoint` 內部呼叫 `.round()` 強制整數像素；zoom 17 下玩家每幀移動 0.39px，整數化後每 2-3 幀才動 1px → 一格一格
+- `pMarker.update` 覆寫為浮點版本：`project(latlng) - pixelOrigin`（不 round）→ CSS `transform: translate3d(x.xxpx, y.yypx, 0)` 支援小數，視覺連續
+- 相機改 pixel-distance threshold（>0.5px 才 setView）：只在實際需要時觸發 Leaflet DOM 重排，加 `noMoveStart:true` 省事件開銷
+- pCircle（SVG 半徑指示）降至 30fps（`aiFrame`），省無謂 SVG 重繪
+
+---
+
 ### 2026-05-20 路徑繞建築 + 鏡頭絲滑 + 全域優化
 
 **最佳路徑完全繞開建築**

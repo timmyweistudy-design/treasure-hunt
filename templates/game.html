@@ -806,6 +806,16 @@ const pIcon = L.divIcon({
     className: '', iconSize: [44,44], iconAnchor: [22,22]
 });
 const pMarker = L.marker(START, {icon: pIcon, zIndexOffset: 1000}).addTo(map);
+// Leaflet 的 update() 內部呼叫 .round() 把像素強制整數，zoom 17 時每幀<1px 造成「一格一格」
+// 覆寫成浮點精確版本，CSS transform 支援小數 px，視覺絲滑
+pMarker.update = function(){
+    if(this._icon && this._map){
+        const p=this._map.project(this._latlng);
+        const o=this._map.getPixelOrigin();
+        this._setPos(new L.Point(p.x-o.x, p.y-o.y));  // 不 round()
+    }
+    return this;
+};
 const pCircle = L.circle(START, {
     radius: CLCT_R, color: '#1a73e8', weight: 1.5, fillColor: '#1a73e8', fillOpacity: .06
 }).addTo(map);
@@ -1800,7 +1810,7 @@ function tryMove(dLon,dLat) {
     }
     blockFlash=0;
     pMarker.setLatLng([pLat,pLon]);
-    pCircle.setLatLng([pLat,pLon]);
+    if(aiFrame) pCircle.setLatLng([pLat,pLon]);  // 30fps 足夠，省 SVG 重繪
 }
 
 // uiFrame=每4幀(~15fps)觸發UI更新; aiFrame=每2幀(~30fps)更新AI標記
@@ -1936,11 +1946,12 @@ function loop(ts) {
                     pushTrail(dt);
                 }
             }
-            // 平滑鏡頭：指數 lerp 跟隨玩家，消除 setView 每幀 snap 感
-            const camK=1-Math.exp(-18*dt);
-            camLat+=(pLat-camLat)*camK;
-            camLon+=(pLon-camLon)*camK;
-            map.setView([camLat,camLon],map.getZoom(),{animate:false});
+            // 相機：只在玩家移動超過 0.5px 時才 setView（避免每幀觸發 Leaflet DOM 重排）
+            {const _px=map.project([pLat,pLon]),_cx=map.project([camLat,camLon]);
+            if(Math.abs(_px.x-_cx.x)>0.5||Math.abs(_px.y-_cx.y)>0.5){
+                camLat=pLat;camLon=pLon;
+                map.setView([camLat,camLon],map.getZoom(),{animate:false,noMoveStart:true});
+            }}
             if(uiFrame){ updateMiniMap(); updateDistances(); }
             if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); } }
         } catch(e) {

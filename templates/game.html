@@ -655,6 +655,10 @@ let gameReady   = false;
 let weatherType = 'sunny';   // 'sunny' | 'fog' | 'storm'
 let weatherTimer = 0;        // 當前天氣剩餘秒數（0 = 晴天）
 let weatherCD    = 90;       // 下次天氣觸發倒數
+let _ambientSrc  = null;     // 環境音 BufferSource
+let _ambientGain = null;     // 環境音音量節點
+let birdTimer    = 12 + Math.random()*10;  // 晴天小鳥叫下次觸發（秒）
+let thunderTimer = 14 + Math.random()*8;   // 雷雨打雷下次觸發（秒）
 
 // 道具
 const items   = {};
@@ -705,6 +709,9 @@ function getAudio() {
 function toggleMute() {
     muted = !muted;
     document.getElementById('mute-btn').textContent = muted ? '🔇' : '🔊';
+    if(muted) _stopAmbient();
+    else if(weatherType==='fog') _startAmbient('lowpass',320,1.2,.07);
+    else if(weatherType==='storm') _startAmbient('bandpass',1400,.6,.13);
 }
 function snd(fn) { if (!muted) try { fn(getAudio()); } catch(e){} }
 
@@ -937,12 +944,106 @@ function playPortal() {
     });
 }
 
+// ── 天氣音效 ──────────────────────────────────────────────
+function _noiseBuffer(ctx, sec=2) {
+    const buf=ctx.createBuffer(1,ctx.sampleRate*sec,ctx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    return buf;
+}
+function _stopAmbient() {
+    if(_ambientSrc){ try{_ambientSrc.stop();}catch(e){} _ambientSrc=null; }
+    _ambientGain=null;
+}
+function _startAmbient(filterType, filterFreq, filterQ, vol, fadeIn=1.5) {
+    if(muted) return;
+    try{
+        const ctx=getAudio();
+        const src=ctx.createBufferSource();
+        src.buffer=_noiseBuffer(ctx,2); src.loop=true;
+        const filt=ctx.createBiquadFilter();
+        filt.type=filterType; filt.frequency.value=filterFreq; filt.Q.value=filterQ;
+        const gain=ctx.createGain();
+        gain.gain.setValueAtTime(0,ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(vol,ctx.currentTime+fadeIn);
+        src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+        src.start();
+        _ambientSrc=src; _ambientGain=gain;
+    }catch(e){}
+}
+function playBird() {
+    // 兩段高頻音掃：上行→下行模擬鳴叫
+    snd(ctx=>{
+        [[2800,3600,0,.10],[3600,2500,.08,.12]].forEach(([f1,f2,t,dur])=>{
+            const o=ctx.createOscillator(),g=ctx.createGain();
+            o.type='sine';
+            o.frequency.setValueAtTime(f1,ctx.currentTime+t);
+            o.frequency.exponentialRampToValueAtTime(f2,ctx.currentTime+t+dur);
+            g.gain.setValueAtTime(.07,ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+t+dur);
+            o.connect(g);g.connect(ctx.destination);
+            o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+dur+.05);
+        });
+    });
+}
+function playThunder() {
+    snd(ctx=>{
+        const src=ctx.createBufferSource();
+        src.buffer=_noiseBuffer(ctx,2.5);
+        const filt=ctx.createBiquadFilter();
+        filt.type='lowpass';filt.frequency.value=160;
+        const gain=ctx.createGain();
+        gain.gain.setValueAtTime(0,ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(.55,ctx.currentTime+.08);
+        gain.gain.setValueAtTime(.55,ctx.currentTime+.25);
+        gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+2.2);
+        src.connect(filt);filt.connect(gain);gain.connect(ctx.destination);
+        src.start();src.stop(ctx.currentTime+2.3);
+    });
+}
+function playWeatherChange(type) {
+    snd(ctx=>{
+        if(type==='fog'){
+            // 低沉下滑 whoosh
+            const o=ctx.createOscillator(),g=ctx.createGain();
+            o.type='sine';
+            o.frequency.setValueAtTime(380,ctx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(130,ctx.currentTime+.9);
+            g.gain.setValueAtTime(.14,ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.9);
+            o.connect(g);g.connect(ctx.destination);
+            o.start();o.stop(ctx.currentTime+.95);
+        } else if(type==='storm'){
+            // 低頻隆隆
+            const o=ctx.createOscillator(),g=ctx.createGain();
+            o.type='sawtooth';
+            o.frequency.setValueAtTime(90,ctx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(38,ctx.currentTime+.6);
+            g.gain.setValueAtTime(.22,ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.7);
+            o.connect(g);g.connect(ctx.destination);
+            o.start();o.stop(ctx.currentTime+.75);
+        } else {
+            // 晴天：清脆兩音
+            [[1047,0],[1319,.12]].forEach(([f,t])=>{
+                const o=ctx.createOscillator(),g=ctx.createGain();
+                o.type='sine';o.frequency.value=f;
+                g.gain.setValueAtTime(.10,ctx.currentTime+t);
+                g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+t+.4);
+                o.connect(g);g.connect(ctx.destination);
+                o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+.45);
+            });
+        }
+    });
+}
+
 // ── 天氣系統 ──────────────────────────────────────────────
 function currentFovLen() {
     return PATROLLER_FOV_LEN * (weatherType==='fog' ? 0.35 : 1);
 }
 function setWeather(type) {
     weatherType = type;
+    _stopAmbient();
     document.getElementById('weather-fog').style.display   = type==='fog'   ? 'block':'none';
     document.getElementById('weather-storm').style.display = type==='storm' ? 'block':'none';
     const chip = document.getElementById('chip-weather');
@@ -950,16 +1051,23 @@ function setWeather(type) {
         weatherTimer=0;
         chip.textContent='☀️ 晴天';
         chip.style.background='';
+        playWeatherChange('sunny');
+        birdTimer=8+Math.random()*10;
     } else if(type==='fog'){
         weatherTimer=30;
         chip.textContent='🌫️ 大霧 30s';
         chip.style.background='rgba(180,190,210,.55)';
         showToast('🌫️ 大霧降臨！守衛視野大幅縮短 30 秒！',3000);
+        playWeatherChange('fog');
+        _startAmbient('lowpass',320,1.2,.07);   // 低頻風聲
     } else {
         weatherTimer=30;
         chip.textContent='⛈️ 雷雨 30s';
         chip.style.background='rgba(20,50,120,.55)';
         showToast('⛈️ 雷雨來了！AI 加速、玩家變慢 30 秒！',3000);
+        playWeatherChange('storm');
+        _startAmbient('bandpass',1400,.6,.13);  // 雨聲
+        thunderTimer=12+Math.random()*10;
     }
 }
 function tickWeather(dt) {
@@ -968,8 +1076,18 @@ function tickWeather(dt) {
         const chip=document.getElementById('chip-weather');
         if(weatherTimer>0 && weatherType!=='sunny')
             chip.textContent=(weatherType==='fog'?'🌫️ 大霧 ':'⛈️ 雷雨 ')+Math.ceil(weatherTimer)+'s';
+        // 打雷計時
+        if(weatherType==='storm'){
+            thunderTimer=Math.max(0,thunderTimer-dt);
+            if(thunderTimer===0){playThunder();thunderTimer=12+Math.random()*10;}
+        }
         if(weatherTimer===0) setWeather('sunny');
         return;
+    }
+    // 晴天小鳥聲（偶爾）
+    if(weatherType==='sunny'){
+        birdTimer=Math.max(0,birdTimer-dt);
+        if(birdTimer===0){playBird();birdTimer=8+Math.random()*12;}
     }
     weatherCD=Math.max(0,weatherCD-dt);
     if(weatherCD===0){

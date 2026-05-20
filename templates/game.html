@@ -437,6 +437,7 @@
         <span class="eff-chip" id="chip-mine" style="display:inline-block">💥 <span id="mine-chr">●●</span> <span id="mine-cd-txt"></span></span>
         <span class="eff-chip" id="chip-wanted" style="display:none;background:rgba(198,40,40,.55)">🚨 通緝！<span id="wanted-t">8</span>s 按Space！</span>
         <span class="eff-chip" id="chip-weather" style="display:inline-block">☀️ 晴天</span>
+        <span class="eff-chip" id="item-slot" style="display:none;background:rgba(255,193,7,.25);border:1px solid rgba(255,193,7,.6)"></span>
     </div>
 </div>
 
@@ -496,7 +497,7 @@
                     <b>移動</b>：<span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> / <span class="key">↑↓←→</span><br>
                     <span class="key">Shift</span> 衝刺 10s・冷卻3s<br>
                     <span class="key">Space</span> 收集 / 撿道具 / 抓小偷<br>
-                    <span class="key">R</span> 誘餌（AI追6s・冷卻40s）<br>
+                    <span class="key">Q</span> 使用道具槽 &nbsp;<span class="key">R</span> 誘餌（AI追6s・冷卻40s）<br>
                     <span class="key">E</span> 💣手雷（2顆・80m暈眩4s・充能20s）<br>
                     <span class="key">F</span> 💥地雷（2個・20m觸發暈眩5s・充能25s）<br>
                     <b>道具</b>：⚡速×2(8s) ⭐無敵+速×1.5(10s) 🔍廣域×3(10s) ❄️凍AI(7s) 🧲磁鐵(8s)<br>
@@ -1668,19 +1669,20 @@ function tickItems(dt) {
         }
     }
 }
-function applyItem(type,id) {
-    map.removeLayer(items[id].marker); delete items[id];
-    if(type==='speed'){speedBoostTimer=8;showToast('⚡ 加速道具！速度×2，持續8秒！',2200);playItem();}
+// ── 道具效果觸發（與撿取分離）────────────────────────────
+const _ITEM_ICONS = {speed:'⚡',star:'⭐',range:'🔍',magnet:'🧲',freeze:'❄️'};
+const _ITEM_NAMES = {speed:'加速',star:'無敵星星',range:'廣域',magnet:'磁鐵',freeze:'冰凍炸彈'};
+function _activateItem(type) {
+    if(type==='speed'){speedBoostTimer=8;showToast('⚡ 加速！速度×2，持續8秒！',2200);playItem();}
     else if(type==='star'){invincTimer=10;showToast('⭐ 無敵星星！速度×1.5+穿牆，持續10秒！',2500);playItem();}
-    else if(type==='range'){rangeBoostTimer=10;showToast('🔍 廣域道具！收集距離×3，持續10秒！',2200);playItem();}
-    else if(type==='magnet'){magnetTimer=8;magnetAutoT=0;showToast('🧲 磁鐵道具！自動收集範圍內寶藏！8秒！',2500);playMagnet();}
+    else if(type==='range'){rangeBoostTimer=10;showToast('🔍 廣域！收集距離×3，持續10秒！',2200);playItem();}
+    else if(type==='magnet'){magnetTimer=8;magnetAutoT=0;showToast('🧲 磁鐵！自動收集範圍內寶藏！8秒！',2500);playMagnet();}
     else{
         aiFrozenTimer=7; freezeVfxTimer=0;
         const mapEl=document.getElementById('map');
         for(const ai of aiList){
             const el=ai.marker.getElement();
             if(el) el.style.filter='sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))';
-            // 初始冰凍爆發 ❄️
             const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
             [0,1,2].forEach(i=>{
                 const sf=document.createElement('div');
@@ -1692,6 +1694,32 @@ function applyItem(type,id) {
         showToast('❄️ 冰凍炸彈！所有守衛凍結7秒！',2500);
         playFreeze();
     }
+}
+
+// ── 道具撿取 → 存入槽（不立即觸發）────────────────────────
+let heldItem = null;
+function _updateItemSlotHUD() {
+    const el=document.getElementById('item-slot');
+    if(!heldItem){el.style.display='none';return;}
+    el.style.display='inline-block';
+    el.textContent=`${_ITEM_ICONS[heldItem]||'?'} 按Q`;
+}
+function applyItem(type,id) {
+    if(heldItem!==null){
+        showToast(`🎒 道具槽已有 ${_ITEM_ICONS[heldItem]}！先按 Q 使用！`,1500);
+        return;   // 道具留在地上
+    }
+    map.removeLayer(items[id].marker); delete items[id];
+    heldItem=type;
+    _updateItemSlotHUD();
+    showToast(`🎒 存入道具槽：${_ITEM_ICONS[type]} ${_ITEM_NAMES[type]}，按 Q 使用！`,2000);
+    playItem();
+}
+function useHeldItem() {
+    if(!heldItem){showToast('🎒 道具槽是空的！',1200);return;}
+    const type=heldItem; heldItem=null;
+    _updateItemSlotHUD();
+    _activateItem(type);
 }
 
 // ── 分數扣分輔助 ─────────────────────────────────────────
@@ -2588,6 +2616,7 @@ document.addEventListener('keydown', e=>{
     const k=_nk(e.key);
     if(MOVE_KEYS.has(k)) e.preventDefault();
     if(k===' '){e.preventDefault();collectNearest();return;}
+    if(k==='q'){e.preventDefault();useHeldItem();return;}
     if(k==='r'){e.preventDefault();dropDecoy();return;}
     if(k==='e'){e.preventDefault();throwGrenade();return;}
     if(k==='f'){e.preventDefault();placeMine();return;}
@@ -2642,8 +2671,8 @@ function tickPullingItems(dt) {
         }
         if(pull.progress>=1){
             // arrived — apply and clean up
-            items[id]={type:pull.type,lat:pLat,lon:pLon,marker:pull.marker};
-            applyItem(pull.type,id);
+            map.removeLayer(pull.marker); // 磁鐵吸來的直接觸發，不佔道具槽
+            _activateItem(pull.type);
             pullingItems.delete(id);
         }
     }

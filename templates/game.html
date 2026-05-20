@@ -529,7 +529,8 @@
                     <span class="key">Shift</span> 衝刺 10s・冷卻3s<br>
                     <span class="key">Space</span> 收集 / 撿道具 / 抓小偷<br>
                     <span class="key">1-5</span> 選道具槽 &nbsp;<span class="key">Q</span> 使用選定槽 &nbsp;<span class="key">R</span> 誘餌（40s CD）<br>
-                    <span class="key">E</span> 💣手雷（2顆・80m暈眩4s・充能20s）<br>
+                    <span class="key">E</span> 💣手雷瞄準（左鍵投・ESC取消・2顆・80m・4s暈眩）<br>
+                    <span class="key">= / -</span> 地圖縮放<br>
                     <span class="key">F</span> 💥地雷（2個・20m觸發暈眩5s・充能25s）<br>
                     <b>道具</b>：⚡速×2(8s) ⭐無敵+速×1.5(10s) 🔍廣域×3(10s) ❄️凍AI(7s) 🧲磁鐵(8s)<br>
                     <b>扣分</b>：👾追跡 <b>-50</b>・👁️巡邏 <b>-30</b>・🦹小偷 <b>-20</b><br>
@@ -741,6 +742,8 @@ let portalCooldown=0;
 // 戰鬥：手雷
 let grenadeCharges=GRENADE_CHARGES, grenadeRechargeCooldown=0, grenadeRechargeQueue=0;
 const grenades=[];  // {lat,lon,tLat,tLon,progress,marker}
+let grenadeAiming=false, grenadeAimLat=0, grenadeAimLon=0;
+let grenadeAimCircle=null, grenadeAimLine=null;
 // 戰鬥：地雷
 let mineCharges=MINE_CHARGES, mineRechargeCooldown=0, mineRechargeQueue=0;
 const mines=[];     // {lat,lon,marker}
@@ -1487,22 +1490,59 @@ function _stunAI(ai, dur) {
     document.getElementById('map').appendChild(lbl);
     ai.stunLabel=lbl;
 }
-function throwGrenade() {
+// ── 手雷瞄準系統 ──────────────────────────────────────────
+function _grenadeCapTarget(lat, lon) {
+    const MAX=200, cosLat=Math.cos(pLat*Math.PI/180);
+    const dLat=lat-pLat, dLon=lon-pLon;
+    const dLatM=dLat*111111, dLonM=dLon*111111*cosLat;
+    const dist=Math.sqrt(dLatM*dLatM+dLonM*dLonM)||1;
+    const scale=Math.min(1,MAX/dist);
+    return [pLat+dLat*scale, pLon+dLon*scale];
+}
+function _updateGrenadeAimVfx() {
+    if(!grenadeAiming) return;
+    if(!grenadeAimCircle){
+        grenadeAimCircle=L.circle([grenadeAimLat,grenadeAimLon],{
+            radius:GRENADE_RADIUS,color:'#ff9800',weight:2,
+            fillColor:'#ff9800',fillOpacity:.07,dashArray:'6 4',interactive:false
+        }).addTo(map);
+        grenadeAimLine=L.polyline([[pLat,pLon],[grenadeAimLat,grenadeAimLon]],{
+            color:'#ff9800',weight:1.5,dashArray:'6 4',opacity:.65,interactive:false
+        }).addTo(map);
+    } else {
+        grenadeAimCircle.setLatLng([grenadeAimLat,grenadeAimLon]);
+        grenadeAimLine.setLatLngs([[pLat,pLon],[grenadeAimLat,grenadeAimLon]]);
+    }
+}
+function cancelGrenadeAim() {
+    grenadeAiming=false;
+    document.getElementById('map').style.cursor='';
+    if(grenadeAimCircle){map.removeLayer(grenadeAimCircle);grenadeAimCircle=null;}
+    if(grenadeAimLine){map.removeLayer(grenadeAimLine);grenadeAimLine=null;}
+}
+function toggleGrenadeAim() {
     if(!gameReady) return;
+    if(grenadeAiming){ cancelGrenadeAim(); return; }
     if(grenadeCharges<=0){ showToast('💣 手雷充能中…',1200); return; }
-    grenadeCharges--;
-    if(grenadeRechargeQueue===0) { grenadeRechargeCooldown=GRENADE_RECHARGE; }
-    grenadeRechargeQueue++;
-    // 投擲目標 = 玩家位置 + 最後移動方向 × ~200m
+    grenadeAiming=true;
+    document.getElementById('map').style.cursor='crosshair';
+    // 預設瞄準方向（上次移動方向 200m）
     const normLen=Math.hypot(lastDx,lastDy)||1;
     const deg200=200/111111;
-    const tLat=pLat+(lastDy/normLen)*deg200;
-    const tLon=pLon+(lastDx/normLen)*deg200*(1/Math.cos(pLat*Math.PI/180));
+    grenadeAimLat=pLat+(lastDy/normLen)*deg200;
+    grenadeAimLon=pLon+(lastDx/normLen)*deg200*(1/Math.cos(pLat*Math.PI/180));
+    _updateGrenadeAimVfx();
+    showToast('💣 移動滑鼠瞄準，左鍵投擲，E/ESC取消',2500);
+}
+function _fireGrenade(tLat, tLon) {
+    if(grenadeCharges<=0) return;
+    grenadeCharges--;
+    if(grenadeRechargeQueue===0) grenadeRechargeCooldown=GRENADE_RECHARGE;
+    grenadeRechargeQueue++;
     const gMarker=L.marker([pLat,pLon],{
         icon:L.divIcon({html:'<div class="grenade-projectile">💣</div>',className:'',iconSize:[14,14],iconAnchor:[7,7]}),
         zIndexOffset:980,interactive:false
     }).addTo(map);
-    // 落點預覽圈（飛行中可見爆炸範圍）
     const gPreview=L.circle([tLat,tLon],{
         radius:GRENADE_RADIUS,color:'#ff9800',weight:1.5,
         fillColor:'#ff9800',fillOpacity:.08,dashArray:'5 3',interactive:false
@@ -2691,8 +2731,11 @@ document.addEventListener('keydown', e=>{
     if(k==='q'){e.preventDefault();useHeldItem();return;}
     if(k>='1'&&k<='5'){e.preventDefault();selectSlot(parseInt(k)-1);return;}
     if(k==='r'){e.preventDefault();dropDecoy();return;}
-    if(k==='e'){e.preventDefault();throwGrenade();return;}
+    if(k==='e'){e.preventDefault();toggleGrenadeAim();return;}
     if(k==='f'){e.preventDefault();placeMine();return;}
+    if(k==='='||k==='+'){e.preventDefault();map.zoomIn();return;}
+    if(k==='-'){e.preventDefault();map.zoomOut();return;}
+    if(k==='Escape'){if(grenadeAiming){cancelGrenadeAim();return;}}
     keys[k]=true;
 });
 document.addEventListener('keyup', e=>{
@@ -2850,7 +2893,7 @@ function loop(ts) {
             {const k=1-Math.exp(-40*dt);
             camLat+=(pLat-camLat)*k; camLon+=(pLon-camLon)*k;
             map.setView([camLat,camLon],map.getZoom(),{animate:false,noMoveStart:true});}
-            if(uiFrame){ updateMiniMap(); updateDistances(); }
+            if(uiFrame){ updateMiniMap(); updateDistances(); if(grenadeAiming) _updateGrenadeAimVfx(); }
             if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); if(ai.stunRing) ai.stunRing.setLatLng([ai.lat,ai.lon]); if(ai.stunLabel){const sp=map.latLngToContainerPoint([ai.lat,ai.lon]);ai.stunLabel.style.left=(sp.x-11)+'px';ai.stunLabel.style.top=(sp.y-38)+'px';} } }
         } catch(e) {
             console.error('[loop]', e);  // 記錄錯誤但不中斷循環
@@ -2865,6 +2908,18 @@ requestAnimationFrame(loop);
 map.on('moveend',()=>{
     document.getElementById('recenter-btn').style.display=
         distM(pLat,pLon,map.getCenter().lat,map.getCenter().lng)>300?'block':'none';
+});
+// 手雷瞄準：滑鼠移動更新圓圈，左鍵投擲
+map.on('mousemove', e=>{
+    if(!grenadeAiming) return;
+    [grenadeAimLat,grenadeAimLon]=_grenadeCapTarget(e.latlng.lat,e.latlng.lng);
+    _updateGrenadeAimVfx();
+});
+map.on('click', e=>{
+    if(!grenadeAiming) return;
+    const [tLat,tLon]=_grenadeCapTarget(e.latlng.lat,e.latlng.lng);
+    cancelGrenadeAim();
+    _fireGrenade(tLat,tLon);
 });
 
 // ── 距離工具 ──────────────────────────────────────────────

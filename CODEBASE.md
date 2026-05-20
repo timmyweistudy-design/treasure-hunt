@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-20（5格道具槽系統 + HUD 全面重設計）**
+> **最後更新：2026-05-20（寶藏分數改為距離公尺數 + 規則頁面 + relocateTreasure 修正）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,19 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-20（v3）寶藏分數改為距離公尺數 + 規則頁面
+
+**計分規則變更**
+- `app.py` `_assign_tiers()`：`points` 從固定 tier 分值（100/200/300/400/500）改為 `haversine()` 回傳的實際公尺數（整數）
+- `game.html`：移除 `TIER_DISTS` 常數；`relocateTreasure()` 改用 `const tierDist = t.points`（直接以公尺數作為重刷距離環）
+
+**新增規則頁面**
+- `templates/rules.html`：完整規則說明頁，涵蓋快捷鍵、道具說明、敵人類型、計分規則、特殊機制、HUD 說明
+- `app.py`：新增 `/rules` 路由
+- `templates/index.html`：遊戲說明卡片新增「📖 完整規則 & 快捷鍵 →」連結按鈕
 
 ---
 
@@ -103,7 +116,7 @@
 - `_prepare_game` 改用 `fetch_poi_all()` + `_assign_tiers()`，城市快取儲存 `raw_pois` 而非 Treasure 物件
 
 **小偷刷新位置同步分層**
-- `relocateTreasure(t)`：計算 `TIER_DISTS[t.points]`（100→200m, 200→450m, … 500→1000m），在該距離 ±80m 隨機方向刷新於 `ORIGIN_LAT/ORIGIN_LON` 為圓心的位置
+- `relocateTreasure(t)`：`const tierDist = t.points`（公尺數），在該距離 ±80m 隨機方向刷新於 `ORIGIN_LAT/ORIGIN_LON` 為圓心的位置（`TIER_DISTS` 常數已移除，v3 改用直接公尺數）
 
 **小偷上限 & 隱身技能**
 - `THIEF_MAX = 3`（原為 4）

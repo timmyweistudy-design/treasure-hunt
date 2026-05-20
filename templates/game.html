@@ -636,8 +636,7 @@ const OPTIMAL      = {{ optimal_order_json | safe }};
 const ROUTE_COORDS = {{ route_coords_json | safe }};
 const START        = [{{ player_lat }}, {{ player_lon }}];
 const ORIGIN_LAT   = START[0], ORIGIN_LON = START[1];
-// 分數 → 該寶藏的目標距離（m），用於小偷偷走後重新刷新位置
-const TIER_DISTS   = {100:200, 200:450, 300:700, 400:850, 500:1000};
+// 分數 = 距出生點公尺數，直接當作重刷距離環
 const TIME_LIMIT   = {{ time_limit }};
 const CLCT_R       = {{ collect_radius }};
 const TOTAL        = TREASURES.length;
@@ -1967,7 +1966,7 @@ function relocateTreasure(tId) {
     const t=TREASURES.find(tr=>tr.id===tId);
     if(!t||collected.has(tId)) return;
     // 在同一距離環附近（±80m）隨機方向重刷
-    const tierDist=(TIER_DISTS[t.points]||500);
+    const tierDist=t.points;
     const rd=(tierDist+(Math.random()*160-80))/111111;
     const cosLat=Math.cos(ORIGIN_LAT*Math.PI/180);
     let nLat0, nLon0;

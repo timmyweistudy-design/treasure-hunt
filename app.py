@@ -79,11 +79,13 @@ def _assign_tiers(raw_pois, origin_lat, origin_lon):
 
         if chosen_p:
             used.add(chosen_i)
+            dist_m = int(round(haversine((origin_lat, origin_lon),
+                                         (chosen_p["lat"], chosen_p["lon"]))))
             result.append(Treasure(
                 id=f"t{tier_idx}", name=chosen_p["name"],
                 lat=chosen_p["lat"], lon=chosen_p["lon"],
                 category=chosen_p["category"],
-                points=tier["points"],
+                points=dist_m,  # 分數 = 距出生點公尺數
             ))
     return result
 
@@ -229,6 +231,11 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
 @app.route("/")
 def index():
     return render_template("index.html", top10=scoreboard.get_top10())
+
+
+@app.route("/rules")
+def rules():
+    return render_template("rules.html")
 
 
 @app.route("/start", methods=["POST"])

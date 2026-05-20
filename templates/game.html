@@ -539,9 +539,7 @@ const AI_SPD         = 0.00020;   // deg/s ≈ 22 m/s（略慢於玩家步行）
 const AI_ATTACK_R    = 25;        // 觸發攻擊距離（公尺）
 const AI_ATTACK_CD   = 8;         // 攻擊冷卻（秒）
 const AI_MAX              = 16;       // AI 最多隻數（10巡邏守衛 + 3追跡者 + 3小偷）
-const THIEF_DELAY         = 100;      // 第一隻小偷出現倒數（秒）
-const THIEF_WAVE_INTERVAL = 100;      // 小偷追加間隔（秒）
-const THIEF_MAX           = 3;        // 小偷最多隻數
+const THIEF_MAX           = 4;        // 小偷場上最多隻數（每收集一個寶藏生成一隻，上限4）
 const CHASER_SPAWN_DELAY  = 60;       // 第一隻追跡者出現（秒）
 const CHASER_WAVE_INTERVAL= 60;       // 追跡者追加間隔（秒）
 const CHASER_MAX          = 3;        // 追跡者最多隻數
@@ -587,7 +585,7 @@ let itemIdCtr = 0, itemSpawnTimer = 3;   // 3 秒後出現第一個道具
 // 效果計時
 let speedBoostTimer = 0, invincTimer = 0;
 // AI（陣列，支援多隻）
-let aiList=[], initialSpawnDone=false, thiefSpawnTimer=THIEF_DELAY, thiefCount=0, thiefWaveTimer=0;
+let aiList=[], initialSpawnDone=false, thiefCount=0;
 let chaserSpawnTimer=CHASER_SPAWN_DELAY, chaserWaveTimer=0, chaserCount=0, chaserWarned=false;
 let navGrid=null;
 let routeLine=null, miniRouteLine=null;
@@ -1391,7 +1389,7 @@ function spawnAI(forceType, silent=false) {
         iconHtml='<div class="thief-dot">🦹</div>';
         miniColor='#424242';
         const tn=thiefCount+1;
-        toastMsg=tn===1?'🦹 寶物小偷出現！牠會偷移寶藏！-20分！':`🦹 第 ${tn} 隻小偷！更多寶藏危險！-20分！`;
+        toastMsg=`🦹 第 ${tn} 隻小偷現身！（獲得寶藏觸發，場上最多${THIEF_MAX}隻）偷竊 -20分！`;
     }
 
     const marker=L.marker([iLat,iLon],{
@@ -1643,16 +1641,7 @@ function tickAI(dt) {
             if(chaserWaveTimer===0){spawnAI('chaser');chaserWaveTimer=CHASER_WAVE_INTERVAL;}
         }
     }
-    // ── 小偷波次（100s → 200s → 300s）─────────────────
-    if(thiefCount<THIEF_MAX){
-        if(thiefCount===0){
-            thiefSpawnTimer=Math.max(0,thiefSpawnTimer-dt);
-            if(thiefSpawnTimer===0){spawnAI('thief');thiefWaveTimer=THIEF_WAVE_INTERVAL;}
-        } else {
-            thiefWaveTimer=Math.max(0,thiefWaveTimer-dt);
-            if(thiefWaveTimer===0){spawnAI('thief');thiefWaveTimer=THIEF_WAVE_INTERVAL;}
-        }
-    }
+    // 小偷：由收集寶藏觸發（見 collect() 函式），此處不再計時生成
     // ── 逐一更新所有 AI ──────────────────────────────────
     let nearestDist=Infinity;
     for(const ai of aiList){
@@ -1684,7 +1673,7 @@ function tickAI(dt) {
             if(chaserCount<CHASER_MAX)
                 txt+=` +👾${Math.ceil(chaserCount===0?chaserSpawnTimer:chaserWaveTimer)}s`;
             if(thiefCount<THIEF_MAX)
-                txt+=` +🦹${Math.ceil(thiefCount===0?thiefSpawnTimer:thiefWaveTimer)}s`;
+                txt+=` 🦹最多${THIEF_MAX}隻`;
             cntEl.textContent=txt;
         }
         document.getElementById('ai-dist').textContent=nearestDist<Infinity?Math.round(nearestDist):'—';
@@ -2479,6 +2468,8 @@ async function collect(id, tLat, tLon) {
         if(orderStreak>=3) bonusStr+=` 🔥連鎖×${orderStreak}！`;
         showToast(`💎 +${pts+bonus+comboBonus+goldenBonus}分${bonusStr}！共 ${score} 分（${found}/${TOTAL}）`);
         updateDistances();
+        // 收集寶藏觸發小偷生成（第1、2、3、4個寶藏各+1隻，場上上限4）
+        if(thiefCount<THIEF_MAX) spawnAI('thief');
 
         if(data.status==='win'){
             clearInterval(ticker);

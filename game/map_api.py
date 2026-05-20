@@ -224,6 +224,32 @@ class MapAPI:
         }
 
     @staticmethod
+    def fetch_poi_all(lat: float, lon: float) -> list:
+        """Return all named POIs in area as simple dicts {lat,lon,name,category}."""
+        d = 0.012
+        queries = [
+            f'[out:json][timeout:10];(node["amenity"="cafe"]({lat-d},{lon-d},{lat+d},{lon+d});node["tourism"="museum"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="library"]({lat-d},{lon-d},{lat+d},{lon+d});node["tourism"="attraction"]({lat-d},{lon-d},{lat+d},{lon+d}););out body;',
+            f'[out:json][timeout:10];(node["leisure"="park"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="restaurant"]({lat-d},{lon-d},{lat+d},{lon+d});node["shop"="convenience"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="school"]({lat-d},{lon-d},{lat+d},{lon+d}););out body;',
+        ]
+        elements = []
+        for q in queries:
+            try:
+                elements += MapAPI._query_overpass(q)
+            except Exception:
+                pass
+        result = []
+        seen = set()
+        for e in elements:
+            tags = e.get("tags", {})
+            name = tags.get("name", "")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            category = tags.get("amenity") or tags.get("tourism") or tags.get("leisure", "place")
+            result.append({"lat": e["lat"], "lon": e["lon"], "name": name, "category": category})
+        return result
+
+    @staticmethod
     def fetch_poi(lat: float, lon: float) -> list:
         d = 0.010
         queries = [

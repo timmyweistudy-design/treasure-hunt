@@ -544,6 +544,9 @@ const TREASURES    = {{ treasures_json | safe }};
 const OPTIMAL      = {{ optimal_order_json | safe }};
 const ROUTE_COORDS = {{ route_coords_json | safe }};
 const START        = [{{ player_lat }}, {{ player_lon }}];
+const ORIGIN_LAT   = START[0], ORIGIN_LON = START[1];
+// 分數 → 該寶藏的目標距離（m），用於小偷偷走後重新刷新位置
+const TIER_DISTS   = {100:200, 200:450, 300:700, 400:850, 500:1000};
 const TIME_LIMIT   = {{ time_limit }};
 const CLCT_R       = {{ collect_radius }};
 const TOTAL        = TREASURES.length;
@@ -1572,8 +1575,17 @@ function updateFOVPoly(ai) {
 function relocateTreasure(tId) {
     const t=TREASURES.find(tr=>tr.id===tId);
     if(!t||collected.has(tId)) return;
-    const nLat0=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
-    const nLon0=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
+    // 在同一距離環附近（±80m）隨機方向重刷
+    const tierDist=(TIER_DISTS[t.points]||500);
+    const rd=(tierDist+(Math.random()*160-80))/111111;
+    const cosLat=Math.cos(ORIGIN_LAT*Math.PI/180);
+    let nLat0, nLon0;
+    for(let i=0;i<12;i++){
+        const angle=Math.random()*Math.PI*2;
+        nLat0=Math.max(BOUNDS.s,Math.min(BOUNDS.n, ORIGIN_LAT+Math.cos(angle)*rd));
+        nLon0=Math.max(BOUNDS.w,Math.min(BOUNDS.e, ORIGIN_LON+Math.sin(angle)*rd/cosLat));
+        if(!isInBuilding(nLat0,nLon0)) break;
+    }
     const [nLat,nLon]=nearestWalkable(nLat0,nLon0);
     t.lat=nLat; t.lon=nLon;
     if(tMarkers[tId]){

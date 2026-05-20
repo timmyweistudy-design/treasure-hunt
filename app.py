@@ -15,6 +15,43 @@ app = Flask(__name__)
 app.secret_key = "treasure-hunt-fixed-key-2026"
 scoreboard = Scoreboard()
 
+# 寶藏距離分層：目標距離(m)和固定分數
+TREASURE_TIERS = [
+    {"target_m": 200,  "points": 100},
+    {"target_m": 450,  "points": 200},
+    {"target_m": 700,  "points": 300},
+    {"target_m": 850,  "points": 400},
+    {"target_m": 1000, "points": 500},
+]
+
+def _assign_tiers(raw_pois, origin_lat, origin_lon):
+    """每個距離層選一個最接近目標距離的 POI，回傳 Treasure list。"""
+    scored = [(haversine((origin_lat, origin_lon), (p["lat"], p["lon"])), i, p)
+              for i, p in enumerate(raw_pois)]
+    used = set()
+    result = []
+    for tier_idx, tier in enumerate(TREASURE_TIERS):
+        best_i, best_p, best_diff = None, None, float('inf')
+        for d, i, p in scored:
+            if i in used:
+                continue
+            diff = abs(d - tier["target_m"])
+            if diff < best_diff:
+                best_diff = diff
+                best_i = i
+                best_p = p
+        if best_p:
+            used.add(best_i)
+            result.append(Treasure(
+                id=f"t{tier_idx}",
+                name=best_p["name"],
+                lat=best_p["lat"],
+                lon=best_p["lon"],
+                category=best_p["category"],
+                points=tier["points"],
+            ))
+    return result
+
 # Pre-populated coords for common cities — skip Nominatim entirely for these
 _KNOWN_CITIES: dict = {
     "taipei":       (25.0375198,  121.5636796),
@@ -85,31 +122,23 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
         if city_key in _city_cache:
             cached = _city_cache[city_key]
             lat, lon = cached["lat"], cached["lon"]
-            all_t = [Treasure(**d) for d in cached["treasures"]]
-            count = min(GAME_CONFIG["treasure_count"], len(all_t))
-            # spread selection from cache
-            from game.map_api import _spread_select as _ss
-            pool = [t.to_dict() for t in all_t]
-            spread = _ss(pool, count)
-            treasures = [Treasure(**d) for d in spread]
+            raw_pois = cached["raw_pois"]
         else:
             if city_key in _KNOWN_CITIES:
                 lat, lon = _KNOWN_CITIES[city_key]
             else:
                 location = MapAPI.geocode(city)
                 lat, lon = location["lat"], location["lon"]
-            treasures = MapAPI.fetch_poi(lat, lon)
-            if not treasures:
+            raw_pois = MapAPI.fetch_poi_all(lat, lon)
+            if not raw_pois:
                 _pending[req_id] = {"status": "error", "message": "此城市找不到足夠的地點，請嘗試其他城市"}
                 return
-            _city_cache[city_key] = {
-                "lat": lat, "lon": lon,
-                "treasures": [t.to_dict() for t in treasures],
-            }
+            _city_cache[city_key] = {"lat": lat, "lon": lon, "raw_pois": raw_pois}
 
-        for t in treasures:
-            dist = haversine((lat, lon), (t.lat, t.lon))
-            t.points = max(50, min(500, round((50 + dist * 0.3) / 10) * 10))
+        treasures = _assign_tiers(raw_pois, lat, lon)
+        if not treasures:
+            _pending[req_id] = {"status": "error", "message": "此城市找不到足夠的地點，請嘗試其他城市"}
+            return
 
         player_coords = (lat, lon)
         optimal_route = solve_tsp_exact(player_coords, treasures)

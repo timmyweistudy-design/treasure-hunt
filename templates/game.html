@@ -1402,8 +1402,9 @@ function spawnItem() {
         uncollected.reduce((b,t)=>distM(lat,lon,t.lat,t.lon)<distM(lat,lon,b.lat,b.lon)?t:b).lat,
         uncollected.reduce((b,t)=>distM(lat,lon,t.lat,t.lon)<distM(lat,lon,b.lat,b.lon)?t:b).lon)<300;
     const r=Math.random();
-    type=nearTreasure?(r<.1?'speed':r<.2?'star':r<.8?'range':r<.9?'freeze':'magnet')
-                     :(r<.2?'speed':r<.4?'star':r<.6?'range':r<.8?'freeze':'magnet');
+    // 近寶物：range 稍微偏高(25%)但不再獨大；隨機生成五種均等
+    type=nearTreasure?(r<.15?'speed':r<.30?'star':r<.55?'range':r<.78?'freeze':'magnet')
+                     :(r<.20?'speed':r<.40?'star':r<.60?'range':r<.80?'freeze':'magnet');
     const id='i'+(itemIdCtr++);
     const [emoji,bg]=type==='speed'?['⚡','#f57c00']:type==='star'?['⭐','#7b1fa2']:
                      type==='range'?['🔍','#00796b']:type==='freeze'?['❄️','#0288d1']:['🧲','#6a1b9a'];

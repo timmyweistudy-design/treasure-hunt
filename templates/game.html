@@ -657,7 +657,7 @@ let weatherTimer = 0;        // 當前天氣剩餘秒數（0 = 晴天）
 let weatherCD    = 90;       // 下次天氣觸發倒數
 let _ambientSrc  = null;     // 環境音 BufferSource
 let _ambientGain = null;     // 環境音音量節點
-let birdTimer    = 12 + Math.random()*10;  // 晴天小鳥叫下次觸發（秒）
+let birdTimer    = 4 + Math.random()*4;    // 晴天小鳥叫下次觸發（秒）
 let thunderTimer = 14 + Math.random()*8;   // 雷雨打雷下次觸發（秒）
 
 // 道具
@@ -710,8 +710,8 @@ function toggleMute() {
     muted = !muted;
     document.getElementById('mute-btn').textContent = muted ? '🔇' : '🔊';
     if(muted) _stopAmbient();
-    else if(weatherType==='fog') _startAmbient('lowpass',500,1.0,.22);
-    else if(weatherType==='storm') _startAmbient('bandpass',2000,.5,.32);
+    else if(weatherType==='fog') _startAmbient(80, 2200, 0.38);
+    else if(weatherType==='storm') _startAmbient(600, 6000, 0.42);
 }
 function snd(fn) { if (!muted) try { fn(getAudio()); } catch(e){} }
 
@@ -955,40 +955,67 @@ function _stopAmbient() {
     if(_ambientSrc){ try{_ambientSrc.stop();}catch(e){} _ambientSrc=null; }
     _ambientGain=null;
 }
-function _startAmbient(filterType, filterFreq, filterQ, vol, fadeIn=1.2) {
+function _startAmbient(hpFreq, lpFreq, vol, fadeIn=1.5) {
     if(muted) return;
     const ctx=getAudio();
     const _doStart=()=>{
         try{
             const src=ctx.createBufferSource();
-            src.buffer=_noiseBuffer(ctx,2); src.loop=true;
-            const filt=ctx.createBiquadFilter();
-            filt.type=filterType; filt.frequency.value=filterFreq; filt.Q.value=filterQ;
+            src.buffer=_noiseBuffer(ctx,3); src.loop=true;
+            // 寬帶通：hp → lp 串聯，保留大部分能量
+            const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=hpFreq;
+            const lp=ctx.createBiquadFilter(); lp.type='lowpass';  lp.frequency.value=lpFreq;
             const gain=ctx.createGain();
             gain.gain.setValueAtTime(0,ctx.currentTime);
             gain.gain.linearRampToValueAtTime(vol,ctx.currentTime+fadeIn);
-            src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+            src.connect(hp); hp.connect(lp); lp.connect(gain); gain.connect(ctx.destination);
             src.start();
             _ambientSrc=src; _ambientGain=gain;
         }catch(e){}
     };
-    // 等 AudioContext 真正 running 再 start，避免 suspended 狀態被 catch 吃掉
     if(ctx.state==='running'){ _doStart(); }
     else { ctx.resume().then(_doStart).catch(()=>{}); }
 }
+
+// ── 鳥叫：每組 1-5 聲，共 5 種不同鳥型 ──────────────────
+function _birdNote(ctx, f1, f2, t, dur, vol) {
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type='sine';
+    o.frequency.setValueAtTime(f1, ctx.currentTime+t);
+    o.frequency.exponentialRampToValueAtTime(f2, ctx.currentTime+t+dur);
+    g.gain.setValueAtTime(vol, ctx.currentTime+t);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+t+dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+dur+.03);
+}
 function playBird() {
-    // 兩段高頻音掃：上行→下行模擬鳴叫
     snd(ctx=>{
-        [[2800,3600,0,.10],[3600,2500,.08,.12]].forEach(([f1,f2,t,dur])=>{
-            const o=ctx.createOscillator(),g=ctx.createGain();
-            o.type='sine';
-            o.frequency.setValueAtTime(f1,ctx.currentTime+t);
-            o.frequency.exponentialRampToValueAtTime(f2,ctx.currentTime+t+dur);
-            g.gain.setValueAtTime(.07,ctx.currentTime+t);
-            g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+t+dur);
-            o.connect(g);g.connect(ctx.destination);
-            o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+dur+.05);
-        });
+        const count=1+Math.floor(Math.random()*5); // 1-5 聲
+        let t=0;
+        for(let i=0;i<count;i++){
+            const type=Math.floor(Math.random()*5);
+            const v=0.08+Math.random()*0.05;
+            if(type===0){
+                // 快速上行滑音（葦鶯）
+                _birdNote(ctx, 2900+Math.random()*400, 4000+Math.random()*500, t, .09, v);
+            } else if(type===1){
+                // 雙音節下行（山雀）
+                _birdNote(ctx, 3200, 2600, t, .10, v);
+                _birdNote(ctx, 2800, 2200, t+.13, .10, v*.85);
+            } else if(type===2){
+                // 低沉先升後降（鶇）
+                _birdNote(ctx, 1400, 2100, t, .13, v);
+                _birdNote(ctx, 2100, 1300, t+.13, .13, v*.8);
+            } else if(type===3){
+                // 短促顫音×3（鷦鷯）
+                for(let j=0;j<3;j++)
+                    _birdNote(ctx, 3500+j*120, 3200+j*80, t+j*.075, .06, v);
+            } else {
+                // 尖銳單音（樹雀）
+                _birdNote(ctx, 4200+Math.random()*500, 3600+Math.random()*400, t, .07, v);
+            }
+            t += .28+Math.random()*.35; // 同組每聲間距 0.28-0.63s
+        }
     });
 }
 function playThunder() {
@@ -1064,14 +1091,14 @@ function setWeather(type) {
         chip.style.background='rgba(180,190,210,.55)';
         showToast('🌫️ 大霧降臨！守衛視野大幅縮短 30 秒！',3000);
         playWeatherChange('fog');
-        _startAmbient('lowpass',500,1.0,.22);   // 低頻風聲
+        _startAmbient(80, 2200, 0.38);   // 低頻風聲（hp80→lp2200，寬帶）
     } else {
         weatherTimer=30;
         chip.textContent='⛈️ 雷雨 30s';
         chip.style.background='rgba(20,50,120,.55)';
         showToast('⛈️ 雷雨來了！AI 加速、玩家變慢 30 秒！',3000);
         playWeatherChange('storm');
-        _startAmbient('bandpass',2000,.5,.32);  // 雨聲
+        _startAmbient(600, 6000, 0.42);  // 雨聲（hp600→lp6000，高頻沙沙）
         thunderTimer=12+Math.random()*10;
     }
 }
@@ -1092,7 +1119,7 @@ function tickWeather(dt) {
     // 晴天小鳥聲（偶爾）
     if(weatherType==='sunny'){
         birdTimer=Math.max(0,birdTimer-dt);
-        if(birdTimer===0){playBird();birdTimer=8+Math.random()*12;}
+        if(birdTimer===0){playBird();birdTimer=4+Math.random()*2;}
     }
     weatherCD=Math.max(0,weatherCD-dt);
     if(weatherCD===0){

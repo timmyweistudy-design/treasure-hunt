@@ -2754,6 +2754,7 @@ document.addEventListener('keydown', e=>{
     keys[k]=true;
 });
 document.addEventListener('keyup', e=>{
+    if(e.isComposing||e.key==='Process'){clearAllKeys();return;}
     const k=_nk(e.key);
     delete keys[k];
 });
@@ -2895,7 +2896,10 @@ function loop(ts) {
                     lastDx=dx; lastDy=dy;  // 記錄移動方向供手雷投擲使用
                     const n=Math.hypot(dx,dy);
                     const spd=(isSprinting?SPRINT_SPD:WALK_SPD)*(speedBoostTimer>0?2:1)*(invincTimer>0?1.5:1)*(weatherType==='storm'?0.85:1);
-                    tryMove(dx/n*spd*dt, dy/n*spd*dt);
+                    // 子步驟：低幀率時分多次小步移動，防止單幀位移過大插入建築
+                    const steps=Math.max(1,Math.round(dt/(1/60)));
+                    const dtS=dt/steps;
+                    for(let s=0;s<steps;s++) tryMove(dx/n*spd*dtS, dy/n*spd*dtS);
                     pushTrail(dt);
                 }
             }

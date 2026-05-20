@@ -710,8 +710,8 @@ function toggleMute() {
     muted = !muted;
     document.getElementById('mute-btn').textContent = muted ? '🔇' : '🔊';
     if(muted) _stopAmbient();
-    else if(weatherType==='fog') _startAmbient('lowpass',320,1.2,.07);
-    else if(weatherType==='storm') _startAmbient('bandpass',1400,.6,.13);
+    else if(weatherType==='fog') _startAmbient('lowpass',500,1.0,.22);
+    else if(weatherType==='storm') _startAmbient('bandpass',2000,.5,.32);
 }
 function snd(fn) { if (!muted) try { fn(getAudio()); } catch(e){} }
 
@@ -955,21 +955,26 @@ function _stopAmbient() {
     if(_ambientSrc){ try{_ambientSrc.stop();}catch(e){} _ambientSrc=null; }
     _ambientGain=null;
 }
-function _startAmbient(filterType, filterFreq, filterQ, vol, fadeIn=1.5) {
+function _startAmbient(filterType, filterFreq, filterQ, vol, fadeIn=1.2) {
     if(muted) return;
-    try{
-        const ctx=getAudio();
-        const src=ctx.createBufferSource();
-        src.buffer=_noiseBuffer(ctx,2); src.loop=true;
-        const filt=ctx.createBiquadFilter();
-        filt.type=filterType; filt.frequency.value=filterFreq; filt.Q.value=filterQ;
-        const gain=ctx.createGain();
-        gain.gain.setValueAtTime(0,ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(vol,ctx.currentTime+fadeIn);
-        src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
-        src.start();
-        _ambientSrc=src; _ambientGain=gain;
-    }catch(e){}
+    const ctx=getAudio();
+    const _doStart=()=>{
+        try{
+            const src=ctx.createBufferSource();
+            src.buffer=_noiseBuffer(ctx,2); src.loop=true;
+            const filt=ctx.createBiquadFilter();
+            filt.type=filterType; filt.frequency.value=filterFreq; filt.Q.value=filterQ;
+            const gain=ctx.createGain();
+            gain.gain.setValueAtTime(0,ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(vol,ctx.currentTime+fadeIn);
+            src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+            src.start();
+            _ambientSrc=src; _ambientGain=gain;
+        }catch(e){}
+    };
+    // 等 AudioContext 真正 running 再 start，避免 suspended 狀態被 catch 吃掉
+    if(ctx.state==='running'){ _doStart(); }
+    else { ctx.resume().then(_doStart).catch(()=>{}); }
 }
 function playBird() {
     // 兩段高頻音掃：上行→下行模擬鳴叫
@@ -1059,14 +1064,14 @@ function setWeather(type) {
         chip.style.background='rgba(180,190,210,.55)';
         showToast('🌫️ 大霧降臨！守衛視野大幅縮短 30 秒！',3000);
         playWeatherChange('fog');
-        _startAmbient('lowpass',320,1.2,.07);   // 低頻風聲
+        _startAmbient('lowpass',500,1.0,.22);   // 低頻風聲
     } else {
         weatherTimer=30;
         chip.textContent='⛈️ 雷雨 30s';
         chip.style.background='rgba(20,50,120,.55)';
         showToast('⛈️ 雷雨來了！AI 加速、玩家變慢 30 秒！',3000);
         playWeatherChange('storm');
-        _startAmbient('bandpass',1400,.6,.13);  // 雨聲
+        _startAmbient('bandpass',2000,.5,.32);  // 雨聲
         thunderTimer=12+Math.random()*10;
     }
 }

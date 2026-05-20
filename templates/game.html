@@ -2749,9 +2749,8 @@ function tickPullingItems(dt) {
                 selectedSlot=emptyIdx;
                 _updateItemSlotHUD();
                 showToast(`🧲 磁鐵→槽${emptyIdx+1}：${_ITEM_ICONS[pull.type]}，按Q使用！`,1800);
-            } else {
-                _activateItem(pull.type);  // 槽全滿 → 直接觸發
             }
+            // 理論上 emptyIdx 不會是 -1（開始拉時已確認有空格）
             pullingItems.delete(id);
         }
     }
@@ -2809,6 +2808,9 @@ function loop(ts) {
             if(magnetTimer>0){
                 for(const [id,item] of Object.entries(items)){
                     if(!pullingItems.has(id)&&distM(pLat,pLon,item.lat,item.lon)<=MAGNET_R){
+                        // 槽有空位才開始拉，否則道具留在原地
+                        const emptyIdx=heldItems.indexOf(null);
+                        if(emptyIdx===-1) continue;
                         const inner=item.marker.getElement()?.querySelector('.item-badge');
                         if(inner) inner.classList.add('pulling');
                         pullingItems.set(id,{type:item.type,marker:item.marker,

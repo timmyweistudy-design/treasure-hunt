@@ -273,7 +273,7 @@
         @keyframes vig-pulse { 0%,100%{opacity:.3} 50%{opacity:.8} }
 
         /* ── Mini-map ── */
-        #mini-map { position: absolute; bottom: 60px; left: 10px;
+        #mini-map { position: absolute; bottom: 64px; left: 10px;
                     width: 130px; height: 130px; border-radius: 12px;
                     border: 2px solid rgba(126,200,248,.65);
                     box-shadow: 0 4px 16px rgba(0,0,0,.5), 0 0 0 1px rgba(126,200,248,.12);
@@ -282,7 +282,7 @@
         #mini-map:hover { opacity: 1; transform: scale(1.05); }
 
         /* ── Recenter ── */
-        #recenter-btn { display: none; position: absolute; bottom: 24px; right: 14px;
+        #recenter-btn { display: none; position: absolute; bottom: 62px; right: 14px;
                         z-index: 999; background: #1a73e8; color: #fff;
                         border: none; border-radius: 24px; padding: 8px 16px;
                         font-size: 13px; font-weight: bold; cursor: pointer;
@@ -402,6 +402,45 @@
         .eff-chip { background:rgba(255,255,255,.14);border-radius:12px;
                     padding:3px 10px;font-size:11px;font-weight:bold;display:none;
                     border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(4px); }
+
+        /* ── Bottom HUD ── */
+        #bottom-hud {
+            position:absolute;bottom:0;left:0;right:268px;
+            height:54px;background:rgba(10,14,26,.93);
+            backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+            z-index:996;border-top:1px solid rgba(100,160,255,.2);
+            display:flex;align-items:center;padding:0 10px;gap:6px;color:#fff;
+        }
+        .bhud-sep { width:1px;height:30px;background:rgba(255,255,255,.12);flex-shrink:0;margin:0 2px; }
+        .bhud-left  { display:flex;align-items:center;gap:5px;flex-shrink:0; }
+        .bhud-center{ flex:1;display:flex;align-items:center;justify-content:center;gap:5px; }
+        .bhud-right { display:flex;align-items:center;gap:5px;flex-shrink:0; }
+        .bhud-chip {
+            background:rgba(255,255,255,.12);border-radius:8px;
+            padding:3px 8px;font-size:11px;font-weight:bold;
+            border:1px solid rgba(255,255,255,.1);white-space:nowrap;
+        }
+        .bhud-chip.danger { background:rgba(198,40,40,.55)!important;border-color:rgba(255,82,82,.4)!important; }
+        .bhud-chip.bhud-alert {
+            background:rgba(198,40,40,.6)!important;border-color:rgba(255,82,82,.5)!important;
+            animation:wanted-flash .5s ease-in-out infinite;
+        }
+        /* ── 5 道具槽 ── */
+        .slot-box {
+            width:44px;height:42px;border-radius:8px;
+            border:2px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            position:relative;cursor:pointer;
+            transition:border-color .15s,background .15s,box-shadow .15s;
+            user-select:none;
+        }
+        .slot-box.selected { border-color:#ffd54f;background:rgba(255,213,79,.14);box-shadow:0 0 8px rgba(255,213,79,.45); }
+        .slot-box.filled   { border-color:rgba(100,180,255,.55);background:rgba(26,115,232,.14); }
+        .slot-box.selected.filled { border-color:#ffd54f;box-shadow:0 0 10px rgba(255,213,79,.6); }
+        .slot-num  { font-size:9px;color:rgba(255,255,255,.38);position:absolute;top:2px;left:4px;
+                     font-family:'Orbitron',monospace;font-weight:700; }
+        .slot-icon { font-size:20px;line-height:1;margin-top:4px; }
+        .slot-key-hint { font-size:9px;color:rgba(255,255,255,.32);white-space:nowrap;margin-left:3px; }
     </style>
 </head>
 <body>
@@ -430,14 +469,6 @@
         <span class="eff-chip" id="chip-freeze">❄️ 冰凍 <span id="freeze-t">7</span>s</span>
         <span class="eff-chip" id="chip-stun">⚡ 被定身！<span id="stun-t">3</span>s</span>
         <span class="eff-chip" id="chip-magnet">🧲 磁鐵 <span id="magnet-t">8</span>s</span>
-        <span class="eff-chip" id="chip-decoy"><span id="decoy-label">🎯 誘餌</span> <span id="decoy-t">6</span>s</span>
-        <span class="eff-chip" id="chip-combo">🔥 連擊×<span id="combo-count">2</span> <span id="combo-t">22</span>s</span>
-        <span class="eff-chip" id="chip-ai"><span id="ai-count-txt"></span> <span id="ai-dist">—</span>m</span>
-        <span class="eff-chip" id="chip-grenade" style="display:inline-block">💣 <span id="grenade-chr">●●</span> <span id="grenade-cd-txt"></span></span>
-        <span class="eff-chip" id="chip-mine" style="display:inline-block">💥 <span id="mine-chr">●●</span> <span id="mine-cd-txt"></span></span>
-        <span class="eff-chip" id="chip-wanted" style="display:none;background:rgba(198,40,40,.55)">🚨 通緝！<span id="wanted-t">8</span>s 按Space！</span>
-        <span class="eff-chip" id="chip-weather" style="display:inline-block">☀️ 晴天</span>
-        <span class="eff-chip" id="item-slot" style="display:none;background:rgba(255,193,7,.25);border:1px solid rgba(255,193,7,.6)"></span>
     </div>
 </div>
 
@@ -497,7 +528,7 @@
                     <b>移動</b>：<span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> / <span class="key">↑↓←→</span><br>
                     <span class="key">Shift</span> 衝刺 10s・冷卻3s<br>
                     <span class="key">Space</span> 收集 / 撿道具 / 抓小偷<br>
-                    <span class="key">Q</span> 使用道具槽 &nbsp;<span class="key">R</span> 誘餌（AI追6s・冷卻40s）<br>
+                    <span class="key">1-5</span> 選道具槽 &nbsp;<span class="key">Q</span> 使用選定槽 &nbsp;<span class="key">R</span> 誘餌（40s CD）<br>
                     <span class="key">E</span> 💣手雷（2顆・80m暈眩4s・充能20s）<br>
                     <span class="key">F</span> 💥地雷（2個・20m觸發暈眩5s・充能25s）<br>
                     <b>道具</b>：⚡速×2(8s) ⭐無敵+速×1.5(10s) 🔍廣域×3(10s) ❄️凍AI(7s) 🧲磁鐵(8s)<br>
@@ -546,6 +577,31 @@
     <div id="stun-glow"></div>
     <div id="mini-map" title="點擊回到玩家位置"></div>
     <button id="recenter-btn" onclick="map.setView([pLat,pLon],17)">🧭 回到玩家</button>
+
+    <!-- ── Bottom HUD ── -->
+    <div id="bottom-hud">
+        <div class="bhud-left">
+            <span id="chip-ai" class="bhud-chip"><span id="ai-count-txt">👁️…</span> <span id="ai-dist">—</span>m</span>
+            <span id="chip-grenade" class="bhud-chip">💣 <span id="grenade-chr">●●</span><span id="grenade-cd-txt"></span></span>
+            <span id="chip-mine" class="bhud-chip">💥 <span id="mine-chr">●●</span><span id="mine-cd-txt"></span></span>
+            <span id="chip-decoy" class="bhud-chip">🎯 <span id="decoy-label">就緒</span><span id="decoy-t"></span></span>
+        </div>
+        <div class="bhud-sep"></div>
+        <div class="bhud-center">
+            <div class="slot-box selected" id="item-slot-1" onclick="selectSlot(0)"><span class="slot-num">1</span></div>
+            <div class="slot-box" id="item-slot-2" onclick="selectSlot(1)"><span class="slot-num">2</span></div>
+            <div class="slot-box" id="item-slot-3" onclick="selectSlot(2)"><span class="slot-num">3</span></div>
+            <div class="slot-box" id="item-slot-4" onclick="selectSlot(3)"><span class="slot-num">4</span></div>
+            <div class="slot-box" id="item-slot-5" onclick="selectSlot(4)"><span class="slot-num">5</span></div>
+            <span class="slot-key-hint">Q使用</span>
+        </div>
+        <div class="bhud-sep"></div>
+        <div class="bhud-right">
+            <span id="chip-weather" class="bhud-chip">☀️ 晴天</span>
+            <span id="chip-combo" class="bhud-chip" style="display:none">🔥 ×<span id="combo-count">2</span> <span id="combo-t">22</span>s</span>
+            <span id="chip-wanted" class="bhud-chip bhud-alert" style="display:none">🚨 <span id="wanted-t">8</span>s Space！</span>
+        </div>
+    </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1696,28 +1752,41 @@ function _activateItem(type) {
     }
 }
 
-// ── 道具撿取 → 存入槽（不立即觸發）────────────────────────
-let heldItem = null;
+// ── 道具槽系統（5格，按1-5選格，Q使用）────────────────────
+let heldItems   = [null,null,null,null,null];
+let selectedSlot = 0;
+
+function selectSlot(idx) {
+    selectedSlot = idx;
+    _updateItemSlotHUD();
+}
 function _updateItemSlotHUD() {
-    const el=document.getElementById('item-slot');
-    if(!heldItem){el.style.display='none';return;}
-    el.style.display='inline-block';
-    el.textContent=`${_ITEM_ICONS[heldItem]||'?'} 按Q`;
+    for(let i=0;i<5;i++){
+        const el=document.getElementById(`item-slot-${i+1}`);
+        if(!el) continue;
+        const item=heldItems[i];
+        el.classList.toggle('selected', i===selectedSlot);
+        el.classList.toggle('filled', item!==null);
+        el.innerHTML=`<span class="slot-num">${i+1}</span>`+(item?`<span class="slot-icon">${_ITEM_ICONS[item]}</span>`:'');
+    }
 }
 function applyItem(type,id) {
-    if(heldItem!==null){
-        showToast(`🎒 道具槽已有 ${_ITEM_ICONS[heldItem]}！先按 Q 使用！`,1500);
-        return;   // 道具留在地上
+    const emptyIdx=heldItems.indexOf(null);
+    if(emptyIdx===-1){
+        showToast('🎒 道具槽已滿！按1-5選一格後按Q使用！',1500);
+        return;  // 道具留在地上
     }
     map.removeLayer(items[id].marker); delete items[id];
-    heldItem=type;
+    heldItems[emptyIdx]=type;
+    selectedSlot=emptyIdx;
     _updateItemSlotHUD();
-    showToast(`🎒 存入道具槽：${_ITEM_ICONS[type]} ${_ITEM_NAMES[type]}，按 Q 使用！`,2000);
+    showToast(`🎒 存入槽${emptyIdx+1}：${_ITEM_ICONS[type]} ${_ITEM_NAMES[type]}，按Q使用！`,2000);
     playItem();
 }
 function useHeldItem() {
-    if(!heldItem){showToast('🎒 道具槽是空的！',1200);return;}
-    const type=heldItem; heldItem=null;
+    const type=heldItems[selectedSlot];
+    if(!type){showToast(`🎒 槽${selectedSlot+1}是空的！按1-5換槽`,1200);return;}
+    heldItems[selectedSlot]=null;
     _updateItemSlotHUD();
     _activateItem(type);
 }
@@ -2187,17 +2256,18 @@ function tickEffects(dt) {
     document.getElementById('chip-magnet').style.display=magnetTimer>0?'inline-block':'none';
     if(magnetTimer>0) document.getElementById('magnet-t').textContent=Math.ceil(magnetTimer);
 
-    const dChip=document.getElementById('chip-decoy');
     if(decoyActive){
-        dChip.style.display='inline-block';
-        document.getElementById('decoy-label').textContent='🎯 誘餌';
-        document.getElementById('decoy-t').textContent=Math.ceil(decoyTimer);
+        document.getElementById('decoy-label').textContent='活躍';
+        document.getElementById('decoy-t').textContent=' '+Math.ceil(decoyTimer)+'s';
+        document.getElementById('chip-decoy').style.background='rgba(255,193,7,.35)';
     } else if(decoyCD>0){
-        dChip.style.display='inline-block';
-        document.getElementById('decoy-label').textContent='🎯 R冷卻';
-        document.getElementById('decoy-t').textContent=Math.ceil(decoyCD);
+        document.getElementById('decoy-label').textContent='CD';
+        document.getElementById('decoy-t').textContent=' '+Math.ceil(decoyCD)+'s';
+        document.getElementById('chip-decoy').style.background='';
     } else {
-        dChip.style.display='none';
+        document.getElementById('decoy-label').textContent='就緒';
+        document.getElementById('decoy-t').textContent='';
+        document.getElementById('chip-decoy').style.background='';
     }
 
     const cChip=document.getElementById('chip-combo');
@@ -2229,7 +2299,8 @@ function tickEffects(dt) {
         if(wantedMaxTimer>0) document.getElementById('wanted-t').textContent=Math.ceil(wantedMaxTimer);
     }
 
-    document.getElementById('eff-row').style.display='flex';  // 手雷/地雷常駐，eff-row 永遠顯示
+    const _anyEff=speedBoostTimer>0||invincTimer>0||rangeBoostTimer>0||aiFrozenTimer>0||stunTimer>0||magnetTimer>0;
+    document.getElementById('eff-row').style.display=_anyEff?'flex':'none';
 }
 
 // ── A* 路徑規劃（供 AI 追跡者使用）──────────────────────
@@ -2617,6 +2688,7 @@ document.addEventListener('keydown', e=>{
     if(MOVE_KEYS.has(k)) e.preventDefault();
     if(k===' '){e.preventDefault();collectNearest();return;}
     if(k==='q'){e.preventDefault();useHeldItem();return;}
+    if(k>='1'&&k<='5'){e.preventDefault();selectSlot(parseInt(k)-1);return;}
     if(k==='r'){e.preventDefault();dropDecoy();return;}
     if(k==='e'){e.preventDefault();throwGrenade();return;}
     if(k==='f'){e.preventDefault();placeMine();return;}
@@ -2670,9 +2742,16 @@ function tickPullingItems(dt) {
             }
         }
         if(pull.progress>=1){
-            // arrived — apply and clean up
-            map.removeLayer(pull.marker); // 磁鐵吸來的直接觸發，不佔道具槽
-            _activateItem(pull.type);
+            map.removeLayer(pull.marker);
+            const emptyIdx=heldItems.indexOf(null);
+            if(emptyIdx!==-1){
+                heldItems[emptyIdx]=pull.type;
+                selectedSlot=emptyIdx;
+                _updateItemSlotHUD();
+                showToast(`🧲 磁鐵→槽${emptyIdx+1}：${_ITEM_ICONS[pull.type]}，按Q使用！`,1800);
+            } else {
+                _activateItem(pull.type);  // 槽全滿 → 直接觸發
+            }
             pullingItems.delete(id);
         }
     }

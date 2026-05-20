@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-20（天氣系統 + 寶藏分層優化 + 道具 & AI 平衡調整）**
+> **最後更新：2026-05-20（5格道具槽系統 + HUD 全面重設計）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,24 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-20（v2）5格道具槽 + HUD 重設計
+
+**道具系統：**
+- `heldItems[5]`（陣列）取代單格 `heldItem`；`selectedSlot`（0~4）記錄當前選擇格
+- 按 `1`~`5` 切換選擇槽（也可點擊底部槽格）；`Q` 使用選定槽的道具
+- 撿道具存入第一個空格並自動切換到該格
+- 磁鐵吸來的道具也存入空格；全滿才直接觸發
+
+**HUD 重設計：**
+- 頂部 `eff-row`：僅在有主動效果時顯示（加速/無敵/廣域/冰凍/磁鐵/被定身）
+- 底部固定欄 `#bottom-hud`（`right: 268px` 不蓋側欄）：
+  - 左：AI計數+距離、手雷、地雷、誘餌狀態
+  - 中：5個槽格（選中金邊、有道具藍邊）+ `Q使用` 提示
+  - 右：天氣、連擊（活躍才顯示）、通緝（活躍才顯示）
+- 小地圖 `bottom` 60px→64px，回到玩家按鈕 24px→62px（避免被底欄蓋住）
 
 ---
 

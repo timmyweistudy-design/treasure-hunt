@@ -2360,6 +2360,7 @@ function updateDistances() {
     const nameEl=document.getElementById('compass-name');
     const distEl=document.getElementById('compass-dist');
 
+    const nextId=OPTIMAL.find(id=>!collected.has(id));
     if(wantedThief){
         // 通緝中：羅盤改指向小偷
         const d=Math.round(distM(pLat,pLon,wantedThief.lat,wantedThief.lon));
@@ -2375,7 +2376,6 @@ function updateDistances() {
         // 正常：指向下一個寶藏
         arrowEl.style.color=''; nameEl.style.color=''; distEl.style.color='';
         if(compassBox) compassBox.classList.remove('thief-alert');
-        const nextId=OPTIMAL.find(id=>!collected.has(id));
         const nextT =nextId?TREASURES.find(t=>t.id===nextId):null;
         if(nextT){
             const d  =Math.round(distM(pLat,pLon,nextT.lat,nextT.lon));

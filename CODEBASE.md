@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-20（戰鬥系統）**
+> **最後更新：2026-05-20（戰鬥系統 + VFX修正）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,25 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-20 戰鬥系統 VFX/顯示修正
+
+**爆炸環位置修正**
+- `_spawnExplosionVfx(lat,lon,radiusM)`：改用 `left:pt.x-pxR; top:pt.y-pxR`，不再用 `transform:translate(-50%,-50%)`
+- 根本原因：inline transform 與 keyframe `transform:scale(0→1)` 衝突，環跑到左上角
+- 接受 `radiusM` 參數：地雷爆炸用 `MINE_RADIUS`，手雷用 `GRENADE_RADIUS`
+
+**觸發範圍視覺化**
+- 手雷：投擲後在落點顯示橘色虛線圓（80m），抵達時移除
+- 地雷：放置後在腳下顯示紅色虛線圓（20m），觸發時移除
+
+**AI 顏色恢復修正**
+- `_stunAI`：改用 `el.style.filter='saturate(0) brightness(1.5)'`（直接 inline style）
+- 舊方法 `[class$="-dot"]` 選擇器在 `class="patrol-dot alert"` 時失效
+- stun 結束：`el.style.filter = aiFrozenTimer>0?'hue-rotate...':''`（保持凍結色）
+- freeze 結束：`el.style.filter = ai.combatStun>0?'saturate...':''`（保持暈眩色）
 
 ---
 

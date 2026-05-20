@@ -81,6 +81,35 @@
         #time-vignette { display:none;position:absolute;inset:0;pointer-events:none;z-index:987;
             box-shadow:inset 0 0 120px rgba(255,100,0,.35);
             animation:vig-pulse .6s ease-in-out infinite; }
+        /* ── 天氣覆蓋層 ── */
+        #weather-fog {
+            display:none;position:absolute;inset:0;z-index:490;pointer-events:none;
+            background:rgba(210,220,235,.42);
+            backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+        }
+        #weather-storm {
+            display:none;position:absolute;inset:0;z-index:490;pointer-events:none;
+            background:rgba(15,25,60,.28);
+            animation:lightning-flash 8s ease-in-out infinite;
+        }
+        @keyframes lightning-flash {
+            0%,92%,96%,100%{opacity:1}
+            94%{opacity:1.6;background:rgba(200,220,255,.18)}
+        }
+        @keyframes rain-move {
+            0%  {background-position:0 0}
+            100%{background-position:-200px 400px}
+        }
+        #weather-storm::after {
+            content:'';position:absolute;inset:0;
+            background-image:repeating-linear-gradient(
+                100deg,
+                transparent 0px,transparent 3px,
+                rgba(180,210,255,.35) 3px,rgba(180,210,255,.35) 4px
+            );
+            background-size:200px 400px;
+            animation:rain-move .6s linear infinite;
+        }
         /* portal */
         @keyframes portal-pulse {
             0%,100% { box-shadow:0 0 0 0 rgba(138,43,226,.8); transform:scale(1); }
@@ -407,11 +436,15 @@
         <span class="eff-chip" id="chip-grenade" style="display:inline-block">💣 <span id="grenade-chr">●●</span> <span id="grenade-cd-txt"></span></span>
         <span class="eff-chip" id="chip-mine" style="display:inline-block">💥 <span id="mine-chr">●●</span> <span id="mine-cd-txt"></span></span>
         <span class="eff-chip" id="chip-wanted" style="display:none;background:rgba(198,40,40,.55)">🚨 通緝！<span id="wanted-t">8</span>s 按Space！</span>
+        <span class="eff-chip" id="chip-weather" style="display:inline-block">☀️ 晴天</span>
     </div>
 </div>
 
 <div class="wrap">
-    <div id="map"></div>
+    <div id="map">
+        <div id="weather-fog"></div>
+        <div id="weather-storm"></div>
+    </div>
     <div id="time-vignette"></div>
 
     <div class="sb">
@@ -617,6 +650,11 @@ let buildings   = [];
 const GRID_DEG  = 0.001;           // 空間格尺寸 ≈ 110m，加速碰撞查詢
 let buildingGrid = {};
 let gameReady   = false;
+
+// 天氣
+let weatherType = 'sunny';   // 'sunny' | 'fog' | 'storm'
+let weatherTimer = 0;        // 當前天氣剩餘秒數（0 = 晴天）
+let weatherCD    = 90;       // 下次天氣觸發倒數
 
 // 道具
 const items   = {};
@@ -897,6 +935,47 @@ function playPortal() {
             o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+dur+.15);
         });
     });
+}
+
+// ── 天氣系統 ──────────────────────────────────────────────
+function currentFovLen() {
+    return PATROLLER_FOV_LEN * (weatherType==='fog' ? 0.35 : 1);
+}
+function setWeather(type) {
+    weatherType = type;
+    document.getElementById('weather-fog').style.display   = type==='fog'   ? 'block':'none';
+    document.getElementById('weather-storm').style.display = type==='storm' ? 'block':'none';
+    const chip = document.getElementById('chip-weather');
+    if(type==='sunny'){
+        weatherTimer=0;
+        chip.textContent='☀️ 晴天';
+        chip.style.background='';
+    } else if(type==='fog'){
+        weatherTimer=30;
+        chip.textContent='🌫️ 大霧 30s';
+        chip.style.background='rgba(180,190,210,.55)';
+        showToast('🌫️ 大霧降臨！守衛視野大幅縮短 30 秒！',3000);
+    } else {
+        weatherTimer=30;
+        chip.textContent='⛈️ 雷雨 30s';
+        chip.style.background='rgba(20,50,120,.55)';
+        showToast('⛈️ 雷雨來了！AI 加速、玩家變慢 30 秒！',3000);
+    }
+}
+function tickWeather(dt) {
+    if(weatherTimer>0){
+        weatherTimer=Math.max(0,weatherTimer-dt);
+        const chip=document.getElementById('chip-weather');
+        if(weatherTimer>0 && weatherType!=='sunny')
+            chip.textContent=(weatherType==='fog'?'🌫️ 大霧 ':'⛈️ 雷雨 ')+Math.ceil(weatherTimer)+'s';
+        if(weatherTimer===0) setWeather('sunny');
+        return;
+    }
+    weatherCD=Math.max(0,weatherCD-dt);
+    if(weatherCD===0){
+        weatherCD=90;
+        setWeather(Math.random()<0.5?'fog':'storm');
+    }
 }
 
 // ── 任意門初始化 + tick ────────────────────────────────────
@@ -1557,7 +1636,7 @@ function inPatrollerFOV(ai) {
     fMX/=fLen; fMY/=fLen;
     const fwd=dx*fMX+dy*fMY;
     const lat=dx*fMY-dy*fMX;
-    return fwd>0&&fwd<=PATROLLER_FOV_LEN&&Math.abs(lat)<=PATROLLER_FOV_HW;
+    return fwd>0&&fwd<=currentFovLen()&&Math.abs(lat)<=PATROLLER_FOV_HW;
 }
 function updateFOVPoly(ai) {
     const cosLat=Math.cos(ai.lat*Math.PI/180);
@@ -1566,8 +1645,9 @@ function updateFOVPoly(ai) {
     const fLen=Math.sqrt(fMX*fMX+fMY*fMY);
     if(fLen<1e-6) return;
     fMX/=fLen; fMY/=fLen;
-    const tipLat=ai.lat+fMY*PATROLLER_FOV_LEN*DLat;
-    const tipLon=ai.lon+fMX*PATROLLER_FOV_LEN*DLon;
+    const fovL=currentFovLen();
+    const tipLat=ai.lat+fMY*fovL*DLat;
+    const tipLon=ai.lon+fMX*fovL*DLon;
     const lLat=tipLat+fMX*PATROLLER_FOV_HW*DLat, lLon=tipLon-fMY*PATROLLER_FOV_HW*DLon;
     const rLat=tipLat-fMX*PATROLLER_FOV_HW*DLat, rLon=tipLon+fMY*PATROLLER_FOV_HW*DLon;
     const bLLat=ai.lat+fMX*PATROLLER_FOV_HW*DLat, bLLon=ai.lon-fMY*PATROLLER_FOV_HW*DLon;
@@ -1807,7 +1887,7 @@ function tickAI(dt) {
             continue;
         }
         ai.pathTimer-=dt;
-        const s=AI_SPD*dt;
+        const s=AI_SPD*dt*(weatherType==='storm'?1.3:1);
         let dToP;
         if(ai.type==='chaser')         dToP=tickChaser(ai,dt,s);
         else if(ai.type==='patroller')  dToP=tickPatroller(ai,dt,s);
@@ -2455,6 +2535,7 @@ function loop(ts) {
             tickMines(dt);
             tickCombatStun(dt);
             tickPortals(dt);
+            tickWeather(dt);
             tickAI(dt);
             // 🧲 磁鐵：把 400m 內道具拉向玩家（動畫吸引）
             if(magnetTimer>0){
@@ -2478,7 +2559,7 @@ function loop(ts) {
                 if(dx||dy){
                     lastDx=dx; lastDy=dy;  // 記錄移動方向供手雷投擲使用
                     const n=Math.hypot(dx,dy);
-                    const spd=(isSprinting?SPRINT_SPD:WALK_SPD)*(speedBoostTimer>0?2:1);
+                    const spd=(isSprinting?SPRINT_SPD:WALK_SPD)*(speedBoostTimer>0?2:1)*(weatherType==='storm'?0.8:1);
                     tryMove(dx/n*spd*dt, dy/n*spd*dt);
                     pushTrail(dt);
                 }

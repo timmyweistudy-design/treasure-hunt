@@ -1,8 +1,34 @@
+import math
 import threading
 import requests
 import random
 from config import NOMINATIM_URL, OSRM_URL, GAME_CONFIG
 from game.models import Treasure, rate_limit
+
+def _haversine_m(a, b):
+    R = 6371000
+    r = math.pi / 180
+    dlat = (b[0] - a[0]) * r
+    dlon = (b[1] - a[1]) * r
+    x = math.sin(dlat/2)**2 + math.cos(a[0]*r)*math.cos(b[0]*r)*math.sin(dlon/2)**2
+    return R * 2 * math.atan2(math.sqrt(x), math.sqrt(1-x))
+
+def _spread_select(elements, count):
+    """Greedy spread selection — pick `count` POIs maximising minimum distance."""
+    for min_d in [200, 150, 100, 60]:
+        selected = []
+        pool = list(elements)
+        random.shuffle(pool)
+        for e in pool:
+            coord = (e["lat"], e["lon"])
+            if all(_haversine_m(coord, (s["lat"], s["lon"])) >= min_d for s in selected):
+                selected.append(e)
+                if len(selected) >= count:
+                    break
+        if len(selected) >= count:
+            return selected
+    pool = list(elements); random.shuffle(pool)
+    return pool[:count]
 
 OVERPASS_MIRRORS = [
     "https://overpass.kumi.systems/api/interpreter",
@@ -209,7 +235,7 @@ class MapAPI:
         for q in queries:
             try:
                 elements += MapAPI._query_overpass(q)
-                if len(elements) >= GAME_CONFIG["treasure_count"] * 4:
+                if len(elements) >= GAME_CONFIG["treasure_count"] * 10:
                     break
             except Exception:
                 pass
@@ -222,7 +248,7 @@ class MapAPI:
         if count == 0:
             return MapAPI._fetch_poi_nominatim(lat, lon)
 
-        selected = random.sample(valid, count)
+        selected = _spread_select(valid, count)
         treasures = []
         for i, poi in enumerate(selected):
             tags = poi.get("tags", {})

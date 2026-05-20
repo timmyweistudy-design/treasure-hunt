@@ -86,7 +86,12 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
             cached = _city_cache[city_key]
             lat, lon = cached["lat"], cached["lon"]
             all_t = [Treasure(**d) for d in cached["treasures"]]
-            treasures = random.sample(all_t, min(GAME_CONFIG["treasure_count"], len(all_t)))
+            count = min(GAME_CONFIG["treasure_count"], len(all_t))
+            # spread selection from cache
+            from game.map_api import _spread_select as _ss
+            pool = [t.to_dict() for t in all_t]
+            spread = _ss(pool, count)
+            treasures = [Treasure(**d) for d in spread]
         else:
             if city_key in _KNOWN_CITIES:
                 lat, lon = _KNOWN_CITIES[city_key]

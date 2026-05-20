@@ -51,7 +51,8 @@ def _assign_tiers(raw_pois, origin_lat, origin_lon):
         chosen_i, chosen_p = None, None
 
         min_d = target * 0.5  # never pick a POI closer than half the target distance
-        for tolerance in (80, 150, 250, 400, float('inf')):
+        tolerances = list(range(50, 500, 50)) + [float('inf')]
+        for tolerance in tolerances:
             raw_pool = [(i, p) for d, i, p in scored
                         if i not in used and d >= min_d and abs(d - target) <= tolerance]
             if not raw_pool:

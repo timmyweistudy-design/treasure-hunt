@@ -64,6 +64,9 @@
         @keyframes explosion-ring { 0%{opacity:.85;transform:scale(0)} 100%{opacity:0;transform:scale(1)} }
         .stun-label { position:absolute;z-index:9999;pointer-events:none;font-size:18px;
                       animation:float-up .9s ease-out forwards; }
+        @keyframes stun-spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        .stun-orbit { position:absolute;z-index:9999;pointer-events:none;font-size:16px;
+                      animation:stun-spin 1s linear infinite;transform-origin:center; }
         /* wanted thief flash */
         @keyframes wanted-flash { 0%,100%{background:rgba(198,40,40,.45)} 50%{background:rgba(255,82,82,.75)} }
         .thief-dot.wanted { animation:wanted-flash .5s ease-in-out infinite; }
@@ -1108,13 +1111,14 @@ function _stunAI(ai, dur) {
     ai.path=[]; ai.pathTimer=dur;
     const el=ai.marker.getElement();
     if(el) el.style.filter='saturate(0) brightness(1.5)';
-    // floating ⭐ VFX
+    // persistent ⭐ orbit — removed when stun ends
+    if(ai.stunLabel) ai.stunLabel.remove();
     const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
     const lbl=document.createElement('div');
-    lbl.className='stun-label'; lbl.textContent='⭐';
-    lbl.style.cssText=`left:${pt.x-10}px;top:${pt.y-30}px`;
+    lbl.className='stun-orbit'; lbl.textContent='⭐';
+    lbl.style.cssText=`left:${pt.x-10}px;top:${pt.y-28}px`;
     document.getElementById('map').appendChild(lbl);
-    setTimeout(()=>lbl.remove(),900);
+    ai.stunLabel=lbl;
 }
 function throwGrenade() {
     if(!gameReady) return;
@@ -1263,8 +1267,8 @@ function tickCombatStun(dt) {
             ai.combatStun=Math.max(0,ai.combatStun-dt);
             if(ai.combatStun===0){
                 const el=ai.marker.getElement();
-                // 恢復顏色：若仍在冰凍狀態保留藍色，否則清除 filter
                 if(el) el.style.filter=aiFrozenTimer>0?'hue-rotate(150deg) brightness(1.4)':'';
+                if(ai.stunLabel){ai.stunLabel.remove();ai.stunLabel=null;}
             }
         }
         if(ai.wanted&&ai.wantedTimer>0){
@@ -2322,7 +2326,7 @@ function loop(ts) {
             camLat+=(pLat-camLat)*k; camLon+=(pLon-camLon)*k;
             map.setView([camLat,camLon],map.getZoom(),{animate:false,noMoveStart:true});}
             if(uiFrame){ updateMiniMap(); updateDistances(); }
-            if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); } }
+            if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); if(ai.stunLabel){const sp=map.latLngToContainerPoint([ai.lat,ai.lon]);ai.stunLabel.style.left=(sp.x-10)+'px';ai.stunLabel.style.top=(sp.y-28)+'px';} } }
         } catch(e) {
             console.error('[loop]', e);  // 記錄錯誤但不中斷循環
         }

@@ -496,7 +496,7 @@
                     <b>移動</b>：<span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> / <span class="key">↑↓←→</span><br>
                     <span class="key">Shift</span> 衝刺 10s・冷卻3s<br>
                     <span class="key">Space</span> 收集 / 撿道具 / 抓小偷<br>
-                    <span class="key">Q</span> 誘餌（AI追6s・冷卻40s）<br>
+                    <span class="key">R</span> 誘餌（AI追6s・冷卻40s）<br>
                     <span class="key">E</span> 💣手雷（2顆・80m暈眩4s・充能20s）<br>
                     <span class="key">F</span> 💥地雷（2個・20m觸發暈眩5s・充能25s）<br>
                     <b>道具</b>：⚡速×2(8s) ⭐無敵+速×1.5(10s) 🔍廣域×3(10s) ❄️凍AI(7s) 🧲磁鐵(8s)<br>
@@ -2166,7 +2166,7 @@ function tickEffects(dt) {
         document.getElementById('decoy-t').textContent=Math.ceil(decoyTimer);
     } else if(decoyCD>0){
         dChip.style.display='inline-block';
-        document.getElementById('decoy-label').textContent='🎯 Q冷卻';
+        document.getElementById('decoy-label').textContent='🎯 R冷卻';
         document.getElementById('decoy-t').textContent=Math.ceil(decoyCD);
     } else {
         dChip.style.display='none';
@@ -2588,7 +2588,7 @@ document.addEventListener('keydown', e=>{
     const k=_nk(e.key);
     if(MOVE_KEYS.has(k)) e.preventDefault();
     if(k===' '){e.preventDefault();collectNearest();return;}
-    if(k==='q'){e.preventDefault();dropDecoy();return;}
+    if(k==='r'){e.preventDefault();dropDecoy();return;}
     if(k==='e'){e.preventDefault();throwGrenade();return;}
     if(k==='f'){e.preventDefault();placeMine();return;}
     keys[k]=true;

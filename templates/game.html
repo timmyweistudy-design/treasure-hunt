@@ -64,13 +64,10 @@
         @keyframes explosion-ring { 0%{opacity:.85;transform:scale(0)} 100%{opacity:0;transform:scale(1)} }
         .stun-label { position:absolute;z-index:9999;pointer-events:none;font-size:18px;
                       animation:float-up .9s ease-out forwards; }
-        @keyframes stun-orbit {
-            0%   { transform:rotate(0deg)   translateY(-22px) rotate(0deg);   }
-            100% { transform:rotate(360deg) translateY(-22px) rotate(-360deg); }
-        }
-        .stun-orbit { position:absolute;z-index:10000;pointer-events:none;font-size:18px;
-                      transform-origin:center;
-                      animation:stun-orbit 1.2s linear infinite; }
+        @keyframes stun-spin { 0%{transform:rotate(0deg) scale(1)} 50%{transform:rotate(180deg) scale(1.25)} 100%{transform:rotate(360deg) scale(1)} }
+        .stun-orbit { position:absolute;z-index:10000;pointer-events:none;font-size:22px;
+                      animation:stun-spin .75s linear infinite;
+                      text-shadow:0 0 10px rgba(255,230,0,.95); }
         /* wanted thief flash */
         @keyframes wanted-flash { 0%,100%{background:rgba(198,40,40,.45)} 50%{background:rgba(255,82,82,.75)} }
         .thief-dot.wanted { animation:wanted-flash .5s ease-in-out infinite; }
@@ -84,6 +81,13 @@
         #time-vignette { display:none;position:absolute;inset:0;pointer-events:none;z-index:987;
             box-shadow:inset 0 0 120px rgba(255,100,0,.35);
             animation:vig-pulse .6s ease-in-out infinite; }
+        /* portal */
+        @keyframes portal-pulse {
+            0%,100% { box-shadow:0 0 0 0 rgba(138,43,226,.8); transform:scale(1); }
+            50%     { box-shadow:0 0 0 18px rgba(138,43,226,0); transform:scale(1.12); }
+        }
+        .portal-icon { font-size:26px;line-height:1;animation:portal-pulse 1.4s ease-in-out infinite;
+                       filter:drop-shadow(0 0 8px rgba(138,43,226,.9));cursor:default; }
         /* magnet pull */
         .item-badge.pulling {
             animation:magnet-pull .35s ease-in-out infinite !important;
@@ -546,6 +550,17 @@ const TOTAL        = TREASURES.length;
 const BOUNDS       = {{ bounds_json | safe }};
 const FOCUS_POINTS = {{ focus_points_json | safe }};
 
+// ── 任意門 ────────────────────────────────────────────────
+const _pmid = { lat:(BOUNDS.n+BOUNDS.s)/2, lon:(BOUNDS.e+BOUNDS.w)/2 };
+const PORTALS = [
+    { id:'tl', lat:(BOUNDS.n+_pmid.lat)/2, lon:(BOUNDS.w+_pmid.lon)/2, pair:'br' },
+    { id:'tr', lat:(BOUNDS.n+_pmid.lat)/2, lon:(BOUNDS.e+_pmid.lon)/2, pair:'bl' },
+    { id:'bl', lat:(BOUNDS.s+_pmid.lat)/2, lon:(BOUNDS.w+_pmid.lon)/2, pair:'tr' },
+    { id:'br', lat:(BOUNDS.s+_pmid.lat)/2, lon:(BOUNDS.e+_pmid.lon)/2, pair:'tl' },
+];
+const PORTAL_R = 25;        // 觸發半徑 25m
+const PORTAL_CD = 3;        // 使用後 3s 冷卻
+
 const WALK_SPD    = 0.00025;
 const SPRINT_SPD  = 0.00050;
 const SPRINT_MAX  = 10;
@@ -617,6 +632,7 @@ let magnetTimer=0, magnetAutoT=0, magnetCircle=null;
 const MAGNET_R = CLCT_R * 8;  // 400m magnet radius (vs 50m normal collect)
 const pullingItems = new Map(); // id → {type, marker, sLat, sLon, progress} for pull animation
 let goldenId=null, goldenTimer=0, goldenCycle=GOLDEN_INTERVAL, goldenRing=null;
+let portalCooldown=0;
 // 戰鬥：手雷
 let grenadeCharges=GRENADE_CHARGES, grenadeRechargeCooldown=0, grenadeRechargeQueue=0;
 const grenades=[];  // {lat,lon,tLat,tLon,progress,marker}
@@ -859,6 +875,55 @@ function playThiefCaught() {
             o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.22);
         });
     });
+}
+
+function playPortal() {
+    snd(ctx => {
+        // 下掃音 + 上掃音 組成穿梭感
+        [[400,120,.0,.35],[300,600,.15,.4]].forEach(([f1,f2,t,dur])=>{
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='sine';
+            o.frequency.setValueAtTime(f1,ctx.currentTime+t);
+            o.frequency.linearRampToValueAtTime(f2,ctx.currentTime+t+dur);
+            g.gain.setValueAtTime(.28,ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+t+dur+.1);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+dur+.15);
+        });
+    });
+}
+
+// ── 任意門初始化 + tick ────────────────────────────────────
+function initPortals() {
+    PORTALS.forEach(p=>{
+        p.marker=L.marker([p.lat,p.lon],{
+            icon:L.divIcon({
+                html:'<div class="portal-icon">🌀</div>',
+                className:'',iconSize:[32,32],iconAnchor:[16,16]
+            }),zIndexOffset:500,interactive:false
+        }).addTo(map);
+        // 觸發半徑圈（淡色虛線）
+        p.circle=L.circle([p.lat,p.lon],{
+            radius:PORTAL_R,color:'#7b1fa2',weight:1.5,
+            fillColor:'#ab47bc',fillOpacity:.08,dashArray:'5 4',interactive:false
+        }).addTo(map);
+    });
+}
+
+function tickPortals(dt) {
+    if(portalCooldown>0){ portalCooldown=Math.max(0,portalCooldown-dt); return; }
+    for(const p of PORTALS){
+        if(distM(pLat,pLon,p.lat,p.lon)<=PORTAL_R){
+            const dest=PORTALS.find(x=>x.id===p.pair);
+            pLat=dest.lat; pLon=dest.lon;
+            camLat=dest.lat; camLon=dest.lon;   // 立即跳轉相機，不 lerp
+            portalCooldown=PORTAL_CD;
+            showToast('🌀 任意門！傳送到對角區域！',2200);
+            playPortal();
+            spawnParticles(dest.lat,dest.lon);
+            break;
+        }
+    }
 }
 
 // ── 粒子爆炸效果 ──────────────────────────────────────────
@@ -1120,7 +1185,7 @@ function _stunAI(ai, dur) {
     const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
     const lbl=document.createElement('div');
     lbl.className='stun-orbit'; lbl.textContent='⭐';
-    lbl.style.cssText=`left:${pt.x-9}px;top:${pt.y-9}px`;
+    lbl.style.cssText=`left:${pt.x-11}px;top:${pt.y-38}px`;
     document.getElementById('map').appendChild(lbl);
     ai.stunLabel=lbl;
 }
@@ -2292,6 +2357,7 @@ function loop(ts) {
             tickGrenades(dt);
             tickMines(dt);
             tickCombatStun(dt);
+            tickPortals(dt);
             tickAI(dt);
             // 🧲 磁鐵：把 400m 內道具拉向玩家（動畫吸引）
             if(magnetTimer>0){
@@ -2330,7 +2396,7 @@ function loop(ts) {
             camLat+=(pLat-camLat)*k; camLon+=(pLon-camLon)*k;
             map.setView([camLat,camLon],map.getZoom(),{animate:false,noMoveStart:true});}
             if(uiFrame){ updateMiniMap(); updateDistances(); }
-            if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); if(ai.stunLabel){const sp=map.latLngToContainerPoint([ai.lat,ai.lon]);ai.stunLabel.style.left=(sp.x-9)+'px';ai.stunLabel.style.top=(sp.y-9)+'px';} } }
+            if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); if(ai.stunLabel){const sp=map.latLngToContainerPoint([ai.lat,ai.lon]);ai.stunLabel.style.left=(sp.x-11)+'px';ai.stunLabel.style.top=(sp.y-38)+'px';} } }
         } catch(e) {
             console.error('[loop]', e);  // 記錄錯誤但不中斷循環
         }
@@ -2582,6 +2648,7 @@ async function startCountdown(){
     await new Promise(r=>setTimeout(r,360));
     overlay.style.display='none';
     clearAllKeys();   // 清除倒數期間任何殘留按鍵，防止遊戲開始時飄移
+    initPortals();
     gameReady=true;
 
     ticker=setInterval(()=>{

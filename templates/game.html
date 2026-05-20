@@ -911,19 +911,23 @@ function initPortals() {
 }
 
 function tickPortals(dt) {
-    if(portalCooldown>0){ portalCooldown=Math.max(0,portalCooldown-dt); return; }
+    if(portalCooldown>0) portalCooldown=Math.max(0,portalCooldown-dt);
+}
+function useNearestPortal() {
+    if(portalCooldown>0) return false;
     for(const p of PORTALS){
         if(distM(pLat,pLon,p.lat,p.lon)<=PORTAL_R){
             const dest=PORTALS.find(x=>x.id===p.pair);
             pLat=dest.lat; pLon=dest.lon;
-            camLat=dest.lat; camLon=dest.lon;   // 立即跳轉相機，不 lerp
+            camLat=dest.lat; camLon=dest.lon;
             portalCooldown=PORTAL_CD;
             showToast('🌀 任意門！傳送到對角區域！',2200);
             playPortal();
             spawnParticles(dest.lat,dest.lon);
-            break;
+            return true;
         }
     }
+    return false;
 }
 
 // ── 粒子爆炸效果 ──────────────────────────────────────────
@@ -2317,6 +2321,7 @@ function tickPullingItems(dt) {
 function collectNearest() {
     if(!gameReady) return;
     if(catchWantedThief()) return;
+    if(useNearestPortal()) return;
     let got=false;
     const eR=effectiveR();
     // 撿附近所有道具

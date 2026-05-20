@@ -111,12 +111,28 @@
             animation:rain-move .6s linear infinite;
         }
         /* portal */
-        @keyframes portal-pulse {
-            0%,100% { box-shadow:0 0 0 0 rgba(138,43,226,.8); transform:scale(1); }
-            50%     { box-shadow:0 0 0 18px rgba(138,43,226,0); transform:scale(1.12); }
+        @keyframes portal-spin-cw  { to { transform:rotate(360deg); } }
+        @keyframes portal-spin-ccw { to { transform:rotate(-360deg); } }
+        @keyframes portal-core-pulse {
+            0%,100% { transform:scale(1);   opacity:.85; }
+            50%     { transform:scale(1.35);opacity:1;   }
         }
-        .portal-icon { font-size:26px;line-height:1;animation:portal-pulse 1.4s ease-in-out infinite;
-                       filter:drop-shadow(0 0 8px rgba(138,43,226,.9));cursor:default; }
+        .portal-wrap {
+            width:40px;height:40px;position:relative;
+            display:flex;align-items:center;justify-content:center;
+            filter:drop-shadow(0 0 10px var(--pc,#00e5ff));
+        }
+        .portal-ring {
+            position:absolute;border-radius:50%;
+            border:2.5px solid var(--pc,#00e5ff);
+        }
+        .portal-ring-a { width:40px;height:40px;opacity:.9; animation:portal-spin-cw  2.6s linear infinite; }
+        .portal-ring-b { width:27px;height:27px;opacity:.6; animation:portal-spin-ccw 1.5s linear infinite;border-style:dashed; }
+        .portal-core   { width:13px;height:13px;border-radius:50%;
+                         background:var(--pc,#00e5ff);opacity:.9;
+                         animation:portal-core-pulse 1.8s ease-in-out infinite; }
+        .portal-pair-cyan  { --pc:#00e5ff; }
+        .portal-pair-amber { --pc:#ff9800; }
         /* magnet pull */
         .item-badge.pulling {
             animation:magnet-pull .35s ease-in-out infinite !important;
@@ -646,10 +662,10 @@ const FOCUS_POINTS = {{ focus_points_json | safe }};
 // ── 任意門 ────────────────────────────────────────────────
 const _pmid = { lat:(BOUNDS.n+BOUNDS.s)/2, lon:(BOUNDS.e+BOUNDS.w)/2 };
 const PORTALS = [
-    { id:'tl', lat:(BOUNDS.n+_pmid.lat)/2, lon:(BOUNDS.w+_pmid.lon)/2, pair:'br' },
-    { id:'tr', lat:(BOUNDS.n+_pmid.lat)/2, lon:(BOUNDS.e+_pmid.lon)/2, pair:'bl' },
-    { id:'bl', lat:(BOUNDS.s+_pmid.lat)/2, lon:(BOUNDS.w+_pmid.lon)/2, pair:'tr' },
-    { id:'br', lat:(BOUNDS.s+_pmid.lat)/2, lon:(BOUNDS.e+_pmid.lon)/2, pair:'tl' },
+    { id:'tl', lat:(BOUNDS.n+_pmid.lat)/2, lon:(BOUNDS.w+_pmid.lon)/2, pair:'br', pairClass:'portal-pair-cyan',  color:'#00e5ff' },
+    { id:'tr', lat:(BOUNDS.n+_pmid.lat)/2, lon:(BOUNDS.e+_pmid.lon)/2, pair:'bl', pairClass:'portal-pair-amber', color:'#ff9800' },
+    { id:'bl', lat:(BOUNDS.s+_pmid.lat)/2, lon:(BOUNDS.w+_pmid.lon)/2, pair:'tr', pairClass:'portal-pair-amber', color:'#ff9800' },
+    { id:'br', lat:(BOUNDS.s+_pmid.lat)/2, lon:(BOUNDS.e+_pmid.lon)/2, pair:'tl', pairClass:'portal-pair-cyan',  color:'#00e5ff' },
 ];
 const PORTAL_R = 40;        // 觸發半徑 40m
 const PORTAL_CD = 3;        // 使用後 3s 冷卻
@@ -1192,14 +1208,13 @@ function initPortals() {
     PORTALS.forEach(p=>{
         p.marker=L.marker([p.lat,p.lon],{
             icon:L.divIcon({
-                html:'<div class="portal-icon">🌀</div>',
-                className:'',iconSize:[32,32],iconAnchor:[16,16]
+                html:`<div class="portal-wrap ${p.pairClass}"><div class="portal-ring portal-ring-a"></div><div class="portal-ring portal-ring-b"></div><div class="portal-core"></div></div>`,
+                className:'',iconSize:[40,40],iconAnchor:[20,20]
             }),zIndexOffset:500,interactive:false
         }).addTo(map);
-        // 觸發半徑圈（淡色虛線）
         p.circle=L.circle([p.lat,p.lon],{
-            radius:PORTAL_R,color:'#7b1fa2',weight:1.5,
-            fillColor:'#ab47bc',fillOpacity:.08,dashArray:'5 4',interactive:false
+            radius:PORTAL_R,color:p.color,weight:1.5,
+            fillColor:p.color,fillOpacity:.07,dashArray:'5 4',interactive:false
         }).addTo(map);
     });
 }

@@ -354,6 +354,17 @@ def apply_penalty():
     return jsonify({"status": "ok", "score": player_data["score"]})
 
 
+@app.route("/score_add", methods=["POST"])
+def score_add():
+    player_data = session.get("player", {})
+    if not player_data:
+        return jsonify({"status": "error"}), 400
+    bonus = int((request.get_json(silent=True) or {}).get("bonus", 0))
+    player_data["score"] = player_data.get("score", 0) + bonus
+    session["player"] = player_data
+    return jsonify({"status": "ok", "score": player_data["score"]})
+
+
 @app.route("/finish")
 def finish_game():
     player_data = session.get("player", {})

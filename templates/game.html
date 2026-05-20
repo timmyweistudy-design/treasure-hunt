@@ -1221,19 +1221,21 @@ function catchWantedThief() {
         if(distM(pLat,pLon,ai.lat,ai.lon)>CATCH_R) continue;
         const bonus=ai.stolenAmt+50;
         score=Math.max(0,score+bonus);
-        document.getElementById('score').textContent=score;
-        fetch('/collect',{method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({treasure_id:'__thief_catch__',bonus})}).catch(()=>{});
+        document.getElementById('v-score').textContent=score;
+        fetch('/score_add',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({bonus})}).catch(()=>{});
         showToast(`🎉 小偷被抓！找回 ${ai.stolenAmt} 分＋獎勵 50 分！`,3500);
         playThiefCaught();
         spawnParticles(ai.lat,ai.lon);
         if(ai.marker) map.removeLayer(ai.marker);
         if(ai.miniMarker) ai.miniMarker.remove();
         if(ai.targetMarker) map.removeLayer(ai.targetMarker);
+        if(ai.catchCircle) map.removeLayer(ai.catchCircle);
         if(ai.fovPoly) map.removeLayer(ai.fovPoly);
         aiList.splice(i,1);
         thiefCount=Math.max(0,thiefCount-1);
         wantedMaxTimer=0;
+        invincTimer=Math.max(invincTimer,1.5);  // 抓到小偷 → 1.5s 無敵獎勵
         return true;
     }
     return false;
@@ -1251,11 +1253,25 @@ function tickCombatStun(dt) {
         }
         if(ai.wanted&&ai.wantedTimer>0){
             ai.wantedTimer=Math.max(0,ai.wantedTimer-dt);
+            // 抓捕範圍圈（每幀跟著小偷移動）
+            if(!ai.catchCircle){
+                ai.catchCircle=L.circle([ai.lat,ai.lon],{
+                    radius:CATCH_R,color:'#ff6f00',weight:2,
+                    fillColor:'#ff6f00',fillOpacity:.06,dashArray:'6 4',interactive:false
+                }).addTo(map);
+                if(ai.miniMarker) ai.miniMarker.setStyle({fillColor:'#ff6f00',color:'#fff'});
+            } else {
+                ai.catchCircle.setLatLng([ai.lat,ai.lon]);
+            }
             if(ai.wantedTimer===0){
                 ai.wanted=false;
+                if(ai.catchCircle){map.removeLayer(ai.catchCircle);ai.catchCircle=null;}
+                if(ai.miniMarker) ai.miniMarker.setStyle({fillColor:'#424242',color:'#fff'});
                 const dot=ai.marker.getElement()?.querySelector('.thief-dot');
                 if(dot) dot.classList.remove('wanted');
             }
+        } else if(!ai.wanted&&ai.catchCircle){
+            map.removeLayer(ai.catchCircle); ai.catchCircle=null;
         }
     }
     // 更新通緝最大倒數（供 HUD）

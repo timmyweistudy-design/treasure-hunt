@@ -18,9 +18,14 @@ scoreboard = Scoreboard()
 # 寶藏距離分層：目標距離(m)和固定分數
 TREASURE_TIERS = [
     {"target_m": 200,  "points": 100},
+    {"target_m": 200,  "points": 100},
+    {"target_m": 450,  "points": 200},
     {"target_m": 450,  "points": 200},
     {"target_m": 700,  "points": 300},
+    {"target_m": 700,  "points": 300},
     {"target_m": 850,  "points": 400},
+    {"target_m": 850,  "points": 400},
+    {"target_m": 1000, "points": 500},
     {"target_m": 1000, "points": 500},
 ]
 

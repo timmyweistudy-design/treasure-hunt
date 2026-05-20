@@ -225,11 +225,18 @@ class MapAPI:
 
     @staticmethod
     def fetch_poi_all(lat: float, lon: float) -> list:
-        """Return all named POIs in area as simple dicts {lat,lon,name,category}."""
+        """Return all named POIs (landmarks, attractions, shops, etc.) as {lat,lon,name,category}."""
         d = 0.012
+        bb = f"{lat-d},{lon-d},{lat+d},{lon+d}"
         queries = [
-            f'[out:json][timeout:10];(node["amenity"="cafe"]({lat-d},{lon-d},{lat+d},{lon+d});node["tourism"="museum"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="library"]({lat-d},{lon-d},{lat+d},{lon+d});node["tourism"="attraction"]({lat-d},{lon-d},{lat+d},{lon+d}););out body;',
-            f'[out:json][timeout:10];(node["leisure"="park"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="restaurant"]({lat-d},{lon-d},{lat+d},{lon+d});node["shop"="convenience"]({lat-d},{lon-d},{lat+d},{lon+d});node["amenity"="school"]({lat-d},{lon-d},{lat+d},{lon+d}););out body;',
+            # 觀光地標、景點、觀景台、藝術裝置、紀念碑
+            f'[out:json][timeout:10];(node["tourism"="attraction"]({bb});node["tourism"="museum"]({bb});node["tourism"="viewpoint"]({bb});node["tourism"="artwork"]({bb});node["tourism"="monument"]({bb});node["tourism"="gallery"]({bb});node["tourism"="theme_park"]({bb}););out body;',
+            # 歷史地標、廟宇、古蹟
+            f'[out:json][timeout:10];(node["historic"]({bb});node["amenity"="place_of_worship"]({bb});node["amenity"="theatre"]({bb});node["amenity"="cinema"]({bb}););out body;',
+            # 公園、自然景觀、山峰
+            f'[out:json][timeout:10];(node["leisure"="park"]({bb});node["leisure"="nature_reserve"]({bb});node["natural"="peak"]({bb});node["natural"="waterfall"]({bb}););out body;',
+            # 咖啡廳、圖書館、學校、餐廳
+            f'[out:json][timeout:10];(node["amenity"="cafe"]({bb});node["amenity"="library"]({bb});node["amenity"="school"]({bb});node["amenity"="restaurant"]({bb}););out body;',
         ]
         elements = []
         for q in queries:
@@ -245,7 +252,9 @@ class MapAPI:
             if not name or name in seen:
                 continue
             seen.add(name)
-            category = tags.get("amenity") or tags.get("tourism") or tags.get("leisure", "place")
+            category = (tags.get("tourism") or tags.get("historic") or
+                        tags.get("natural") or tags.get("amenity") or
+                        tags.get("leisure", "place"))
             result.append({"lat": e["lat"], "lon": e["lon"], "name": name, "category": category})
         return result
 

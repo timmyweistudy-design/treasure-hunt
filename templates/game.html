@@ -3131,7 +3131,7 @@ async function collect(id, tLat, tLon) {
         // 收集寶藏觸發小偷生成（第1、2、3、4個寶藏各+1隻，場上上限4）
         if(thiefCount<THIEF_MAX) spawnAI('thief');
 
-        if(data.status==='win'){
+        if(data.status==='win' || collected.size>=TOTAL){
             clearInterval(ticker);
             playWin();
             showToast('🎉 全部收集完成！計算獎勵…',3000);

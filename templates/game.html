@@ -710,7 +710,7 @@ function toggleMute() {
     muted = !muted;
     document.getElementById('mute-btn').textContent = muted ? '🔇' : '🔊';
     if(muted) _stopAmbient();
-    else if(weatherType==='fog') _startAmbient(80, 2200, 0.38);
+    else if(weatherType==='fog') _startAmbient(80, 2200, 0.18);
     else if(weatherType==='storm') _startAmbient(600, 6000, 0.42);
 }
 function snd(fn) { if (!muted) try { fn(getAudio()); } catch(e){} }
@@ -1091,7 +1091,7 @@ function setWeather(type) {
         chip.style.background='rgba(180,190,210,.55)';
         showToast('🌫️ 大霧降臨！守衛視野大幅縮短 30 秒！',3000);
         playWeatherChange('fog');
-        _startAmbient(80, 2200, 0.38);   // 低頻風聲（hp80→lp2200，寬帶）
+        _startAmbient(80, 2200, 0.18);   // 低頻風聲（hp80→lp2200，寬帶）
     } else {
         weatherTimer=30;
         chip.textContent='⛈️ 雷雨 30s';

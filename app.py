@@ -1,5 +1,6 @@
 import os
 import json
+import math
 import time
 import uuid
 import random
@@ -109,12 +110,12 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
         optimal_route = solve_tsp_exact(player_coords, treasures)
         total_dist = calculate_total_distance(player_coords, optimal_route)
 
-        all_lats = [lat] + [t.lat for t in treasures]
-        all_lons = [lon] + [t.lon for t in treasures]
-        margin = 0.002
+        # 固定 10km×10km 正方形邊界，以起點為中心
+        half_lat = 5000.0 / 111320.0
+        half_lon = 5000.0 / (111320.0 * math.cos(math.radians(lat)))
         bounds = {
-            "s": min(all_lats) - margin, "n": max(all_lats) + margin,
-            "w": min(all_lons) - margin, "e": max(all_lons) + margin,
+            "s": lat - half_lat, "n": lat + half_lat,
+            "w": lon - half_lon, "e": lon + half_lon,
         }
         focus_points = [(lat, lon)] + [(t.lat, t.lon) for t in treasures]
         _prefetch_buildings(focus_points)

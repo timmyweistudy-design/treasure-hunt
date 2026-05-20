@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-19**
+> **最後更新：2026-05-20**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,22 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-20 固定 10km×10km 邊界 + 全區建築碰撞
+
+**邊界永遠是 10km×10km 正方形**
+- `app.py`：加入 `import math`；bounds 改為以玩家起點為中心計算
+  - `half_lat = 5000 / 111320`（≈ 0.04491 度）
+  - `half_lon = 5000 / (111320 × cos(lat))`（依緯度調整）
+  - 取代舊的「min/max 寶藏位置 + margin」動態計算，形狀固定不變
+
+**邊界內所有房子都有碰撞**
+- `game.html`：建築物查詢已涵蓋整個 BOUNDS bbox，修好邊界後自動覆蓋全區
+  - Overpass query timeout 從 25s → 35s（10km×10km 資料量更大）
+  - fetch 超時從 27s → 38s
+  - `_parseOSMBuildings` 建築上限從 3000 → 5000
 
 ---
 

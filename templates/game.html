@@ -576,7 +576,7 @@ const THIEF_MAX           = 4;        // 小偷場上最多隻數（每收集一
 const CHASER_SPAWN_DELAY  = 60;       // 第一隻追跡者出現（秒）
 const CHASER_WAVE_INTERVAL= 60;       // 追跡者追加間隔（秒）
 const CHASER_MAX          = 3;        // 追跡者最多隻數
-const ITEM_IVTL      = 4;         // 道具重生間隔（秒）
+const ITEM_IVTL      = 1;         // 道具重生間隔（秒）
 const ITEM_LIFE      = 40;        // 道具存在時間（秒）
 const ITEM_MAX       = 20;        // 地圖上最多幾個道具
 const ITEM_MIN_DIST  = 100;       // 道具最小間距（公尺）
@@ -615,7 +615,7 @@ let gameReady   = false;
 
 // 道具
 const items   = {};
-let itemIdCtr = 0, itemSpawnTimer = 3;   // 3 秒後出現第一個道具
+let itemIdCtr = 0, itemSpawnTimer = 1;   // 1 秒後出現第一個道具
 // 效果計時
 let speedBoostTimer = 0, invincTimer = 0;
 // AI（陣列，支援多隻）

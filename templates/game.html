@@ -2698,6 +2698,12 @@ document.addEventListener('keyup', e=>{
     const k=_nk(e.key);
     delete keys[k];
 });
+// 滾輪切換道具槽
+document.getElementById('map').addEventListener('wheel', e=>{
+    if(!gameReady) return;
+    e.preventDefault();
+    selectSlot((selectedSlot + (e.deltaY>0?1:-1) + 5) % 5);
+}, {passive:false});
 // 多重清除：任何失焦情況都清除按鍵，防止飄移
 window.addEventListener('blur', clearAllKeys);
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) clearAllKeys(); });

@@ -25,27 +25,29 @@ TREASURE_TIERS = [
 ]
 
 def _assign_tiers(raw_pois, origin_lat, origin_lon):
-    """每層直接選離目標距離最近的未用 POI（無 tolerance 限制）。"""
+    """
+    每層想像一個正方形圈（target_m 為半徑），
+    從圈上的店家隨機選一個；圈上沒有就逐漸往外擴再隨機選。
+    """
     scored = [(haversine((origin_lat, origin_lon), (p["lat"], p["lon"])), i, p)
               for i, p in enumerate(raw_pois)]
     used = set()
     result = []
     for tier_idx, tier in enumerate(TREASURE_TIERS):
-        best_i, best_p, best_diff = None, None, float('inf')
-        for d, i, p in scored:
-            if i in used:
-                continue
-            diff = abs(d - tier["target_m"])
-            if diff < best_diff:
-                best_diff = diff
-                best_i = i
-                best_p = p
-        if best_p:
-            used.add(best_i)
+        target = tier["target_m"]
+        chosen_i, chosen_p = None, None
+        for tolerance in (80, 150, 250, 400, float('inf')):
+            pool = [(i, p) for d, i, p in scored
+                    if i not in used and abs(d - target) <= tolerance]
+            if pool:
+                chosen_i, chosen_p = random.choice(pool)
+                break
+        if chosen_p:
+            used.add(chosen_i)
             result.append(Treasure(
-                id=f"t{tier_idx}", name=best_p["name"],
-                lat=best_p["lat"], lon=best_p["lon"],
-                category=best_p["category"],
+                id=f"t{tier_idx}", name=chosen_p["name"],
+                lat=chosen_p["lat"], lon=chosen_p["lon"],
+                category=chosen_p["category"],
                 points=tier["points"],
             ))
     return result

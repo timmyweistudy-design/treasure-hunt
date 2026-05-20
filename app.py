@@ -25,34 +25,30 @@ TREASURE_TIERS = [
 ]
 
 def _assign_tiers(raw_pois, origin_lat, origin_lon):
-    """每個距離層選一個 POI：優先 ±100m 內，退而求其次 ±200m，最後取最近。"""
+    """每層直接選離目標距離最近的未用 POI（無 tolerance 限制）。"""
     scored = [(haversine((origin_lat, origin_lon), (p["lat"], p["lon"])), i, p)
               for i, p in enumerate(raw_pois)]
     used = set()
-    assigned = {}   # tier_idx → (i, p)
-
-    for tolerance in (100, 200, float('inf')):
-        for tier_idx, tier in enumerate(TREASURE_TIERS):
-            if tier_idx in assigned:
+    result = []
+    for tier_idx, tier in enumerate(TREASURE_TIERS):
+        best_i, best_p, best_diff = None, None, float('inf')
+        for d, i, p in scored:
+            if i in used:
                 continue
-            best_i, best_p, best_diff = None, None, float('inf')
-            for d, i, p in scored:
-                if i in used:
-                    continue
-                diff = abs(d - tier["target_m"])
-                if diff <= tolerance and diff < best_diff:
-                    best_diff = diff
-                    best_i = i
-                    best_p = p
-            if best_p:
-                used.add(best_i)
-                assigned[tier_idx] = (best_i, best_p)
-
-    return [
-        Treasure(id=f"t{ti}", name=p["name"], lat=p["lat"], lon=p["lon"],
-                 category=p["category"], points=TREASURE_TIERS[ti]["points"])
-        for ti, (_, p) in sorted(assigned.items())
-    ]
+            diff = abs(d - tier["target_m"])
+            if diff < best_diff:
+                best_diff = diff
+                best_i = i
+                best_p = p
+        if best_p:
+            used.add(best_i)
+            result.append(Treasure(
+                id=f"t{tier_idx}", name=best_p["name"],
+                lat=best_p["lat"], lon=best_p["lon"],
+                category=best_p["category"],
+                points=tier["points"],
+            ))
+    return result
 
 # Pre-populated coords for common cities — skip Nominatim entirely for these
 _KNOWN_CITIES: dict = {

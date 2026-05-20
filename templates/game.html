@@ -543,6 +543,7 @@ const THIEF_STEAL_R     = 20;     // 小偷偷竊觸發距離（公尺）
 
 // ── 遊戲狀態 ──────────────────────────────────────────────
 let pLat = START[0], pLon = START[1];
+let camLat = START[0], camLon = START[1];   // 平滑鏡頭位置
 let score = 0, found = 0, remaining = TIME_LIMIT;
 const collected = new Set();
 let buildings   = [];
@@ -1537,6 +1538,8 @@ function runAstar(fLat,fLon,tLat,tLon){
             const nr=r+dr,nc=c+dc;
             if(nr<0||nr>=rows||nc<0||nc>=cols) continue;
             const nk=kf(nr,nc); if(closed.has(nk)||blocked[nk]) continue;
+            // 對角線：兩個側邊格都要暢通，防止切穿建築角
+            if(dr&&dc&&(blocked[kf(r+dr,c)]||blocked[kf(r,c+dc)])) continue;
             const ng=gk+((dr&&dc)?1.414:1);
             if(ng<(g.get(nk)??Infinity)){g.set(nk,ng);par.set(nk,k);open.push([ng+h(nr,nc),nr,nc]);}
         }
@@ -1574,7 +1577,7 @@ function runRouteAstar(rg,fLat,fLon,tLat,tLon){
     const sk=kf(r0,c0);g.set(sk,0);open.push([h(r0,c0),r0,c0]);
     const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
     let vis=0;
-    while(open.size&&vis<16000){
+    while(open.size&&vis<32000){
         const [,r,c]=open.pop();
         const k=kf(r,c);if(closed.has(k))continue;closed.add(k);vis++;
         if(r===rG&&c===cG){
@@ -1588,6 +1591,8 @@ function runRouteAstar(rg,fLat,fLon,tLat,tLon){
             const nr=r+dr,nc=c+dc;
             if(nr<0||nr>=rows||nc<0||nc>=cols)continue;
             const nk=kf(nr,nc);if(closed.has(nk)||blocked[nk])continue;
+            // 對角線：兩個側邊格都要暢通，防止切穿建築角
+            if(dr&&dc&&(blocked[kf(r+dr,c)]||blocked[kf(r,c+dc)]))continue;
             const ng=gk+((dr&&dc)?1.414:1);
             if(ng<(g.get(nk)??Infinity)){g.set(nk,ng);par.set(nk,k);open.push([ng+h(nr,nc),nr,nc]);}
         }
@@ -1622,9 +1627,36 @@ function snapToUnblocked(rg, lat, lon){
     return [lat,lon];
 }
 
+// 視線判斷：沿直線取樣，確認不穿過任何建築
+function lineOfSightClear(p1,p2){
+    const dLa=p2[0]-p1[0],dLo=p2[1]-p1[1];
+    const dist=Math.hypot(dLa,dLo);
+    if(dist<ROUTE_CELL*0.5) return true;
+    const steps=Math.ceil(dist/(ROUTE_CELL*0.35))+1;
+    for(let i=1;i<steps;i++){
+        const t=i/steps;
+        if(isInBuilding(p1[0]+dLa*t,p1[1]+dLo*t)) return false;
+    }
+    return true;
+}
+// 路徑平滑：跳過可直接連線的中間點（去除 A* 鋸齒）
+function smoothRoutePath(path){
+    if(path.length<=2) return path;
+    const res=[path[0]];
+    let i=0;
+    while(i<path.length-1){
+        let far=i+1;
+        for(let j=path.length-1;j>i+1;j--){
+            if(lineOfSightClear(path[i],path[j])){far=j;break;}
+        }
+        res.push(path[far]);
+        i=far;
+    }
+    return res;
+}
+
 function rebuildOptimalRouteAstar() {
     if(!navGrid||!routeGrid) return;
-    // Start from current player position; skip already-collected treasures
     const rawWpts=[[pLat,pLon]];
     for(const id of OPTIMAL){
         if(collected.has(id)) continue;
@@ -1640,7 +1672,7 @@ function rebuildOptimalRouteAstar() {
     let all=[];
     for(let i=0;i<wpts.length-1;i++){
         const seg=runRouteAstar(routeGrid,wpts[i][0],wpts[i][1],wpts[i+1][0],wpts[i+1][1]);
-        if(seg.length>0) all=all.concat(seg);
+        if(seg.length>0) all=all.concat(smoothRoutePath(seg));
         else all.push(rawWpts[i],rawWpts[i+1]);
     }
     if(all.length<2) return;
@@ -1769,7 +1801,6 @@ function tryMove(dLon,dLat) {
     blockFlash=0;
     pMarker.setLatLng([pLat,pLon]);
     pCircle.setLatLng([pLat,pLon]);
-    map.setView([pLat,pLon],map.getZoom(),{animate:false});
 }
 
 // uiFrame=每4幀(~15fps)觸發UI更新; aiFrame=每2幀(~30fps)更新AI標記
@@ -1905,6 +1936,11 @@ function loop(ts) {
                     pushTrail(dt);
                 }
             }
+            // 平滑鏡頭：指數 lerp 跟隨玩家，消除 setView 每幀 snap 感
+            const camK=1-Math.exp(-18*dt);
+            camLat+=(pLat-camLat)*camK;
+            camLon+=(pLon-camLon)*camK;
+            map.setView([camLat,camLon],map.getZoom(),{animate:false});
             if(uiFrame){ updateMiniMap(); updateDistances(); }
             if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); } }
         } catch(e) {

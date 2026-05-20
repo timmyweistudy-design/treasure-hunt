@@ -27,6 +27,21 @@
 
 ---
 
+### 2026-05-20 路徑繞建築 + 鏡頭絲滑 + 全域優化
+
+**最佳路徑完全繞開建築**
+- `runRouteAstar`：A* 對角步加側邊格檢查，禁止切穿建築角落（diagonal corner-cutting fix）
+- `runAstar`（AI 路徑）：同樣加入側邊格檢查
+- `runRouteAstar` vis 上限 16000 → 32000（5km×5km 全圖可達）
+- 新增 `lineOfSightClear()` + `smoothRoutePath()`：A* 後以視線判斷去除鋸齒中間點，路線更自然
+
+**走路/跑步絲滑**
+- `camLat/camLon` 平滑鏡頭變數（指數 lerp，τ≈0.056s）
+- `tryMove` 移除 `map.setView`（不再每幀 snap Leaflet DOM）
+- 主迴圈統一計算 camLat/camLon lerp 後才呼叫 `map.setView`，避免鋸齒感
+
+---
+
 ### 2026-05-20 固定 5km×5km 邊界 + 全區建築碰撞（完整版）
 
 **邊界永遠是 5km×5km 正方形**

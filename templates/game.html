@@ -167,7 +167,7 @@
                         transition: width .1s linear, background .3s; }
         .sprint-fill.cooling  { background: linear-gradient(90deg,#e57373,#ef9a9a); }
         .sprint-fill.recharge { background: linear-gradient(90deg,#ffd54f,#fff176); }
-        .sprint-hint  { font-size: 10px; color: #5A2840; white-space: nowrap; }
+        .sprint-hint  { font-size: 10px; color: #9A7080; white-space: nowrap; }
 
         /* ── Layout ── */
         .wrap { flex: 1; display: flex; overflow: hidden; position: relative; }
@@ -194,7 +194,7 @@
                               background: rgba(194,24,91,.12); display: flex; align-items: center;
                               justify-content: center; flex-shrink: 0; font-size: 22px; }
         .compass-info { flex: 1; min-width: 0; }
-        .compass-lbl  { font-size: 10px; color: #5A2840; margin-bottom: 2px; }
+        .compass-lbl  { font-size: 10px; color: #9A7080; margin-bottom: 2px; }
         .compass-name { font-size: 12px; font-weight: bold; color: #f5e0d0;
                         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .compass-dist { font-family: 'Orbitron', monospace; font-size: 13px; color: #F4A020; font-weight: 700; margin-top: 2px; }
@@ -205,7 +205,7 @@
 
         .prog-wrap { height: 5px; background: rgba(255,255,255,.08); border-radius: 3px; margin-bottom: 10px; }
         .prog-fill  { height: 100%; background: linear-gradient(90deg,#F4A020,#C2185B); border-radius: 3px; transition: width .4s; }
-        .sec-lbl { font-size: 11px; color: #6A3040; font-weight: bold;
+        .sec-lbl { font-size: 11px; color: #A07880; font-weight: bold;
                    letter-spacing: .4px; margin-bottom: 8px; }
 
         .tc { background: rgba(20,6,12,.85); border-radius: 8px; padding: 9px 11px; margin-bottom: 7px;
@@ -214,10 +214,10 @@
         .tc.near   { border-left-color: #F4A020; background: rgba(244,160,32,.09); }
         .tc.found  { border-left-color: rgba(100,180,100,.5); opacity: .42; }
         .tc.target { border-left-color: #C2185B; background: rgba(194,24,91,.12); }
-        .tc .sq  { font-size: 10.5px; color: #5A2840; }
+        .tc .sq  { font-size: 10.5px; color: #9A7080; }
         .tc .nm  { font-size: 13px; font-weight: bold; margin: 2px 0 3px; color: #f5e0d0; }
-        .tc .cat { font-size: 11px; color: #7A4050; }
-        .tc .dst { font-family: 'Orbitron', monospace; font-size: 11px; margin-top: 4px; color: #6A3040; }
+        .tc .cat { font-size: 11px; color: #B08090; }
+        .tc .dst { font-family: 'Orbitron', monospace; font-size: 11px; margin-top: 4px; color: #A07880; }
         .tc .dst.ok  { color: #80C880; font-weight: bold; }
         .tc .dst.far { color: #ef5350; }
         .cbtn { margin-top: 6px; width: 100%; padding: 6px; font-size: 12px; font-weight: bold;
@@ -253,7 +253,7 @@
                     animation: spin .8s linear infinite; margin: 0 auto 18px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .ld-step  { font-size: 14px; color: #F4A020; margin-bottom: 6px; min-height: 22px; }
-        .ld-sub   { font-size: 11.5px; color: #6A2840; margin-bottom: 20px; min-height: 18px; }
+        .ld-sub   { font-size: 11.5px; color: #A07080; margin-bottom: 20px; min-height: 18px; }
         .ld-retry { background: rgba(194,24,91,.16); color: #FF80AB;
                     border: 1px solid rgba(194,24,91,.35);
                     padding: 8px 22px; border-radius: 20px; cursor: pointer;
@@ -510,7 +510,7 @@
         }
         .leaflet-popup-tip { background: rgba(18,5,12,.95) !important; }
         .leaflet-popup-content { color: #f5e0d0; }
-        .leaflet-popup-content span[style*="color:#777"] { color: #7A4050 !important; }
+        .leaflet-popup-content span[style*="color:#C0A0B0"] { color: #C0A0B0 !important; }
         .leaflet-close-button { color: #FF80AB !important; }
     </style>
 </head>
@@ -1539,8 +1539,8 @@ TREASURES.forEach(t => {
     m.bindPopup(`
         <div style="min-width:175px;font-family:Arial">
             <b style="font-size:14px">💎 ${t.name}</b><br>
-            <span style="color:#777;font-size:12px">${t.category}・${t.points}分</span><br>
-            <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#6A3040">計算中…</div>
+            <span style="color:#C0A0B0;font-size:12px">${t.category}・${t.points}分</span><br>
+            <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#A07880">計算中…</div>
             <button id="pp-btn-${t.id}" onclick="collect('${t.id}',${t.lat},${t.lon})"
                 style="margin-top:6px;width:100%;padding:7px;background:#C2185B;color:#FFE0EC;
                        border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold">
@@ -2330,8 +2330,8 @@ function relocateTreasure(tId) {
         tMarkers[tId].marker.bindPopup(`
             <div style="min-width:175px;font-family:Arial">
                 <b style="font-size:14px">💎 ${t.name}</b><br>
-                <span style="color:#777;font-size:12px">${t.category}・${t.points}分</span><br>
-                <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#6A3040">計算中…</div>
+                <span style="color:#C0A0B0;font-size:12px">${t.category}・${t.points}分</span><br>
+                <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#A07880">計算中…</div>
                 <button id="pp-btn-${t.id}" onclick="collect('${t.id}',${nLat},${nLon})"
                     style="margin-top:6px;width:100%;padding:7px;background:#C2185B;color:#FFE0EC;
                            border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold">

@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v5.4 — 灰色方框根本修正 + 角色資料夾整理）**
+> **最後更新：2026-05-21（v5.5 — 追跡者受傷動畫）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -28,6 +28,20 @@
 
 ---
 
+### 2026-05-21（v5.5）追跡者受傷動畫
+
+`characters/chaser/Hurt.png`（256×128，2 幀）裁切為 `Churt1-2.png` 存入 `static/sprites/chaser/`。
+
+- `.churt` / `.churt.active`：受傷幀疊加在 `.cf` 同層（`position:absolute`），預設 `display:none`
+- `_stunAI(ai, dur)`：追跡者改為切換到 `.churt` 幀（隱藏 `.cf`）而非套灰色 filter
+- 受傷動畫幀率：6fps，2 幀循環播放
+- `tickCombatStun(dt)`：暈眩結束時，隱藏 `.churt`、顯示 `.cf[0]`、還原 run 動畫狀態
+- 冰凍 filter 可疊加在受傷幀上（`_applyAIFilter` 同時套用 `.cf,.churt`）
+- 冰凍結束後若仍受傷（追跡者），不重新套灰色 filter
+- `_updateChaserSizes()`：同步縮放 `.churt` 幀尺寸
+
+---
+
 ### 2026-05-21（v5.4）灰色方框根本修正 + 角色資料夾整理
 
 **灰色方框根本修正**
@@ -42,7 +56,7 @@
 static/sprites/
 ├── player/  (Arun1-6.png)
 ├── guard/   (Grun1-8.png)
-└── chaser/  (Crun1-6.png)
+└── chaser/  (Crun1-6.png, Churt1-2.png)
 
 characters/
 ├── player/
@@ -51,7 +65,8 @@ characters/
 ├── guard/
 │   └── run_spritesheet.png
 └── chaser/
-    └── run_spritesheet.png
+    ├── run_spritesheet.png
+    └── Hurt.png  (2 幀原始受傷動作)
 ```
 
 所有 game.html 路徑同步更新（`/static/sprites/Xrun` → `/static/sprites/character/Xrun`）。

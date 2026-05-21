@@ -757,7 +757,7 @@ let portalCooldown=0;
 // 戰鬥：手雷
 let grenadeCharges=GRENADE_CHARGES, grenadeRechargeCooldown=0, grenadeRechargeQueue=0;
 const grenades=[];  // {lat,lon,tLat,tLon,progress,marker}
-let grenadeAiming=false, grenadeAimLat=0, grenadeAimLon=0;
+let grenadeAiming=false, grenadeAimLat=0, grenadeAimLon=0, grenadeAtCap=false;
 let grenadeAimCircle=null, grenadeAimLine=null;
 // 戰鬥：地雷
 let mineCharges=MINE_CHARGES, mineRechargeCooldown=0, mineRechargeQueue=0;
@@ -1186,18 +1186,18 @@ function tickWeather(dt) {
         // 打雷計時
         if(weatherType==='storm'){
             thunderTimer=Math.max(0,thunderTimer-dt);
-            if(thunderTimer===0){playThunder();thunderTimer=12+Math.random()*10;}
+            if(thunderTimer<=0){playThunder();thunderTimer=12+Math.random()*10;}
         }
-        if(weatherTimer===0) setWeather('sunny');
+        if(weatherTimer<=0) setWeather('sunny');
         return;
     }
     // 晴天小鳥聲（偶爾）
     if(weatherType==='sunny'){
         birdTimer=Math.max(0,birdTimer-dt);
-        if(birdTimer===0){playBird();birdTimer=4+Math.random()*2;}
+        if(birdTimer<=0){playBird();birdTimer=4+Math.random()*2;}
     }
     weatherCD=Math.max(0,weatherCD-dt);
-    if(weatherCD===0){
+    if(weatherCD<=0){
         weatherCD=60;
         setWeather(Math.random()<0.5?'fog':'storm');
     }
@@ -1409,7 +1409,7 @@ function tickDecoy(dt) {
     if(decoyCD>0) decoyCD=Math.max(0,decoyCD-dt);
     if(!decoyActive) return;
     decoyTimer=Math.max(0,decoyTimer-dt);
-    if(decoyTimer===0){
+    if(decoyTimer<=0){
         decoyActive=false;
         if(decoyMarker){map.removeLayer(decoyMarker);decoyMarker=null;}
         for(const ai of aiList){ai.pathTimer=0;ai._astarPending=false;}
@@ -1456,10 +1456,10 @@ function clearGoldenTreasure(expired) {
 function tickGolden(dt) {
     if(goldenId){
         goldenTimer=Math.max(0,goldenTimer-dt);
-        if(goldenTimer===0) clearGoldenTreasure(true);
+        if(goldenTimer<=0) clearGoldenTreasure(true);
     }
     goldenCycle=Math.max(0,goldenCycle-dt);
-    if(goldenCycle===0){
+    if(goldenCycle<=0){
         goldenCycle=GOLDEN_INTERVAL;
         const candidates=TREASURES.filter(t=>!collected.has(t.id)&&t.id!==goldenId);
         if(candidates.length>0){
@@ -1512,21 +1512,25 @@ function _grenadeCapTarget(lat, lon) {
     const dLatM=dLat*111111, dLonM=dLon*111111*cosLat;
     const dist=Math.sqrt(dLatM*dLatM+dLonM*dLonM)||1;
     const scale=Math.min(1,MAX/dist);
+    grenadeAtCap=(scale<1);
     return [pLat+dLat*scale, pLon+dLon*scale];
 }
 function _updateGrenadeAimVfx() {
     if(!grenadeAiming) return;
+    const col=grenadeAtCap?'#e53935':'#ff9800';
     if(!grenadeAimCircle){
         grenadeAimCircle=L.circle([grenadeAimLat,grenadeAimLon],{
-            radius:GRENADE_RADIUS,color:'#ff9800',weight:2,
-            fillColor:'#ff9800',fillOpacity:.07,dashArray:'6 4',interactive:false
+            radius:GRENADE_RADIUS,color:col,weight:2,
+            fillColor:col,fillOpacity:.07,dashArray:'6 4',interactive:false
         }).addTo(map);
         grenadeAimLine=L.polyline([[pLat,pLon],[grenadeAimLat,grenadeAimLon]],{
-            color:'#ff9800',weight:1.5,dashArray:'6 4',opacity:.65,interactive:false
+            color:col,weight:1.5,dashArray:'6 4',opacity:.65,interactive:false
         }).addTo(map);
     } else {
         grenadeAimCircle.setLatLng([grenadeAimLat,grenadeAimLon]);
+        grenadeAimCircle.setStyle({color:col,fillColor:col});
         grenadeAimLine.setLatLngs([[pLat,pLon],[grenadeAimLat,grenadeAimLon]]);
+        grenadeAimLine.setStyle({color:col});
     }
 }
 function cancelGrenadeAim() {
@@ -1596,7 +1600,7 @@ function tickGrenades(dt) {
     // recharge
     if(grenadeRechargeQueue>0&&grenadeCharges<GRENADE_CHARGES){
         grenadeRechargeCooldown=Math.max(0,grenadeRechargeCooldown-dt);
-        if(grenadeRechargeCooldown===0){
+        if(grenadeRechargeCooldown<=0){
             grenadeCharges=Math.min(GRENADE_CHARGES,grenadeCharges+1);
             grenadeRechargeQueue--;
             if(grenadeRechargeQueue>0) grenadeRechargeCooldown=GRENADE_RECHARGE;
@@ -1627,10 +1631,10 @@ function placeMine() {
 function tickMines(dt) {
     for(let i=mines.length-1;i>=0;i--){
         const m=mines[i];
-        if(!m.armed){ m.armTimer=Math.max(0,m.armTimer-dt); if(m.armTimer===0) m.armed=true; continue; }
+        if(!m.armed){ m.armTimer=Math.max(0,m.armTimer-dt); if(m.armTimer<=0) m.armed=true; continue; }
         // 自動到期
         m.life=Math.max(0,m.life-dt);
-        if(m.life===0){ map.removeLayer(m.marker); if(m.circle) map.removeLayer(m.circle); mines.splice(i,1); continue; }
+        if(m.life<=0){ map.removeLayer(m.marker); if(m.circle) map.removeLayer(m.circle); mines.splice(i,1); continue; }
         let triggered=false;
         for(const ai of aiList){
             if(ai.combatStun>0) continue;
@@ -1648,7 +1652,7 @@ function tickMines(dt) {
     // recharge
     if(mineRechargeQueue>0&&mineCharges<MINE_CHARGES){
         mineRechargeCooldown=Math.max(0,mineRechargeCooldown-dt);
-        if(mineRechargeCooldown===0){
+        if(mineRechargeCooldown<=0){
             mineCharges=Math.min(MINE_CHARGES,mineCharges+1);
             mineRechargeQueue--;
             if(mineRechargeQueue>0) mineRechargeCooldown=MINE_RECHARGE;
@@ -1688,7 +1692,7 @@ function tickCombatStun(dt) {
     for(const ai of aiList){
         if(ai.combatStun>0){
             ai.combatStun=Math.max(0,ai.combatStun-dt);
-            if(ai.combatStun===0){
+            if(ai.combatStun<=0){
                 const el=ai.marker.getElement();
                 if(el) el.style.filter=aiFrozenTimer>0?'sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))':'';
                 if(ai.stunLabel){ai.stunLabel.remove();ai.stunLabel=null;}
@@ -1706,7 +1710,7 @@ function tickCombatStun(dt) {
             } else {
                 ai.catchCircle.setLatLng([ai.lat,ai.lon]);
             }
-            if(ai.wantedTimer===0){
+            if(ai.wantedTimer<=0){
                 ai.wanted=false;
                 if(ai.catchCircle){map.removeLayer(ai.catchCircle);ai.catchCircle=null;}
                 if(ai.miniMarker) ai.miniMarker.setStyle({fillColor:'#424242',color:'#fff'});
@@ -1793,6 +1797,7 @@ function _activateItem(type) {
         aiFrozenTimer=7; freezeVfxTimer=0;
         const mapEl=document.getElementById('map');
         for(const ai of aiList){
+            if(ai.invis) _thiefSetInvis(ai,false);   // 冰凍解除隱身
             const el=ai.marker.getElement();
             if(el) el.style.filter='sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))';
             const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
@@ -2032,11 +2037,11 @@ function tickChaser(ai,dt,s) {
     }
     ai.attackCD=Math.max(0,ai.attackCD-dt);
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
-    if(dToP<STUN_R&&stunCD===0&&stunTimer===0&&invincTimer===0){
+    if(dToP<STUN_R&&stunCD<=0&&stunTimer<=0&&invincTimer<=0){
         stunCD=STUN_CD; stunTimer=STUN_DURATION;
         showToast('⚡ 被追跡者定身了！無法移動 1 秒！',1500); playStun();
     }
-    if(dToP<AI_ATTACK_R&&ai.attackCD===0&&invincTimer===0){
+    if(dToP<AI_ATTACK_R&&ai.attackCD<=0&&invincTimer<=0){
         ai.attackCD=AI_ATTACK_CD;
         applyScorePenalty(50,'😱 被追跡者抓到！-50分！');
         playAIAttack();
@@ -2051,7 +2056,7 @@ function tickPatroller(ai,dt,s) {
     if(ai.alertTimer>0){
         ai.alertTimer=Math.max(0,ai.alertTimer-dt);
         ai.facingLat=pLat; ai.facingLon=pLon;
-        if(ai.alertTimer===0){ai.path=[];ai.pathTimer=0;}
+        if(ai.alertTimer<=0){ai.path=[];ai.pathTimer=0;}
     } else {
         // 沿 OPTIMAL 路標巡邏
         const wpId=OPTIMAL[ai.waypointIdx%OPTIMAL.length];
@@ -2071,7 +2076,7 @@ function tickPatroller(ai,dt,s) {
             }
         }
         // 視野偵測
-        if(ai.alertCD===0&&invincTimer===0&&inPatrollerFOV(ai)){
+        if(ai.alertCD<=0&&invincTimer<=0&&inPatrollerFOV(ai)){
             ai.alertTimer=3; ai.alertCD=10;
             applyScorePenalty(30,'👁️ 巡邏守衛發現你了！-30分！');
             playPatrollerAlert();
@@ -2079,16 +2084,16 @@ function tickPatroller(ai,dt,s) {
             if(dot) dot.classList.add('alert');
         }
     }
-    if(ai.alertTimer===0){
+    if(ai.alertTimer<=0){
         const dot=ai.marker.getElement()?.querySelector('.patrol-dot');
         if(dot) dot.classList.remove('alert');
     }
     // FOV 多邊形：每 0.1s 更新一次（10fps），降低每幀 DOM 操作量
     ai.fovDrawTimer=Math.max(0,ai.fovDrawTimer-dt);
-    if(ai.fovDrawTimer===0){updateFOVPoly(ai);ai.fovDrawTimer=0.1;}
+    if(ai.fovDrawTimer<=0){updateFOVPoly(ai);ai.fovDrawTimer=0.1;}
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
     // ⚡ 定身技能：距離夠近且冷卻好就定身玩家（AI 自身繼續移動）
-    if(dToP<STUN_R&&stunCD===0&&stunTimer===0&&invincTimer===0){
+    if(dToP<STUN_R&&stunCD<=0&&stunTimer<=0&&invincTimer<=0){
         stunCD=STUN_CD; stunTimer=STUN_DURATION;
         showToast('⚡ 被巡邏守衛定身了！無法移動 1 秒！',1500); playStun();
     }
@@ -2131,7 +2136,7 @@ function tickThief(ai,dt,s) {
     // ── 隱身技能 ─────────────────────────────────────────
     if(ai.invis){
         ai.invisTimer=Math.max(0,ai.invisTimer-dt);
-        if(ai.invisTimer===0){ _thiefSetInvis(ai,false); ai.invisCD=THIEF_INVIS_CD; }
+        if(ai.invisTimer<=0){ _thiefSetInvis(ai,false); ai.invisCD=THIEF_INVIS_CD; }
     } else {
         if(ai.invisCD>0) ai.invisCD=Math.max(0,ai.invisCD-dt);
         // 冷卻結束後平均每 8s 隨機發動一次
@@ -2157,7 +2162,7 @@ function tickThief(ai,dt,s) {
     const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
     const ts=ai.wanted?s*0.5:s*timePressure;  // 通緝中速度降半，讓玩家有機會追上
     if(len>1e-6){ai.lat+=dLa/len*ts;ai.lon+=dLo/len*ts;}
-    if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
+    if(ai.stealCD<=0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);
         applyScorePenalty(20,`🦹 小偷把「${name}」搬走了！-20分！🚨 ${THIEF_WANTED_DUR}秒內按Space反制！`);
@@ -2184,10 +2189,10 @@ function tickAI(dt) {
         if(chaserCount===0){
             chaserSpawnTimer=Math.max(0,chaserSpawnTimer-dt);
             if(!chaserWarned&&chaserSpawnTimer<=10){chaserWarned=true;showToast('⚠️ 10秒後追跡者出現！',2000);}
-            if(chaserSpawnTimer===0){spawnAI('chaser');chaserWaveTimer=CHASER_WAVE_INTERVAL;}
+            if(chaserSpawnTimer<=0){spawnAI('chaser');chaserWaveTimer=CHASER_WAVE_INTERVAL;}
         } else {
             chaserWaveTimer=Math.max(0,chaserWaveTimer-dt);
-            if(chaserWaveTimer===0){spawnAI('chaser');chaserWaveTimer=CHASER_WAVE_INTERVAL;}
+            if(chaserWaveTimer<=0){spawnAI('chaser');chaserWaveTimer=CHASER_WAVE_INTERVAL;}
         }
     }
     // 小偷：由收集寶藏觸發（見 collect() 函式），此處不再計時生成
@@ -2237,7 +2242,7 @@ function tickEffects(dt) {
 
     const wasInvinc=invincTimer>0;
     if(wasInvinc) invincTimer=Math.max(0,invincTimer-dt);
-    if(wasInvinc&&invincTimer===0){
+    if(wasInvinc&&invincTimer<=0){
         ensureOutsideBuilding();
         pMarker.setLatLng([pLat,pLon]);
         pCircle.setLatLng([pLat,pLon]);
@@ -2248,7 +2253,7 @@ function tickEffects(dt) {
 
     const wasFreeze=aiFrozenTimer>0;
     if(wasFreeze) aiFrozenTimer=Math.max(0,aiFrozenTimer-dt);
-    if(wasFreeze&&aiFrozenTimer===0){
+    if(wasFreeze&&aiFrozenTimer<=0){
         for(const ai of aiList){
             const el=ai.marker.getElement();
             if(el) el.style.filter=ai.combatStun>0?'saturate(0) brightness(1.5)':'';
@@ -2257,7 +2262,7 @@ function tickEffects(dt) {
     // 持續飄雪特效
     if(aiFrozenTimer>0){
         freezeVfxTimer=Math.max(0,freezeVfxTimer-dt);
-        if(freezeVfxTimer===0){
+        if(freezeVfxTimer<=0){
             freezeVfxTimer=0.45;
             const mapEl=document.getElementById('map');
             for(const ai of aiList){
@@ -2281,7 +2286,7 @@ function tickEffects(dt) {
 
     const wasCombo=comboTimer>0;
     if(wasCombo) comboTimer=Math.max(0,comboTimer-dt);
-    if(wasCombo&&comboTimer===0) comboCount=0;
+    if(wasCombo&&comboTimer<=0) comboCount=0;
 
     // === UI DOM（15fps）===
     if(!uiFrame) return;
@@ -2327,7 +2332,7 @@ function tickEffects(dt) {
     }
 
     const cChip=document.getElementById('chip-combo');
-    if(comboCount>=2&&comboTimer>0){
+    if(comboCount>=1&&comboTimer>0){
         cChip.style.display='inline-block';
         document.getElementById('combo-count').textContent=comboCount;
         document.getElementById('combo-t').textContent=Math.ceil(comboTimer);
@@ -2655,12 +2660,12 @@ function tickSprint(dt) {
     const want=keys['Shift']||keys['ShiftLeft']||keys['ShiftRight'];
     if(sprintCD>0){
         sprintCD=Math.max(0,sprintCD-dt);
-        if(sprintCD===0) sprintBar=SPRINT_MAX;
+        if(sprintCD<=0) sprintBar=SPRINT_MAX;
         isSprinting=false;
     } else if(want&&sprintBar>0){
         isSprinting=true;
         sprintBar=Math.max(0,sprintBar-dt);
-        if(sprintBar===0){sprintCD=COOL_T;isSprinting=false;}
+        if(sprintBar<=0){sprintCD=COOL_T;isSprinting=false;}
     } else {
         isSprinting=false;
         if(sprintBar<SPRINT_MAX) sprintBar=Math.min(SPRINT_MAX,sprintBar+dt*.65);
@@ -2669,7 +2674,7 @@ function tickSprint(dt) {
     wasSprinting=isSprinting;
     if(!uiFrame) return; // DOM 降到 15fps
 
-    const isRecharging=!isSprinting&&sprintCD===0&&sprintBar<SPRINT_MAX;
+    const isRecharging=!isSprinting&&sprintCD<=0&&sprintBar<SPRINT_MAX;
     const pct=sprintCD>0?0:(sprintBar/SPRINT_MAX*100);
     const fill=document.getElementById('sprint-fill');
     const lbl =document.getElementById('sprint-lbl');
@@ -2872,11 +2877,15 @@ function loop(ts) {
             tickAI(dt);
             // 🧲 磁鐵：把 400m 內道具拉向玩家（動畫吸引）
             if(magnetTimer>0){
+                // 計算實際可收納數量（空槽減去正在拉的道具），避免超量吸取
+                let canPull=heldItems.filter(s=>s===null).length-pullingItems.size;
                 for(const [id,item] of Object.entries(items)){
+                    if(canPull<=0) break;
                     if(!pullingItems.has(id)&&distM(pLat,pLon,item.lat,item.lon)<=MAGNET_R){
                         // 槽有空位才開始拉，否則道具留在原地
                         const emptyIdx=heldItems.indexOf(null);
                         if(emptyIdx===-1) continue;
+                        canPull--;
                         const inner=item.marker.getElement()?.querySelector('.item-badge');
                         if(inner) inner.classList.add('pulling');
                         pullingItems.set(id,{type:item.type,marker:item.marker,
@@ -3225,14 +3234,14 @@ function fetchBuildingsDirect(){
     // 整個遊玩邊界一個 bbox query（Overpass 格式：south,west,north,east）
     const bS=BOUNDS.s.toFixed(5), bN=BOUNDS.n.toFixed(5),
           bW=BOUNDS.w.toFixed(5), bE=BOUNDS.e.toFixed(5);
-    const query=`[out:json][timeout:30][maxsize:134217728];way["building"](${bS},${bW},${bN},${bE});(._;>;);out body qt;`;
+    const query=`[out:json][timeout:9][maxsize:134217728];way["building"](${bS},${bW},${bN},${bE});(._;>;);out body qt;`;
     const body=new URLSearchParams({data:query});
     return new Promise(function(resolve){
         var done=false, failed=0, mirrorN=OVERPASS_MIRRORS.length;
         var ctrls=OVERPASS_MIRRORS.map(function(){return new AbortController();});
         var tid=setTimeout(function(){
             if(!done){done=true;ctrls.forEach(function(c){c.abort();});resolve([]);}
-        },33000);
+        },10000);
         OVERPASS_MIRRORS.forEach(function(url,i){
             fetch(url,{method:'POST',body:body,signal:ctrls[i].signal})
                 .then(function(r){if(!r.ok)throw r.status;return r.json();})

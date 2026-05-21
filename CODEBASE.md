@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v4.9 — 真實打雷音檔 CC0 MP3）**
+> **最後更新：2026-05-21（v5.0 — Master 音訊壓縮器 + 打雷音量全面優化）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,20 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v5.0）Master 音訊壓縮器 + 打雷音量全面優化
+
+**Master 輸出鏈（所有音效統一走這裡）**
+- `getAudio()` 建立 `masterOut = GainNode(1.4) → DynamicsCompressor(-18dB, 4:1) → destination`
+- `_dest()` 幫助函數：非環境音效全部接到 masterOut，整體提升 1.4x 且防爆音
+- 環境音 `_startAmbient` 仍直連 `ctx.destination`，避免壓縮器對長音造成呼吸感
+
+**打雷優化**
+- 真實音檔 gain：1.1 → 3.0（再過 master 1.4x，實際約 4.2x）
+- 雨聲 duck：0.04 → 0.005（幾乎靜音），恢復時間 1.6s → 3.0s
+- 合成 fallback：移除炸彈感 crack，改為正弦波 70→22Hz boom + 低頻噪音 roll
 
 ---
 

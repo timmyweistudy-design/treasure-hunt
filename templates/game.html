@@ -2013,18 +2013,26 @@ function relocateTreasure(tId) {
     setTimeout(rebuildOptimalRouteAstar, 50);
 }
 
-// ── 隨機可走點（用於守衛巡邏，確保距 AI 至少 200m）────────
+// ── 隨機可走點（直接從 navGrid 未封鎖格取樣，保證 A* 可達）
 function _randWalkable(fromLat, fromLon){
-    for(let i=0;i<60;i++){
+    if(navGrid){
+        const {rows,cols,blocked}=navGrid;
+        for(let i=0;i<120;i++){
+            const r=Math.floor(Math.random()*rows);
+            const c=Math.floor(Math.random()*cols);
+            if(blocked[r*cols+c]) continue;
+            const [la,lo]=rcToLL(r,c);
+            if(!fromLat||distM(la,lo,fromLat,fromLon)>NAV_CELL*111111*4) return [la,lo];
+        }
+    }
+    // navGrid 尚未建立時 fallback
+    for(let i=0;i<30;i++){
         const lat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
         const lon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
-        if(isInBuilding(lat,lon)) continue;
-        const [nl,no]=navGrid?nearestWalkable(lat,lon):[lat,lon];
-        if(!fromLat||distM(nl,no,fromLat,fromLon)>200) return [nl,no];
+        if(!isInBuilding(lat,lon)) return [lat,lon];
     }
-    // fallback: 用寶藏位置
     const t=TREASURES[Math.floor(Math.random()*TREASURES.length)];
-    return t?nearestWalkable(t.lat,t.lon):[ORIGIN_LAT,ORIGIN_LON];
+    return t?[t.lat,t.lon]:[ORIGIN_LAT,ORIGIN_LON];
 }
 
 // ── AI 移動（含牆壁滑動，防止卡牆）────────────────────────
@@ -2093,7 +2101,15 @@ function tickPatroller(ai,dt,s) {
         if(ai.pathTimer<=0&&!ai._astarPending){
             ai._astarPending=true; ai.pathTimer=1.5;
             const fl=ai.lat,fo=ai.lon,tl=ai.destLat,to=ai.destLon;
-            (requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});
+            (requestIdleCallback||setTimeout)(()=>{
+                ai.path=runAstar(fl,fo,tl,to);
+                ai._astarPending=false;
+                // A* 找不到路（同格或不可達）→ 立刻換目的地
+                if(ai.path.length===0){
+                    const [dl,do_]=_randWalkable(ai.lat,ai.lon);
+                    ai.destLat=dl; ai.destLon=do_;
+                }
+            });
         }
         while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
         if(ai.path.length>0){
@@ -2103,7 +2119,8 @@ function tickPatroller(ai,dt,s) {
                 aiMove(ai,dLa,dLo,s);
             }
         }
-        if(distM(ai.lat,ai.lon,ai.destLat,ai.destLon)<40){
+        // 閾值用 2 個格子寬（~88m），避免最後一節點和目的地同格導致 A* 失敗
+        if(distM(ai.lat,ai.lon,ai.destLat,ai.destLon)<NAV_CELL*111111*2){
             const [dl,do_]=_randWalkable(ai.lat,ai.lon);
             ai.destLat=dl; ai.destLon=do_;
             ai.path=[]; ai.pathTimer=0;

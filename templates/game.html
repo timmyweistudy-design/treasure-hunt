@@ -2013,6 +2013,70 @@ function relocateTreasure(tId) {
     setTimeout(rebuildOptimalRouteAstar, 50);
 }
 
+// ── AI 專用 A*（獨立於玩家路線，navGrid 未建好回傳 null）────
+function _aiAstar(fLat, fLon, tLat, tLon) {
+    if(!navGrid) return null;
+    const {rows,cols,blocked}=navGrid;
+    // snap to nearest unblocked cell
+    const snap=(lat,lon)=>{
+        const r0=Math.max(0,Math.min(rows-1,Math.round((lat-BOUNDS.s)/NAV_CELL)));
+        const c0=Math.max(0,Math.min(cols-1,Math.round((lon-BOUNDS.w)/NAV_CELL)));
+        if(!blocked[r0*cols+c0]) return [r0,c0];
+        for(let d=1;d<=8;d++) for(let dr=-d;dr<=d;dr++) for(let dc=-d;dc<=d;dc++){
+            if(Math.abs(dr)!==d&&Math.abs(dc)!==d) continue;
+            const r=Math.max(0,Math.min(rows-1,r0+dr)), c=Math.max(0,Math.min(cols-1,c0+dc));
+            if(!blocked[r*cols+c]) return [r,c];
+        }
+        return [r0,c0];
+    };
+    const [r0,c0]=snap(fLat,fLon), [rG,cG]=snap(tLat,tLon);
+    if(r0===rG&&c0===cG) return [];   // 同格 → fallback 直線
+    const kf=(r,c)=>r*cols+c;
+    const h=(r,c)=>Math.abs(r-rG)+Math.abs(c-cG);
+    const open=new MinHeap(),g=new Map(),par=new Map(),closed=new Set();
+    g.set(kf(r0,c0),0); open.push([h(r0,c0),r0,c0]);
+    const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    let vis=0;
+    while(open.size&&vis<6000){
+        const [,r,c]=open.pop();
+        const k=kf(r,c); if(closed.has(k)) continue; closed.add(k); vis++;
+        if(r===rG&&c===cG){
+            const path=[]; let cur=k;
+            while(par.has(cur)){const pr=Math.floor(cur/cols),pc=cur%cols;path.push([BOUNDS.s+pr*NAV_CELL,BOUNDS.w+pc*NAV_CELL]);cur=par.get(cur);}
+            path.reverse(); return path;
+        }
+        const gk=g.get(k);
+        for(const [dr,dc] of DIRS){
+            const nr=r+dr,nc=c+dc;
+            if(nr<0||nr>=rows||nc<0||nc>=cols) continue;
+            const nk=kf(nr,nc); if(closed.has(nk)||blocked[nk]) continue;
+            if(dr&&dc&&(blocked[kf(r+dr,c)]||blocked[kf(r,c+dc)])) continue;
+            const ng=gk+(dr&&dc?1.414:1);
+            if(ng<(g.get(nk)??Infinity)){g.set(nk,ng);par.set(nk,k);open.push([ng+h(nr,nc),nr,nc]);}
+        }
+    }
+    return [];
+}
+// 統一 AI 路徑追蹤：定期重算 A*，路徑空時 fallback 直線移動
+function _aiFollowPath(ai, tLat, tLon, spd, dt, interval) {
+    ai._pathCd=(ai._pathCd||0)-dt;
+    if(ai._pathCd<=0&&!ai._astarPending){
+        ai._astarPending=true; ai._pathCd=interval;
+        const fl=ai.lat,fo=ai.lon;
+        (requestIdleCallback||setTimeout)(()=>{
+            const p=_aiAstar(fl,fo,tLat,tLon);
+            if(p!==null) ai.path=p;   // null = navGrid 未建好，保留舊路徑
+            ai._astarPending=false;
+        });
+    }
+    while(ai.path&&ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<40) ai.path.shift();
+    if(ai.path&&ai.path.length>0){
+        aiMove(ai,ai.path[0][0]-ai.lat,ai.path[0][1]-ai.lon,spd);
+    } else {
+        aiMove(ai,tLat-ai.lat,tLon-ai.lon,spd);  // fallback 直線
+    }
+}
+
 // ── 隨機可走點（直接從 navGrid 未封鎖格取樣，保證 A* 可達）
 function _randWalkable(fromLat, fromLon){
     if(navGrid){
@@ -2057,9 +2121,10 @@ function tickChaser(ai,dt,s) {
     const cs=s*(ai.speedMult||1)*timePressure;
     if(invincTimer>0){
         aiMove(ai, ai.lat-pLat, ai.lon-pLon, cs);
+        ai.path=[];
     } else {
         const chLat=decoyActive?decoyLat:pLat, chLon=decoyActive?decoyLon:pLon;
-        aiMove(ai, chLat-ai.lat, chLon-ai.lon, cs);
+        _aiFollowPath(ai, chLat, chLon, cs, dt, 0.8);
     }
     ai.attackCD=Math.max(0,ai.attackCD-dt);
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
@@ -2084,17 +2149,15 @@ function tickPatroller(ai,dt,s) {
         ai.facingLat=pLat; ai.facingLon=pLon;
         if(ai.alertTimer===0){ai.path=[];ai.pathTimer=0;}
     } else {
-        // 隨機巡邏：直線走向目的地（aiMove 負責滑牆），到了換下一個
-        if(!ai.destLat||distM(ai.lat,ai.lon,ai.destLat,ai.destLon)<50){
-            ai.destLat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
-            ai.destLon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
+        // 隨機巡邏：A* 走向目的地，到了換下一個
+        if(!ai.destLat||distM(ai.lat,ai.lon,ai.destLat,ai.destLon)<60){
+            const [dl,do_]=_randWalkable(ai.lat,ai.lon);
+            ai.destLat=dl; ai.destLon=do_;
+            ai.path=[]; ai._pathCd=0;
         }
-        const dLa=ai.destLat-ai.lat, dLo=ai.destLon-ai.lon;
-        const len=Math.sqrt(dLa*dLa+dLo*dLo);
-        if(len>1e-6){
-            ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
-            aiMove(ai,dLa,dLo,s);
-        }
+        const dLa=ai.destLat-ai.lat, dLo=ai.destLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
+        if(len>1e-6){ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;}
+        _aiFollowPath(ai, ai.destLat, ai.destLon, s, dt, 2.0);
         // 視野偵測
         if(ai.alertCD===0&&invincTimer===0&&inPatrollerFOV(ai)){
             ai.alertTimer=3; ai.alertCD=10;
@@ -2177,7 +2240,7 @@ function tickThief(ai,dt,s) {
     if(!tgt){ai.targetTId=null; return 9999;}
     const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
     const ts=ai.wanted?s*0.5:s*timePressure;
-    aiMove(ai, tgt.lat-ai.lat, tgt.lon-ai.lon, ts);
+    _aiFollowPath(ai, tgt.lat, tgt.lon, ts, dt, 1.5);
     if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);
@@ -2405,7 +2468,7 @@ function buildNavGrid(){
     const bl=new Uint8Array(rows*cols);
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
         if(isInBuilding(BOUNDS.s+r*NAV_CELL,BOUNDS.w+c*NAV_CELL)) bl[r*cols+c]=1;
-    navGrid={rows,cols,blocked:inflateBlocked(bl,rows,cols)};
+    navGrid={rows,cols,blocked:bl};  // 不膨脹，AI 座標才能對到有效格
 }
 function llToRC(lat,lon){
     const r=Math.max(0,Math.min(navGrid.rows-1,Math.round((lat-BOUNDS.s)/NAV_CELL)));

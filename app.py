@@ -177,6 +177,24 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
             _pending[req_id] = {"status": "error", "message": "此城市找不到足夠的地點，請嘗試其他城市"}
             return
 
+        # Pad to treasure_count with random positions when Overpass returns fewer POIs
+        target = GAME_CONFIG["treasure_count"]
+        cos_lat_pad = math.cos(math.radians(lat))
+        idx = len(treasures)
+        attempts = 0
+        while len(treasures) < target and attempts < 300:
+            attempts += 1
+            angle = random.uniform(0, 2 * math.pi)
+            dist_m = random.uniform(200, 900)
+            nlat = lat + math.cos(angle) * dist_m / 111320.0
+            nlon = lon + math.sin(angle) * dist_m / (111320.0 * cos_lat_pad)
+            if all(haversine((nlat, nlon), (t.lat, t.lon)) >= 150 for t in treasures):
+                treasures.append(Treasure(
+                    id=f"t{idx}", name=f"神秘地點 {idx + 1}",
+                    lat=nlat, lon=nlon, category="mystery", points=100
+                ))
+                idx += 1
+
         player_coords = (lat, lon)
         optimal_route = solve_tsp_exact(player_coords, treasures)
         total_dist = calculate_total_distance(player_coords, optimal_route)

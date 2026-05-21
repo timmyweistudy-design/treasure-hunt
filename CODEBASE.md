@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（AI 全改走 A* 路徑，不再直線衝 + 膨脹 + 滑牆 + 小偷偷寶路徑重算）**
+> **最後更新：2026-05-21（寶藏數不足時補滿 10 個神秘地點）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,15 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v4.5）寶藏數量不足時自動補滿
+
+**`app.py` `_bg_prepare()` 新增 padding 邏輯**
+- Overpass 回傳 POI 不足 10 個時，以隨機角度＋200~900m 距離從出生點生成「神秘地點 N」補滿
+- 每個補充地點需與現有寶藏距離 ≥150m（用 `haversine` 檢核），最多嘗試 300 次
+- 確保任何城市都固定出現 10 個寶藏
 
 ---
 

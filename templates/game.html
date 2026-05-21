@@ -1571,11 +1571,16 @@ function _spawnExplosionVfx(lat,lon,radiusM) {
     document.getElementById('map').appendChild(lbl);
     setTimeout(()=>lbl.remove(),920);
 }
+function _aiFilterEl(ai){
+    // 守衛用 sprite，filter 要加在內層 .gsw 避免外層 div 產生灰色方框
+    if(ai.type==='patroller') return ai.marker.getElement()?.querySelector('.gsw');
+    return ai.marker.getElement();
+}
 function _stunAI(ai, dur) {
     ai.combatStun=dur;
     ai.path=[]; ai.pathTimer=dur;
     if(ai.invis) _thiefSetInvis(ai,false);   // 被炸中解除隱身
-    const el=ai.marker.getElement();
+    const el=_aiFilterEl(ai);
     if(el) el.style.filter='saturate(0) brightness(1.5)';
     // persistent ⭐ orbit — removed when stun ends
     if(ai.stunLabel) ai.stunLabel.remove();
@@ -1775,7 +1780,7 @@ function tickCombatStun(dt) {
         if(ai.combatStun>0){
             ai.combatStun=Math.max(0,ai.combatStun-dt);
             if(ai.combatStun<=0){
-                const el=ai.marker.getElement();
+                const el=_aiFilterEl(ai);
                 if(el) el.style.filter=aiFrozenTimer>0?'sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))':'';
                 if(ai.stunLabel){ai.stunLabel.remove();ai.stunLabel=null;}
             }
@@ -1880,7 +1885,7 @@ function _activateItem(type) {
         const mapEl=document.getElementById('map');
         for(const ai of aiList){
             if(ai.invis) _thiefSetInvis(ai,false);   // 冰凍解除隱身
-            const el=ai.marker.getElement();
+            const el=_aiFilterEl(ai);
             if(el) el.style.filter='sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))';
             const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
             [0,1,2].forEach(i=>{
@@ -2378,7 +2383,7 @@ function tickEffects(dt) {
     if(wasFreeze) aiFrozenTimer=Math.max(0,aiFrozenTimer-dt);
     if(wasFreeze&&aiFrozenTimer<=0){
         for(const ai of aiList){
-            const el=ai.marker.getElement();
+            const el=_aiFilterEl(ai);
             if(el) el.style.filter=ai.combatStun>0?'saturate(0) brightness(1.5)':'';
         }
     }

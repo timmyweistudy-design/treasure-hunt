@@ -227,37 +227,58 @@ class MapAPI:
     def fetch_poi_all(lat: float, lon: float) -> list:
         """
         Return all named POIs as {lat,lon,name,category}.
-        Uses nwr (node+way+relation) with out center so parks, temples,
-        schools mapped as polygons are all included.
+        Runs three Overpass queries in parallel; merges all results.
+        Falls back to empty list on total failure (caller will pad with mystery spots).
         """
         d = 0.015   # ±1670 m — covers 1000 m tier with margin
         bb = f"{lat-d},{lon-d},{lat+d},{lon+d}"
         queries = [
-            # 景點、地標、觀景台、博物館、藝術、廟宇、歷史古蹟
-            (f'[out:json][timeout:18];'
+            # 景點、地標、博物館、廟宇、歷史古蹟（nwr 含面要素）
+            (f'[out:json][timeout:14];'
              f'(nwr["tourism"~"attraction|museum|viewpoint|artwork|monument|gallery|theme_park"]({bb});'
              f'nwr["historic"]({bb});'
              f'nwr["amenity"~"place_of_worship|theatre|cinema"]({bb});'
              f');out center;'),
             # 公園、自然、學校、圖書館、咖啡廳、餐廳
-            (f'[out:json][timeout:18];'
+            (f'[out:json][timeout:14];'
              f'(nwr["leisure"~"park|nature_reserve|garden"]({bb});'
              f'nwr["natural"~"peak|waterfall|beach"]({bb});'
              f'nwr["amenity"~"library|school|cafe|restaurant"]({bb});'
              f');out center;'),
+            # 純 node 快速 fallback（最輕量，最可能成功）
+            (f'[out:json][timeout:10];'
+             f'(node["name"]["amenity"]({bb});'
+             f'node["name"]["tourism"]({bb});'
+             f'node["name"]["leisure"]({bb});'
+             f');out body;'),
         ]
-        elements = []
-        for q in queries:
+
+        # 三條查詢全部並行發出
+        all_elements = [None, None, None]
+        threads = []
+        def _run_query(idx, q):
             try:
                 els = _parallel_post(
                     q,
                     handler=lambda j: j.get("elements", []),
-                    per_timeout=20, total_timeout=22,
+                    per_timeout=16, total_timeout=18,
                 )
-                if els:
-                    elements += els
+                all_elements[idx] = els or []
             except Exception:
-                pass
+                all_elements[idx] = []
+
+        for i, q in enumerate(queries):
+            t = threading.Thread(target=_run_query, args=(i, q), daemon=True)
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join(timeout=20)   # 最多等 20s（三條查詢都在這 20s 內並行）
+
+        elements = []
+        for els in all_elements:
+            if els:
+                elements += els
+
         result = []
         seen = set()
         for e in elements:
@@ -265,7 +286,6 @@ class MapAPI:
             name = tags.get("name", "")
             if not name or name in seen:
                 continue
-            # node → direct lat/lon; way/relation → center object
             if e.get("type") == "node":
                 elat, elon = e.get("lat"), e.get("lon")
             else:

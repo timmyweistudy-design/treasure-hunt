@@ -166,15 +166,11 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
                 location = MapAPI.geocode(city)
                 lat, lon = location["lat"], location["lon"]
             raw_pois = MapAPI.fetch_poi_all(lat, lon)
-            if not raw_pois:
-                _pending[req_id] = {"status": "error", "message": "此城市找不到足夠的地點，請嘗試其他城市"}
-                return
-            _city_cache[city_key] = {"lat": lat, "lon": lon, "raw_pois": raw_pois}
+            if raw_pois:
+                _city_cache[city_key] = {"lat": lat, "lon": lon, "raw_pois": raw_pois}
+            # Overpass 全失敗時 raw_pois=[]，padding 會填滿，不中斷
 
         treasures = _assign_tiers(raw_pois, lat, lon)
-        if not treasures:
-            _pending[req_id] = {"status": "error", "message": "此城市找不到足夠的地點，請嘗試其他城市"}
-            return
 
         # Pad to treasure_count with random positions when Overpass returns fewer POIs
         target = GAME_CONFIG["treasure_count"]

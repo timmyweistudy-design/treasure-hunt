@@ -2010,6 +2010,7 @@ function relocateTreasure(tId) {
     }
     if(miniTMarkers[tId]) miniTMarkers[tId].setLatLng([nLat,nLon]);
     updateDistances();
+    setTimeout(rebuildOptimalRouteAstar, 50);
 }
 
 // ── 追跡者行為 ───────────────────────────────────────────

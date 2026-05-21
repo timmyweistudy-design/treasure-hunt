@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-20（傳送門視覺重設計 + 規則頁數值同步 + 建築顏色加深 + 首頁說明更新）**
+> **最後更新：2026-05-21（小偷偷寶藏後最佳路徑自動重算）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,14 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v4.1）小偷偷寶藏後最佳路徑自動重算
+
+**`relocateTreasure()` 新增 `setTimeout(rebuildOptimalRouteAstar, 50)`**
+- 原本只有 `updateDistances()`，路徑線不會重繪
+- 小偷把寶藏移走後，現在會在 50ms 後重跑 A* 最短路徑並更新地圖上的綠色連線
 
 ---
 

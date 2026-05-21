@@ -1109,29 +1109,33 @@ function playThunder() {
     _triggerLightning();           // 同步閃光
     snd(ctx=>{
         const t=ctx.currentTime;
-        // ── 閃電劈裂聲（短促 bandpass 噪音爆破）──
+        // 打雷時暫時壓低雨聲，讓雷聲清晰切入，1.5s 後恢復
+        if(_ambientGain){
+            _ambientGain.gain.cancelScheduledValues(t);
+            _ambientGain.gain.setValueAtTime(0.42,t);
+            _ambientGain.gain.linearRampToValueAtTime(0.04,t+.08);
+            _ambientGain.gain.linearRampToValueAtTime(0.42,t+1.6);
+        }
+        // ── 閃電劈裂聲（全頻噪音短爆，不用 bandpass 以免被雨聲蓋住）──
         const crackSrc=ctx.createBufferSource();
-        crackSrc.buffer=_noiseBuffer(ctx,.22);
-        const crackFilt=ctx.createBiquadFilter();
-        crackFilt.type='bandpass'; crackFilt.frequency.value=1400; crackFilt.Q.value=0.7;
+        crackSrc.buffer=_noiseBuffer(ctx,.3);
         const crackGain=ctx.createGain();
-        crackGain.gain.setValueAtTime(0,t);
-        crackGain.gain.linearRampToValueAtTime(.70,t+.012);
-        crackGain.gain.exponentialRampToValueAtTime(.001,t+.20);
-        crackSrc.connect(crackFilt); crackFilt.connect(crackGain); crackGain.connect(ctx.destination);
-        crackSrc.start(t); crackSrc.stop(t+.22);
-        // ── 滾動雷鳴（低頻 lowpass 噪音長衰減）──
+        crackGain.gain.setValueAtTime(1.5,t);
+        crackGain.gain.exponentialRampToValueAtTime(.001,t+.28);
+        crackSrc.connect(crackGain); crackGain.connect(ctx.destination);
+        crackSrc.start(t); crackSrc.stop(t+.3);
+        // ── 滾動雷鳴（低頻 lowpass，音量明顯高於雨聲）──
         const rollSrc=ctx.createBufferSource();
-        rollSrc.buffer=_noiseBuffer(ctx,3.2);
+        rollSrc.buffer=_noiseBuffer(ctx,3.5);
         const rollFilt=ctx.createBiquadFilter();
-        rollFilt.type='lowpass'; rollFilt.frequency.value=140;
+        rollFilt.type='lowpass'; rollFilt.frequency.value=200;
         const rollGain=ctx.createGain();
         rollGain.gain.setValueAtTime(0,t+.05);
-        rollGain.gain.linearRampToValueAtTime(.52,t+.16);
-        rollGain.gain.setValueAtTime(.52,t+.55);
-        rollGain.gain.exponentialRampToValueAtTime(.001,t+3.0);
+        rollGain.gain.linearRampToValueAtTime(.95,t+.18);
+        rollGain.gain.setValueAtTime(.95,t+.65);
+        rollGain.gain.exponentialRampToValueAtTime(.001,t+3.3);
         rollSrc.connect(rollFilt); rollFilt.connect(rollGain); rollGain.connect(ctx.destination);
-        rollSrc.start(t+.05); rollSrc.stop(t+3.2);
+        rollSrc.start(t+.05); rollSrc.stop(t+3.5);
     });
 }
 function playWeatherChange(type) {

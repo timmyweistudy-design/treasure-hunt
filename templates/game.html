@@ -1123,9 +1123,12 @@ function playThunder() {
         if(_thunderBuffer){
             const src=ctx.createBufferSource();
             src.buffer=_thunderBuffer;
-            const g=ctx.createGain(); g.gain.value=1.1;
+            const g=ctx.createGain();
+            g.gain.setValueAtTime(1.1,t);
+            g.gain.setValueAtTime(1.1,t+4.5);
+            g.gain.linearRampToValueAtTime(0,t+6);   // 4.5s 後 1.5s 淡出，共 6s
             src.connect(g); g.connect(ctx.destination);
-            src.start(t);
+            src.start(t); src.stop(t+6.1);
             return;
         }
         // ── 音檔已下載但尚未解碼：解碼後下次用；本次用合成 fallback ──

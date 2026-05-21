@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v5.0 — Master 音訊壓縮器 + 打雷音量全面優化）**
+> **最後更新：2026-05-21（v5.1 — Sprite 動畫 DOM display 切換 + 縮放感知 fps）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,18 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v5.1）Sprite 動畫 DOM display 切換 + 縮放感知 fps
+
+**問題**：`img.src` 切換幀時瀏覽器需重新解碼 URL，產生空白幀閃爍；固定 fps 在縮放時快慢不一。
+
+**修正（templates/game.html）**：
+- `pIcon` HTML：在 `#pdot` 內嵌 `<div class="psw" id="psw">` 包含 6 個 `<img class="pf">` 預置 DOM（第 0 幀加 `active`），CSS `.pf { display:none }` / `.pf.active { display:block }`
+- 遊戲迴圈改以 `classList.remove/add('active')` 切換幀（無 HTTP 請求，無空白幀）
+- `animFps` 改為縮放感知計算：`onScreenPx = _sprSpeed * pxPerDeg * cos(lat)` → `fps = clamp(6,18, onScreenPx / _sprSizeNow * 18)`
+- `_updateSpriteSize()` 同步更新 `#psw` 及所有 `.pf` 的寬高；記入 `_sprSizeNow`
 
 ---
 

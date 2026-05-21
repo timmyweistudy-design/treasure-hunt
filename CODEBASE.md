@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（AI 牆壁滑動修正 + 小偷偷寶後路徑重算）**
+> **最後更新：2026-05-21（A* 建築膨脹修正 + AI 牆壁滑動 + 小偷偷寶後路徑重算）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,15 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v4.3）A* 障礙物膨脹修正
+
+**新增 `inflateBlocked(bl, rows, cols)` helper**
+- `buildNavGrid` 和 `buildRouteGrid` 在標記 blocked 格後，再往外膨脹 1 格
+- 修正最佳路線線段貼著建築角落穿過的問題（格點在建築外但線段視覺上切進角落）
+- 同時修正 AI A* 路徑也不再貼牆角走
 
 ---
 

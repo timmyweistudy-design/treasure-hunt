@@ -2382,13 +2382,24 @@ class MinHeap{
     _up(i){while(i>0){const p=(i-1)>>1;if(this.h[p][0]<=this.h[i][0])break;[this.h[p],this.h[i]]=[this.h[i],this.h[p]];i=p;}}
     _down(i){const n=this.h.length;for(;;){let m=i,l=2*i+1,r=2*i+2;if(l<n&&this.h[l][0]<this.h[m][0])m=l;if(r<n&&this.h[r][0]<this.h[m][0])m=r;if(m===i)break;[this.h[m],this.h[i]]=[this.h[i],this.h[m]];i=m;}}
 }
+function inflateBlocked(bl, rows, cols){
+    const out=new Uint8Array(bl);
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+        if(!bl[r*cols+c]) continue;
+        for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+            const nr=r+dr,nc=c+dc;
+            if(nr>=0&&nr<rows&&nc>=0&&nc<cols) out[nr*cols+nc]=1;
+        }
+    }
+    return out;
+}
 function buildNavGrid(){
     const rows=Math.ceil((BOUNDS.n-BOUNDS.s)/NAV_CELL)+1;
     const cols=Math.ceil((BOUNDS.e-BOUNDS.w)/NAV_CELL)+1;
     const bl=new Uint8Array(rows*cols);
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
         if(isInBuilding(BOUNDS.s+r*NAV_CELL,BOUNDS.w+c*NAV_CELL)) bl[r*cols+c]=1;
-    navGrid={rows,cols,blocked:bl};
+    navGrid={rows,cols,blocked:inflateBlocked(bl,rows,cols)};
 }
 function llToRC(lat,lon){
     const r=Math.max(0,Math.min(navGrid.rows-1,Math.round((lat-BOUNDS.s)/NAV_CELL)));
@@ -2460,7 +2471,7 @@ function buildRouteGrid(){
     const bl=new Uint8Array(rows*cols);
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
         if(isInBuilding(BOUNDS.s+r*ROUTE_CELL,BOUNDS.w+c*ROUTE_CELL)) bl[r*cols+c]=1;
-    return {rows,cols,blocked:bl};
+    return {rows,cols,blocked:inflateBlocked(bl,rows,cols)};
 }
 
 function runRouteAstar(rg,fLat,fLon,tLat,tLon){

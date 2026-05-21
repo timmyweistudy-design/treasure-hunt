@@ -377,9 +377,12 @@
         .cf  { position:absolute; top:0; left:0; width:44px; height:44px;
                image-rendering:pixelated; pointer-events:none; display:none; }
         .cf.active { display:block; }
-        .churt { position:absolute; top:0; left:0; width:44px; height:44px;
-                 image-rendering:pixelated; pointer-events:none; display:none; }
+        .churt   { position:absolute; top:0; left:0; width:44px; height:44px;
+                   image-rendering:pixelated; pointer-events:none; display:none; }
         .churt.active { display:block; }
+        .cattack { position:absolute; top:0; left:0; width:44px; height:44px;
+                   image-rendering:pixelated; pointer-events:none; display:none; }
+        .cattack.active { display:block; }
         @keyframes ai-pulse {
             0%,100%{ filter:drop-shadow(0 0 5px rgba(183,28,28,.9)) }
             50%    { filter:drop-shadow(0 0 14px rgba(183,28,28,.3)) } }
@@ -392,6 +395,9 @@
         .gf  { position:absolute; top:0; left:0; width:44px; height:44px;
                image-rendering:pixelated; pointer-events:none; display:none; }
         .gf.active { display:block; }
+        .ghurt { position:absolute; top:0; left:0; width:44px; height:44px;
+                 image-rendering:pixelated; pointer-events:none; display:none; }
+        .ghurt.active { display:block; }
         .guard-dot.alert .gsw { filter:drop-shadow(0 0 8px #ef5350) brightness(1.2);
                                  animation:ai-pulse .4s ease-in-out infinite; }
         @keyframes patrol-pulse {
@@ -1405,7 +1411,7 @@ function _updateGuardSizes(){
         if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}
         if(gsw){
             gsw.style.width=size+'px';gsw.style.height=size+'px';
-            el.querySelectorAll('.gf').forEach(img=>{img.style.width=size+'px';img.style.height=size+'px';});
+            el.querySelectorAll('.gf,.ghurt').forEach(img=>{img.style.width=size+'px';img.style.height=size+'px';});
         }
         el.style.marginLeft=(-size/2)+'px';
         el.style.marginTop=(-anchorY)+'px';
@@ -1429,7 +1435,7 @@ function _updateChaserSizes(){
         if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}
         if(csw){
             csw.style.width=size+'px';csw.style.height=size+'px';
-            el.querySelectorAll('.cf,.churt').forEach(img=>{img.style.width=size+'px';img.style.height=size+'px';});
+            el.querySelectorAll('.cf,.churt,.cattack').forEach(img=>{img.style.width=size+'px';img.style.height=size+'px';});
         }
         el.style.marginLeft=(-size/2)+'px';
         el.style.marginTop=(-anchorY)+'px';
@@ -1627,8 +1633,8 @@ function _applyAIFilter(ai, filterStr){
     // sprite 角色：filter 直接套在每張 <img> 幀上，不建立 wrapper 合成層，不產生灰色方框
     const el=ai.marker.getElement();
     if(!el) return;
-    if(ai.type==='patroller') el.querySelectorAll('.gf').forEach(img=>img.style.filter=filterStr);
-    else if(ai.type==='chaser') el.querySelectorAll('.cf,.churt').forEach(img=>img.style.filter=filterStr);
+    if(ai.type==='patroller') el.querySelectorAll('.gf,.ghurt').forEach(img=>img.style.filter=filterStr);
+    else if(ai.type==='chaser') el.querySelectorAll('.cf,.churt,.cattack').forEach(img=>img.style.filter=filterStr);
     else el.style.filter=filterStr;
 }
 function _stunAI(ai, dur) {
@@ -1639,11 +1645,20 @@ function _stunAI(ai, dur) {
         // switch to hurt animation; no gray filter for chaser
         const _sel=ai.marker.getElement();
         if(_sel){
-            _sel.querySelectorAll('.cf').forEach(img=>img.classList.remove('active'));
+            _sel.querySelectorAll('.cf,.cattack').forEach(img=>img.classList.remove('active'));
             const _hs=_sel.querySelectorAll('.churt');
             _hs.forEach((img,i)=>{if(i===0)img.classList.add('active');else img.classList.remove('active');});
         }
-        ai._cFrame=0; ai._cFrameAcc=0; ai._churtFrame=0; ai._churtFrameAcc=0;
+        ai._cFrame=0; ai._cFrameAcc=0; ai._churtFrame=0; ai._churtFrameAcc=0; ai._attackAnim=0; ai._cattackFrame=0; ai._cattackFrameAcc=0;
+    } else if(ai.type==='patroller'){
+        // switch to hurt animation; no gray filter for guard
+        const _sel=ai.marker.getElement();
+        if(_sel){
+            _sel.querySelectorAll('.gf').forEach(img=>img.classList.remove('active'));
+            const _hs=_sel.querySelectorAll('.ghurt');
+            _hs.forEach((img,i)=>{if(i===0)img.classList.add('active');else img.classList.remove('active');});
+        }
+        ai._gFrame=0; ai._gFrameAcc=0; ai._ghurtFrame=0; ai._ghurtFrameAcc=0;
     } else {
         _applyAIFilter(ai,'saturate(0) brightness(1.5)');
     }
@@ -1845,6 +1860,7 @@ function tickCombatStun(dt) {
         if(ai.combatStun>0){
             ai.combatStun=Math.max(0,ai.combatStun-dt);
             if(ai.combatStun<=0){
+                const _freezeFilter=aiFrozenTimer>0?'sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))':'';
                 if(ai.type==='chaser'){
                     const _se=ai.marker.getElement();
                     if(_se){
@@ -1852,12 +1868,21 @@ function tickCombatStun(dt) {
                         const _cfs=_se.querySelectorAll('.cf');
                         _cfs.forEach(img=>img.classList.remove('active'));
                         if(_cfs.length) _cfs[0].classList.add('active');
-                        const _ff=aiFrozenTimer>0?'sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))':'';
-                        _cfs.forEach(img=>img.style.filter=_ff);
+                        _cfs.forEach(img=>img.style.filter=_freezeFilter);
                     }
                     ai._churtFrame=0; ai._churtFrameAcc=0; ai._cFrame=0; ai._cFrameAcc=0;
+                } else if(ai.type==='patroller'){
+                    const _se=ai.marker.getElement();
+                    if(_se){
+                        _se.querySelectorAll('.ghurt').forEach(img=>{img.classList.remove('active');img.style.filter='';});
+                        const _gfs=_se.querySelectorAll('.gf');
+                        _gfs.forEach(img=>img.classList.remove('active'));
+                        if(_gfs.length) _gfs[0].classList.add('active');
+                        _gfs.forEach(img=>img.style.filter=_freezeFilter);
+                    }
+                    ai._ghurtFrame=0; ai._ghurtFrameAcc=0; ai._gFrame=0; ai._gFrameAcc=0;
                 } else {
-                    _applyAIFilter(ai,aiFrozenTimer>0?'sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))':'');
+                    _applyAIFilter(ai,_freezeFilter);
                 }
                 if(ai.stunLabel){ai.stunLabel.remove();ai.stunLabel=null;}
             }
@@ -2065,6 +2090,11 @@ function spawnAI(forceType, silent=false) {
             <img class="cf" src="/static/sprites/chaser/Crun6.png">
             <img class="churt" src="/static/sprites/chaser/Churt1.png">
             <img class="churt" src="/static/sprites/chaser/Churt2.png">
+            <img class="cattack" src="/static/sprites/chaser/Cattack1.png">
+            <img class="cattack" src="/static/sprites/chaser/Cattack2.png">
+            <img class="cattack" src="/static/sprites/chaser/Cattack3.png">
+            <img class="cattack" src="/static/sprites/chaser/Cattack4.png">
+            <img class="cattack" src="/static/sprites/chaser/Cattack5.png">
         </div></div>`;
         miniColor='#c62828';
         const n=chaserCount+1;
@@ -2079,6 +2109,9 @@ function spawnAI(forceType, silent=false) {
             <img class="gf" src="/static/sprites/guard/Grun6.png">
             <img class="gf" src="/static/sprites/guard/Grun7.png">
             <img class="gf" src="/static/sprites/guard/Grun8.png">
+            <img class="ghurt" src="/static/sprites/guard/Ghurt1.png">
+            <img class="ghurt" src="/static/sprites/guard/Ghurt2.png">
+            <img class="ghurt" src="/static/sprites/guard/Ghurt3.png">
         </div></div>`;
         miniColor='#6a1b9a';
         toastMsg='👁️ 巡邏守衛出現！走入視野範圍 -30分！';
@@ -2228,6 +2261,7 @@ function tickChaser(ai,dt,s) {
     }
     if(dToP<AI_ATTACK_R&&ai.attackCD<=0&&invincTimer<=0){
         ai.attackCD=AI_ATTACK_CD;
+        ai._attackAnim=0.7;  // play attack animation for 0.7s
         applyScorePenalty(50,'😱 被追跡者抓到！-50分！');
         playAIAttack();
     }
@@ -2400,32 +2434,48 @@ function tickAI(dt) {
     // ── 守衛 Sprite 幀更新 ────────────────────────────────
     for(const ai of aiList){
         if(ai.type!=='patroller') continue;
-        const gfs=ai.marker.getElement()?.querySelectorAll('.gf');
-        const gsw=ai.marker.getElement()?.querySelector('.gsw');
+        const _gel=ai.marker.getElement();
+        if(!_gel) continue;
+        const gfs=_gel.querySelectorAll('.gf');
+        const ghurts=_gel.querySelectorAll('.ghurt');
+        const gsw=_gel.querySelector('.gsw');
         if(!gfs?.length) continue;
         if(!ai._gFrame) ai._gFrame=0;
         if(!ai._gFrameAcc) ai._gFrameAcc=0;
-        const moved=(ai._prevLat!==undefined&&(ai.lat!==ai._prevLat||ai.lon!==ai._prevLon));
-        if(moved){
-            const cosLat=Math.cos(ai.lat*Math.PI/180);
-            const dLo=(ai.lon-(ai._prevLon||ai.lon))*111111*cosLat;
-            if(dLo<-1e-6) ai._gLeft=true; else if(dLo>1e-6) ai._gLeft=false;
-            const zoom=map.getZoom();
-            const pxPerDeg=256*Math.pow(2,zoom)/360;
-            const onScreenPx=AI_SPD*pxPerDeg*Math.cos(ai.lat*Math.PI/180);
-            const gAnimFps=Math.max(6,Math.min(18,onScreenPx/_guardSizeNow*18));
-            ai._gFrameAcc=(ai._gFrameAcc+gAnimFps*dt)%8;
-            const f=Math.floor(ai._gFrameAcc);
-            if(f!==ai._gFrame){
-                gfs[ai._gFrame].classList.remove('active');
-                gfs[f].classList.add('active');
-                ai._gFrame=f;
+        if(!ai._ghurtFrame) ai._ghurtFrame=0;
+        if(!ai._ghurtFrameAcc) ai._ghurtFrameAcc=0;
+        if(ai.combatStun>0){
+            // hurt animation: 3 frames at 6fps
+            ai._ghurtFrameAcc=(ai._ghurtFrameAcc+6*dt)%3;
+            const f=Math.floor(ai._ghurtFrameAcc);
+            if(f!==ai._ghurtFrame){
+                ghurts[ai._ghurtFrame]?.classList.remove('active');
+                ghurts[f]?.classList.add('active');
+                ai._ghurtFrame=f;
             }
         } else {
-            if(ai._gFrame!==0){
-                gfs[ai._gFrame].classList.remove('active');
-                gfs[0].classList.add('active');
-                ai._gFrame=0; ai._gFrameAcc=0;
+            const moved=(ai._prevLat!==undefined&&(ai.lat!==ai._prevLat||ai.lon!==ai._prevLon));
+            if(moved){
+                const cosLat=Math.cos(ai.lat*Math.PI/180);
+                const dLo=(ai.lon-(ai._prevLon||ai.lon))*111111*cosLat;
+                if(dLo<-1e-6) ai._gLeft=true; else if(dLo>1e-6) ai._gLeft=false;
+                const zoom=map.getZoom();
+                const pxPerDeg=256*Math.pow(2,zoom)/360;
+                const onScreenPx=AI_SPD*pxPerDeg*Math.cos(ai.lat*Math.PI/180);
+                const gAnimFps=Math.max(6,Math.min(18,onScreenPx/_guardSizeNow*18));
+                ai._gFrameAcc=(ai._gFrameAcc+gAnimFps*dt)%8;
+                const f=Math.floor(ai._gFrameAcc);
+                if(f!==ai._gFrame){
+                    gfs[ai._gFrame].classList.remove('active');
+                    gfs[f].classList.add('active');
+                    ai._gFrame=f;
+                }
+            } else {
+                if(ai._gFrame!==0){
+                    gfs[ai._gFrame].classList.remove('active');
+                    gfs[0].classList.add('active');
+                    ai._gFrame=0; ai._gFrameAcc=0;
+                }
             }
         }
         if(gsw){const t=ai._gLeft?'scaleX(-1)':'scaleX(1)'; if(gsw.style.transform!==t) gsw.style.transform=t;}
@@ -2438,20 +2488,44 @@ function tickAI(dt) {
         if(!_cel) continue;
         const cfs=_cel.querySelectorAll('.cf');
         const churts=_cel.querySelectorAll('.churt');
+        const cattacks=_cel.querySelectorAll('.cattack');
         const csw=_cel.querySelector('.csw');
         if(!cfs?.length) continue;
         if(!ai._cFrame) ai._cFrame=0;
         if(!ai._cFrameAcc) ai._cFrameAcc=0;
         if(!ai._churtFrame) ai._churtFrame=0;
         if(!ai._churtFrameAcc) ai._churtFrameAcc=0;
-        if(ai.combatStun>0){
-            // hurt animation: 2 frames at 6fps
+        if(!ai._cattackFrame) ai._cattackFrame=0;
+        if(!ai._cattackFrameAcc) ai._cattackFrameAcc=0;
+        if(!ai._attackAnim) ai._attackAnim=0;
+        // determine anim state: hurt > attack > run
+        const _as=ai.combatStun>0?'hurt':ai._attackAnim>0?'attack':'run';
+        if(_as!==ai._animState){
+            cfs.forEach(img=>img.classList.remove('active'));
+            churts.forEach(img=>img.classList.remove('active'));
+            cattacks.forEach(img=>img.classList.remove('active'));
+            if(_as==='run'){ai._cFrame=0;ai._cFrameAcc=0;cfs[0]?.classList.add('active');}
+            else if(_as==='hurt'){ai._churtFrame=0;ai._churtFrameAcc=0;churts[0]?.classList.add('active');}
+            else{ai._cattackFrame=0;ai._cattackFrameAcc=0;cattacks[0]?.classList.add('active');}
+            ai._animState=_as;
+        }
+        if(_as==='hurt'){
             ai._churtFrameAcc=(ai._churtFrameAcc+6*dt)%2;
             const f=Math.floor(ai._churtFrameAcc);
             if(f!==ai._churtFrame){
                 churts[ai._churtFrame]?.classList.remove('active');
                 churts[f]?.classList.add('active');
                 ai._churtFrame=f;
+            }
+        } else if(_as==='attack'){
+            ai._attackAnim=Math.max(0,ai._attackAnim-dt);
+            // 5 frames, play once over 0.7s → ~7fps, clamp at last frame
+            ai._cattackFrameAcc=Math.min(ai._cattackFrameAcc+10*dt,4.99);
+            const f=Math.floor(ai._cattackFrameAcc);
+            if(f!==ai._cattackFrame){
+                cattacks[ai._cattackFrame]?.classList.remove('active');
+                cattacks[f]?.classList.add('active');
+                ai._cattackFrame=f;
             }
         } else {
             const moved=(ai._prevLat!==undefined&&(ai.lat!==ai._prevLat||ai.lon!==ai._prevLon));
@@ -2525,7 +2599,7 @@ function tickEffects(dt) {
     if(wasFreeze) aiFrozenTimer=Math.max(0,aiFrozenTimer-dt);
     if(wasFreeze&&aiFrozenTimer<=0){
         for(const ai of aiList){
-            _applyAIFilter(ai,(ai.combatStun>0&&ai.type!=='chaser')?'saturate(0) brightness(1.5)':'');
+            _applyAIFilter(ai,(ai.combatStun>0&&ai.type!=='chaser'&&ai.type!=='patroller')?'saturate(0) brightness(1.5)':'');
         }
     }
     // 持續飄雪特效

@@ -346,7 +346,7 @@
         .tbadge { width:40px; height:40px; position:relative;
                   display:flex; align-items:center; justify-content:center;
                   filter:drop-shadow(0 2px 6px rgba(0,0,0,.55)); }
-        .tb-chest { font-size:28px; line-height:1; display:block; }
+        .tb-chest-img { width:36px; height:36px; display:block; object-fit:contain; }
         .tb-num   { position:absolute; top:-3px; right:-6px;
                     min-width:16px; height:16px; padding:0 3px; border-radius:8px;
                     font-size:10px; font-weight:900; color:#fff; line-height:1;
@@ -1510,7 +1510,7 @@ TREASURES.forEach(t => {
     const bg  = CC[t.category] || '#616161';
     const m = L.marker([t.lat, t.lon], {
         icon: L.divIcon({
-            html:`<div class="tbadge${ord===1?' target':''}"><span class="tb-chest">🎁</span><span class="tb-num" style="background:${bg}">${ord}</span></div>`,
+            html:`<div class="tbadge${ord===1?' target':''}"><img class="tb-chest-img" src="/static/chest.png"><span class="tb-num" style="background:${bg}">${ord}</span></div>`,
             className:'', iconSize:[40,40], iconAnchor:[20,20]
         })
     }).addTo(map);
@@ -1621,7 +1621,7 @@ function setGoldenTreasure(id) {
     }).addTo(map);
     if(tMarkers[id]&&!collected.has(id)){
         tMarkers[id].marker.setIcon(L.divIcon({
-            html:'<div class="tbadge golden"><span class="tb-chest">💰</span></div>',
+            html:'<div class="tbadge golden"><img class="tb-chest-img" src="/static/chest.png"></div>',
             className:'',iconSize:[40,40],iconAnchor:[20,20]
         }));
     }
@@ -1637,7 +1637,7 @@ function clearGoldenTreasure(expired) {
         const ord=tMarkers[prevId].order;
         const bg=CC[t.category]||'#616161';
         tMarkers[prevId].marker.setIcon(L.divIcon({
-            html:`<div class="tbadge"><span class="tb-chest">🎁</span><span class="tb-num" style="background:${bg}">${ord}</span></div>`,
+            html:`<div class="tbadge"><img class="tb-chest-img" src="/static/chest.png"><span class="tb-num" style="background:${bg}">${ord}</span></div>`,
             className:'',iconSize:[40,40],iconAnchor:[20,20]
         }));
     }
@@ -3550,11 +3550,11 @@ function updateDistances() {
             const isGolden=t.id===goldenId&&goldenTimer>0;
             let html;
             if(isGolden){
-                html='<div class="tbadge golden"><span class="tb-chest">💰</span></div>';
+                html='<div class="tbadge golden"><img class="tb-chest-img" src="/static/chest.png"></div>';
             } else {
                 const ord=tMarkers[t.id].order, bg=CC[t.category]||'#616161';
                 const cls=`tbadge${inR?' inrange':isTarget?' target':''}`;
-                html=`<div class="${cls}"><span class="tb-chest">🎁</span><span class="tb-num" style="background:${bg}">${ord}</span></div>`;
+                html=`<div class="${cls}"><img class="tb-chest-img" src="/static/chest.png"><span class="tb-num" style="background:${bg}">${ord}</span></div>`;
             }
             tMarkers[t.id].marker.setIcon(L.divIcon({html,className:'',iconSize:[40,40],iconAnchor:[20,20]}));
         }
@@ -3631,7 +3631,7 @@ async function collect(id, tLat, tLon) {
         if(dEl){dEl.textContent='✅ 已收集';dEl.className='dst ok';}
 
         if(tMarkers[id]) tMarkers[id].marker.setIcon(L.divIcon({
-            html:'<div class="tbadge done"><span class="tb-chest">✅</span></div>',
+            html:'<div class="tbadge done"><img class="tb-chest-img" src="/static/chest.png"></div>',
             className:'',iconSize:[40,40],iconAnchor:[20,20]
         }));
         // 小地圖寶藏變灰

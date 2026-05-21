@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（寶藏數不足時補滿 10 個神秘地點）**
+> **最後更新：2026-05-21（7 項遊戲邏輯 & 程式碼品質修正）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,35 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v4.6）7 項遊戲邏輯 & 程式碼品質修正
+
+**浮點計時器全面修正**
+- 22 個計時器比對從 `===0` 改為 `<=0`，防止浮點殘差導致冷卻/效果卡住不觸發
+- 影響：天氣、黃金寶藏、手雷/地雷充能、追跡者/守衛/小偷所有行為計時器、定身/攻擊冷卻、衝刺
+
+**小偷冰凍解隱身**
+- 冰凍炸彈啟動時對每隻 AI 加 `if(ai.invis) _thiefSetInvis(ai,false)`
+- 原本小偷被凍住期間仍保持隱形，修正後冰凍同時解除隱身
+
+**磁鐵超量吸取修正**
+- 在磁鐵迴圈前預算 `canPull = 空槽數 - 正在拉的道具數`
+- 防止在同一幀啟動超過可用格數的拉取導致道具消失
+
+**Overpass 建築物查詢 timeout 縮短**
+- 前端 fallback timeout: 33s → 10s；Overpass query timeout: 30s → 9s
+- 鏡像全失敗時最多等 10s 就開始遊戲（無建築碰撞模式）
+
+**連擊 HUD 提早顯示**
+- `comboCount>=2` → `comboCount>=1`：第一個寶藏收到後就顯示連擊計時器，讓玩家知道有 22s 窗口
+
+**手雷距離上限視覺提示**
+- `_grenadeCapTarget()` 加 `grenadeAtCap` flag；超過 200m 時瞄準圈和連線變紅色
+
+**刪除死程式碼**
+- 移除 `app.py` 中從未使用的 `TREASURE_TIERS` 陣列（v3 改為公尺數計分後遺留）
 
 ---
 

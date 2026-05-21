@@ -371,15 +371,16 @@
             0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.12)} }
 
         /* ── AI 追跡者 ── */
-        .ai-dot { width:30px;height:30px;border-radius:50%;
-                  background:radial-gradient(circle at 35% 35%,#ef5350,#b71c1c);
-                  display:flex;align-items:center;justify-content:center;font-size:15px;
-                  border:2.5px solid rgba(255,255,255,.88);
-                  animation:ai-pulse .6s ease-in-out infinite;
-                  box-shadow:0 2px 8px rgba(183,28,28,.5); }
+        /* ── 追跡者 Sprite ── */
+        .chaser-dot { width:44px; height:44px; }
+        .csw { position:relative; width:44px; height:44px; }
+        .cf  { position:absolute; top:0; left:0; width:44px; height:44px;
+               image-rendering:pixelated; pointer-events:none; display:none; }
+        .cf.active { display:block; }
         @keyframes ai-pulse {
-            0%,100%{ box-shadow:0 2px 8px rgba(183,28,28,.5), 0 0 0 4px rgba(183,28,28,.4) }
-            50%    { box-shadow:0 2px 8px rgba(183,28,28,.5), 0 0 0 13px rgba(183,28,28,.04) } }
+            0%,100%{ filter:drop-shadow(0 0 5px rgba(183,28,28,.9)) }
+            50%    { filter:drop-shadow(0 0 14px rgba(183,28,28,.3)) } }
+        .chaser-dot .csw { animation:ai-pulse .6s ease-in-out infinite; }
 
         /* ── 巡邏守衛 ── */
         /* ── 守衛 Sprite ── */
@@ -1408,6 +1409,30 @@ function _updateGuardSizes(){
     }
 }
 map.on('zoomend',_updateGuardSizes);
+
+// ── 追跡者大小跟隨地圖縮放（與玩家相同公式）────────────────
+let _chaserSizeNow=44;
+function _updateChaserSizes(){
+    const zoom=map.getZoom();
+    const size=Math.max(16,Math.min(80,Math.round(44*Math.pow(2,zoom-17))));
+    _chaserSizeNow=size;
+    const anchorY=Math.round(size*0.55);
+    for(const ai of aiList){
+        if(ai.type!=='chaser') continue;
+        const el=ai.marker.getElement();
+        if(!el) continue;
+        const dot=el.querySelector('.chaser-dot');
+        const csw=el.querySelector('.csw');
+        if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}
+        if(csw){
+            csw.style.width=size+'px';csw.style.height=size+'px';
+            el.querySelectorAll('.cf').forEach(img=>{img.style.width=size+'px';img.style.height=size+'px';});
+        }
+        el.style.marginLeft=(-size/2)+'px';
+        el.style.marginTop=(-anchorY)+'px';
+    }
+}
+map.on('zoomend',_updateChaserSizes);
 const pCircle = L.circle(START, {
     radius: CLCT_R, color: '#1a73e8', weight: 1.5, fillColor: '#1a73e8', fillOpacity: .06
 }).addTo(map);
@@ -1596,8 +1621,9 @@ function _spawnExplosionVfx(lat,lon,radiusM) {
     setTimeout(()=>lbl.remove(),920);
 }
 function _aiFilterEl(ai){
-    // 守衛用 sprite，filter 要加在內層 .gsw 避免外層 div 產生灰色方框
+    // sprite 類型的 filter 要加在內層 wrapper，避免外層 div 產生灰色方框
     if(ai.type==='patroller') return ai.marker.getElement()?.querySelector('.gsw');
+    if(ai.type==='chaser')   return ai.marker.getElement()?.querySelector('.csw');
     return ai.marker.getElement();
 }
 function _stunAI(ai, dur) {
@@ -2004,7 +2030,14 @@ function spawnAI(forceType, silent=false) {
 
     let iconHtml, miniColor, toastMsg;
     if(type==='chaser'){
-        iconHtml='<div class="ai-dot">👾</div>';
+        iconHtml=`<div class="chaser-dot"><div class="csw">
+            <img class="cf active" src="/static/sprites/Crun1.png">
+            <img class="cf" src="/static/sprites/Crun2.png">
+            <img class="cf" src="/static/sprites/Crun3.png">
+            <img class="cf" src="/static/sprites/Crun4.png">
+            <img class="cf" src="/static/sprites/Crun5.png">
+            <img class="cf" src="/static/sprites/Crun6.png">
+        </div></div>`;
         miniColor='#c62828';
         const n=chaserCount+1;
         toastMsg=n===1?'👾 追跡者出現了！被抓到 -50分！':`👾 第 ${n} 隻追跡者！速度更快，小心！`;
@@ -2028,8 +2061,8 @@ function spawnAI(forceType, silent=false) {
         toastMsg=`🦹 第 ${tn} 隻小偷現身！（獲得寶藏觸發，場上最多${THIEF_MAX}隻）偷竊 -20分！`;
     }
 
-    const _iSize=type==='patroller'?[44,44]:[30,30];
-    const _iAnchor=type==='patroller'?[22,24]:[15,15];
+    const _iSize=(type==='patroller'||type==='chaser')?[44,44]:[30,30];
+    const _iAnchor=(type==='patroller'||type==='chaser')?[22,24]:[15,15];
     const marker=L.marker([iLat,iLon],{
         icon:L.divIcon({html:iconHtml,className:'',iconSize:_iSize,iconAnchor:_iAnchor}),
         zIndexOffset:950
@@ -2063,7 +2096,8 @@ function spawnAI(forceType, silent=false) {
     }
 
     aiList.push(ai);
-    if(type==='patroller') _updateGuardSizes();  // 新守衛立即套用當前縮放大小
+    if(type==='patroller') _updateGuardSizes();   // 新守衛立即套用當前縮放大小
+    if(type==='chaser')    _updateChaserSizes();  // 新追跡者立即套用當前縮放大小
     if(!silent) showToast(toastMsg,3200);
 }
 
@@ -2367,6 +2401,41 @@ function tickAI(dt) {
             }
         }
         if(gsw){const t=ai._gLeft?'scaleX(-1)':'scaleX(1)'; if(gsw.style.transform!==t) gsw.style.transform=t;}
+        ai._prevLat=ai.lat; ai._prevLon=ai.lon;
+    }
+    // ── 追跡者 Sprite 幀更新 ──────────────────────────────
+    for(const ai of aiList){
+        if(ai.type!=='chaser') continue;
+        const cfs=ai.marker.getElement()?.querySelectorAll('.cf');
+        const csw=ai.marker.getElement()?.querySelector('.csw');
+        if(!cfs?.length) continue;
+        if(!ai._cFrame) ai._cFrame=0;
+        if(!ai._cFrameAcc) ai._cFrameAcc=0;
+        const moved=(ai._prevLat!==undefined&&(ai.lat!==ai._prevLat||ai.lon!==ai._prevLon));
+        if(moved){
+            const cosLat=Math.cos(ai.lat*Math.PI/180);
+            const dLo=(ai.lon-(ai._prevLon||ai.lon))*111111*cosLat;
+            if(dLo<-1e-6) ai._cLeft=true; else if(dLo>1e-6) ai._cLeft=false;
+            const zoom=map.getZoom();
+            const pxPerDeg=256*Math.pow(2,zoom)/360;
+            const chaserSpd=AI_SPD*(ai.speedMult||1);
+            const onScreenPx=chaserSpd*pxPerDeg*Math.cos(ai.lat*Math.PI/180);
+            const cAnimFps=Math.max(6,Math.min(20,onScreenPx/_chaserSizeNow*18));
+            ai._cFrameAcc=(ai._cFrameAcc+cAnimFps*dt)%6;
+            const f=Math.floor(ai._cFrameAcc);
+            if(f!==ai._cFrame){
+                cfs[ai._cFrame].classList.remove('active');
+                cfs[f].classList.add('active');
+                ai._cFrame=f;
+            }
+        } else {
+            if(ai._cFrame!==0){
+                cfs[ai._cFrame].classList.remove('active');
+                cfs[0].classList.add('active');
+                ai._cFrame=0; ai._cFrameAcc=0;
+            }
+        }
+        if(csw){const t=ai._cLeft?'scaleX(-1)':'scaleX(1)'; if(csw.style.transform!==t) csw.style.transform=t;}
         ai._prevLat=ai.lat; ai._prevLon=ai.lon;
     }
     // ── 動態 chip 標籤（15fps 足夠）──────────────────────

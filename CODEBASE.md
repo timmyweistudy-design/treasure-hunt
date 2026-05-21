@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v5.2 — 守衛精靈縮放同步 + 函式速查加入 CODEBASE.md）**
+> **最後更新：2026-05-21（v5.3 — 追跡者 Sprite 動畫，比照守衛完整實作）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -25,6 +25,19 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 9. [技術架構筆記](#9-技術架構筆記)
+
+---
+
+### 2026-05-21（v5.3）追跡者 Sprite 動畫
+
+`Run (1).png`（768×128，6 幀）裁切為 `Crun1-6.png` 存入 `static/sprites/`。
+
+- `.chaser-dot` / `.csw` / `.cf.active`：比照守衛 DOM display 切換架構（6 幀）
+- `iconSize/iconAnchor`：追跡者升至 `[44,44]/[22,24]`（同玩家/守衛）
+- `_aiFilterEl(ai)`：追跡者回傳 `.csw`，避免暈眩/冰凍 filter 產生灰色方框
+- `_updateChaserSizes()`：縮放感知（44px 基準，16-80px，spawn 時立即套用）
+- 動畫 fps 依 `ai.speedMult` 加速（追跡者越快幀率越高，上限 20fps）
+- 動作方向翻轉（左右 `scaleX(-1)` 套在 `.csw`）
 
 ---
 
@@ -956,7 +969,7 @@ AI扣分     = 被追跡者觸碰 -50 分（8秒冷卻）
 | `tickGrenades(dt)` | 每幀推進手雷飛行動畫，管理充能計時器 |
 | `tickMines(dt)` | 每幀偵測 AI 踩雷並觸發爆炸，管理充能計時器 |
 | `_stunAI(ai, dur)` | 設定 AI 暈眩：清路徑、置灰濾鏡、spawn ⭐ 旋轉標籤 |
-| `_aiFilterEl(ai)` | 回傳該 AI 應套用 filter 的元素（守衛→.gsw；其他→外層 div） |
+| `_aiFilterEl(ai)` | 回傳該 AI 應套用 filter 的元素（守衛→.gsw；追跡者→.csw；其他→外層 div） |
 | `tickCombatStun(dt)` | 遞減所有 AI 暈眩計時，時間到恢復樣式並移除 ⭐ 標籤 |
 | `catchWantedThief()` | 嘗試逮捕通緝小偷，成功返還被盜分數 + 獎勵 |
 | `_spawnExplosionVfx(lat, lon, radiusM)` | 在地圖上建立爆炸環 DOM 動畫 |
@@ -988,6 +1001,7 @@ AI扣分     = 被追跡者觸碰 -50 分（8秒冷卻）
 |------|------|
 | `_updateSpriteSize()` | 依地圖縮放更新玩家精靈大小（44px 基準，16–80px 範圍） |
 | `_updateGuardSizes()` | 依地圖縮放更新所有守衛精靈大小（與玩家相同公式） |
+| `_updateChaserSizes()` | 依地圖縮放更新所有追跡者精靈大小（與玩家相同公式） |
 | `pushTrail(dt)` | 記錄玩家移動軌跡點（供尾跡線繪製） |
 | `showToast(msg, dur)` | 顯示遊戲右上角提示訊息 |
 | `showScoreFloat(lat, lon, gained)` | 收集寶藏時在寶藏位置浮出 +N 分動畫 |

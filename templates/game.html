@@ -316,20 +316,20 @@
 
         /* ── Leaflet icons — Player ── */
         .player-dot {
-            width: 44px; height: 44px; border-radius: 50%;
+            width: 32px; height: 32px; border-radius: 50%;
             background: radial-gradient(circle at 35% 35%, #42a5f5, #1565c0);
-            border: 3px solid rgba(255,255,255,.92);
+            border: 2.5px solid rgba(255,255,255,.92);
             display: flex; align-items: center; justify-content: center;
-            font-size: 22px; animation: ppulse 2s ease-in-out infinite;
-            box-shadow: 0 3px 10px rgba(21,101,192,.55);
+            font-size: 16px; animation: ppulse 2s ease-in-out infinite;
+            box-shadow: 0 2px 8px rgba(21,101,192,.55);
         }
         .player-dot.sprint {
             background: radial-gradient(circle at 35% 35%, #ffb74d, #e65100);
-            box-shadow: 0 3px 14px rgba(230,81,0,.65);
+            box-shadow: 0 2px 10px rgba(230,81,0,.65);
         }
         @keyframes ppulse {
-            0%,100%{ box-shadow:0 3px 10px rgba(21,101,192,.55), 0 0 0 6px rgba(26,115,232,.28) }
-            50%    { box-shadow:0 3px 10px rgba(21,101,192,.55), 0 0 0 16px rgba(26,115,232,.05) }
+            0%,100%{ box-shadow:0 2px 8px rgba(21,101,192,.55), 0 0 0 4px rgba(26,115,232,.28) }
+            50%    { box-shadow:0 2px 8px rgba(21,101,192,.55), 0 0 0 12px rgba(26,115,232,.05) }
         }
         .tbadge { width: 34px; height: 34px; border-radius: 50%; color: #fff;
                   font-weight: 900; font-size: 14px;
@@ -359,39 +359,39 @@
             0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.12)} }
 
         /* ── AI 追跡者 ── */
-        .ai-dot { width:42px;height:42px;border-radius:50%;
+        .ai-dot { width:30px;height:30px;border-radius:50%;
                   background:radial-gradient(circle at 35% 35%,#ef5350,#b71c1c);
-                  display:flex;align-items:center;justify-content:center;font-size:20px;
-                  border:3px solid rgba(255,255,255,.88);
+                  display:flex;align-items:center;justify-content:center;font-size:15px;
+                  border:2.5px solid rgba(255,255,255,.88);
                   animation:ai-pulse .6s ease-in-out infinite;
-                  box-shadow:0 3px 10px rgba(183,28,28,.5); }
+                  box-shadow:0 2px 8px rgba(183,28,28,.5); }
         @keyframes ai-pulse {
-            0%,100%{ box-shadow:0 3px 10px rgba(183,28,28,.5), 0 0 0 5px rgba(183,28,28,.4) }
-            50%    { box-shadow:0 3px 10px rgba(183,28,28,.5), 0 0 0 18px rgba(183,28,28,.04) } }
+            0%,100%{ box-shadow:0 2px 8px rgba(183,28,28,.5), 0 0 0 4px rgba(183,28,28,.4) }
+            50%    { box-shadow:0 2px 8px rgba(183,28,28,.5), 0 0 0 13px rgba(183,28,28,.04) } }
 
         /* ── 巡邏守衛 ── */
-        .patrol-dot { width:42px;height:42px;border-radius:50%;
+        .patrol-dot { width:30px;height:30px;border-radius:50%;
                       background:radial-gradient(circle at 35% 35%,#ce93d8,#6a1b9a);
-                      display:flex;align-items:center;justify-content:center;font-size:20px;
-                      border:3px solid rgba(255,255,255,.88);
+                      display:flex;align-items:center;justify-content:center;font-size:15px;
+                      border:2.5px solid rgba(255,255,255,.88);
                       animation:patrol-pulse .9s ease-in-out infinite;
-                      box-shadow:0 3px 10px rgba(106,27,154,.5); }
+                      box-shadow:0 2px 8px rgba(106,27,154,.5); }
         @keyframes patrol-pulse {
-            0%,100%{ box-shadow:0 3px 10px rgba(106,27,154,.5), 0 0 0 5px rgba(106,27,154,.4) }
-            50%    { box-shadow:0 3px 10px rgba(106,27,154,.5), 0 0 0 18px rgba(106,27,154,.06) } }
+            0%,100%{ box-shadow:0 2px 8px rgba(106,27,154,.5), 0 0 0 4px rgba(106,27,154,.4) }
+            50%    { box-shadow:0 2px 8px rgba(106,27,154,.5), 0 0 0 13px rgba(106,27,154,.06) } }
         .patrol-dot.alert { background:radial-gradient(circle at 35% 35%,#ef5350,#c62828) !important;
                             animation:ai-pulse .4s ease-in-out infinite !important; }
 
         /* ── 寶物小偷 ── */
-        .thief-dot { width:42px;height:42px;border-radius:50%;
+        .thief-dot { width:30px;height:30px;border-radius:50%;
                      background:radial-gradient(circle at 35% 35%,#757575,#212121);
-                     display:flex;align-items:center;justify-content:center;font-size:20px;
-                     border:3px solid rgba(255,255,255,.78);
+                     display:flex;align-items:center;justify-content:center;font-size:15px;
+                     border:2.5px solid rgba(255,255,255,.78);
                      animation:thief-sneak .8s ease-in-out infinite;
-                     box-shadow:0 3px 10px rgba(33,33,33,.6); }
+                     box-shadow:0 2px 8px rgba(33,33,33,.6); }
         @keyframes thief-sneak {
-            0%,100%{ box-shadow:0 3px 10px rgba(33,33,33,.6), 0 0 0 4px rgba(66,66,66,.45);opacity:1 }
-            50%    { box-shadow:0 3px 10px rgba(33,33,33,.6), 0 0 0 12px rgba(66,66,66,.08);opacity:.72 } }
+            0%,100%{ box-shadow:0 2px 8px rgba(33,33,33,.6), 0 0 0 3px rgba(66,66,66,.45);opacity:1 }
+            50%    { box-shadow:0 2px 8px rgba(33,33,33,.6), 0 0 0 9px rgba(66,66,66,.08);opacity:.72 } }
 
         /* ── 定身電擊光圈（玩家被 AI 定身時） ── */
         #stun-glow { display:none;position:absolute;inset:0;pointer-events:none;z-index:986;
@@ -1285,7 +1285,7 @@ _mainTile.on('tileerror', function(){
 
 const pIcon = L.divIcon({
     html: '<div class="player-dot" id="pdot">🏃</div>',
-    className: '', iconSize: [44,44], iconAnchor: [22,22]
+    className: '', iconSize: [32,32], iconAnchor: [16,16]
 });
 const pMarker = L.marker(START, {icon: pIcon, zIndexOffset: 1000}).addTo(map);
 // Leaflet 的 update() 內部呼叫 .round() 把像素強制整數，zoom 17 時每幀<1px 造成「一格一格」
@@ -1904,7 +1904,7 @@ function spawnAI(forceType, silent=false) {
     }
 
     const marker=L.marker([iLat,iLon],{
-        icon:L.divIcon({html:iconHtml,className:'',iconSize:[42,42],iconAnchor:[21,21]}),
+        icon:L.divIcon({html:iconHtml,className:'',iconSize:[30,30],iconAnchor:[15,15]}),
         zIndexOffset:950
     }).addTo(map);
     const miniMarker=L.circleMarker([iLat,iLon],{
@@ -3131,7 +3131,7 @@ async function collect(id, tLat, tLon) {
         // 收集寶藏觸發小偷生成（第1、2、3、4個寶藏各+1隻，場上上限4）
         if(thiefCount<THIEF_MAX) spawnAI('thief');
 
-        if(data.status==='win'){
+        if(data.status==='win' || collected.size>=TOTAL){
             clearInterval(ticker);
             playWin();
             showToast('🎉 全部收集完成！計算獎勵…',3000);

@@ -16,6 +16,14 @@ app.secret_key = "treasure-hunt-fixed-key-2026"
 scoreboard = Scoreboard()
 
 
+TREASURE_TIERS = [
+    {"target_m": 200},  {"target_m": 200},
+    {"target_m": 450},  {"target_m": 450},
+    {"target_m": 700},  {"target_m": 700},
+    {"target_m": 850},  {"target_m": 850},
+    {"target_m": 1000}, {"target_m": 1000},
+]
+
 _MIN_TREASURE_SPREAD = 150  # metres — minimum distance between any two placed treasures
 
 def _assign_tiers(raw_pois, origin_lat, origin_lon):

@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（小偷偷寶藏後最佳路徑自動重算）**
+> **最後更新：2026-05-21（AI 牆壁滑動修正 + 小偷偷寶後路徑重算）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,15 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v4.2）AI 牆壁滑動修正
+
+**新增 `aiMove(ai, dLa, dLo, spd)` helper**
+- 原本三種 AI（追跡者/巡邏守衛/小偷）撞牆後直接 revert 位置，遇到牆角會完全卡住
+- 現在改為軸分離滑牆：若對角線被擋，先試 lat 軸，再試 lon 軸，與玩家 `tryMove` 邏輯相同
+- 替換了 4 處舊的 `oLa/oLo revert` 寫法
 
 ---
 

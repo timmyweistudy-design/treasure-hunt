@@ -90,12 +90,16 @@
         #weather-storm {
             display:none;position:absolute;inset:0;z-index:490;pointer-events:none;
             background:rgba(15,25,60,.28);
-            animation:lightning-flash 8s ease-in-out infinite;
         }
-        @keyframes lightning-flash {
-            0%,92%,96%,100%{opacity:1}
-            94%{opacity:1.6;background:rgba(200,220,255,.18)}
+        @keyframes lightning-strike {
+            0%   { background:rgba(235,245,255,.90); }
+            12%  { background:rgba(180,210,255,.50); }
+            22%  { background:rgba(15,25,60,.28);    }
+            42%  { background:rgba(200,225,255,.28); }
+            56%  { background:rgba(15,25,60,.28);    }
+            100% { background:rgba(15,25,60,.28);    }
         }
+        #weather-storm.strike { animation:lightning-strike .85s ease-out forwards; }
         @keyframes rain-move {
             0%  {background-position:0 0}
             100%{background-position:-200px 400px}
@@ -1093,19 +1097,41 @@ function playBird() {
         }
     });
 }
+function _triggerLightning() {
+    const el=document.getElementById('weather-storm');
+    if(!el||el.style.display==='none') return;
+    el.classList.remove('strike');
+    void el.offsetWidth;  // 強制重流，讓 animation 重新觸發
+    el.classList.add('strike');
+    setTimeout(()=>el.classList.remove('strike'), 900);
+}
 function playThunder() {
+    _triggerLightning();           // 同步閃光
     snd(ctx=>{
-        const src=ctx.createBufferSource();
-        src.buffer=_noiseBuffer(ctx,2.5);
-        const filt=ctx.createBiquadFilter();
-        filt.type='lowpass';filt.frequency.value=160;
-        const gain=ctx.createGain();
-        gain.gain.setValueAtTime(0,ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(.55,ctx.currentTime+.08);
-        gain.gain.setValueAtTime(.55,ctx.currentTime+.25);
-        gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+2.2);
-        src.connect(filt);filt.connect(gain);gain.connect(ctx.destination);
-        src.start();src.stop(ctx.currentTime+2.3);
+        const t=ctx.currentTime;
+        // ── 閃電劈裂聲（短促 bandpass 噪音爆破）──
+        const crackSrc=ctx.createBufferSource();
+        crackSrc.buffer=_noiseBuffer(ctx,.22);
+        const crackFilt=ctx.createBiquadFilter();
+        crackFilt.type='bandpass'; crackFilt.frequency.value=1400; crackFilt.Q.value=0.7;
+        const crackGain=ctx.createGain();
+        crackGain.gain.setValueAtTime(0,t);
+        crackGain.gain.linearRampToValueAtTime(.70,t+.012);
+        crackGain.gain.exponentialRampToValueAtTime(.001,t+.20);
+        crackSrc.connect(crackFilt); crackFilt.connect(crackGain); crackGain.connect(ctx.destination);
+        crackSrc.start(t); crackSrc.stop(t+.22);
+        // ── 滾動雷鳴（低頻 lowpass 噪音長衰減）──
+        const rollSrc=ctx.createBufferSource();
+        rollSrc.buffer=_noiseBuffer(ctx,3.2);
+        const rollFilt=ctx.createBiquadFilter();
+        rollFilt.type='lowpass'; rollFilt.frequency.value=140;
+        const rollGain=ctx.createGain();
+        rollGain.gain.setValueAtTime(0,t+.05);
+        rollGain.gain.linearRampToValueAtTime(.52,t+.16);
+        rollGain.gain.setValueAtTime(.52,t+.55);
+        rollGain.gain.exponentialRampToValueAtTime(.001,t+3.0);
+        rollSrc.connect(rollFilt); rollFilt.connect(rollGain); rollGain.connect(ctx.destination);
+        rollSrc.start(t+.05); rollSrc.stop(t+3.2);
     });
 }
 function playWeatherChange(type) {

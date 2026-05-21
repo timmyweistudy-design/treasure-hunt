@@ -2431,6 +2431,9 @@ function nearestWalkable(lat,lon){
 }
 function runAstar(fLat,fLon,tLat,tLon){
     if(!navGrid) return [];
+    // snap start/goal to nearest walkable cell (inflated grid can block AI's current pos)
+    [fLat,fLon]=nearestWalkable(fLat,fLon);
+    [tLat,tLon]=nearestWalkable(tLat,tLon);
     const {rows,cols,blocked}=navGrid;
     const [r0,c0]=llToRC(fLat,fLon);
     const [rG,cG]=llToRC(tLat,tLon);
@@ -2441,7 +2444,7 @@ function runAstar(fLat,fLon,tLat,tLon){
     const sk=kf(r0,c0); g.set(sk,0); open.push([h(r0,c0),r0,c0]);
     const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
     let vis=0;
-    while(open.size&&vis<3000){
+    while(open.size&&vis<8000){
         const [,r,c]=open.pop();
         const k=kf(r,c); if(closed.has(k)) continue; closed.add(k); vis++;
         if(r===rG&&c===cG){

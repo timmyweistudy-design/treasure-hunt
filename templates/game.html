@@ -66,6 +66,7 @@
                       animation:float-up .9s ease-out forwards; }
         @keyframes stun-spin { 0%{transform:rotate(0deg) scale(1)} 50%{transform:rotate(180deg) scale(1.25)} 100%{transform:rotate(360deg) scale(1)} }
         .stun-orbit { position:absolute;z-index:10000;pointer-events:none;font-size:22px;
+                      line-height:1;
                       animation:stun-spin .75s linear infinite;
                       text-shadow:0 0 10px rgba(255,230,0,.95); }
         /* wanted thief: flash via per-img class, see .wanted-spr */
@@ -1479,10 +1480,10 @@ function _positionStunLabel(ai){
     const zoom=map.getZoom();
     const sz=Math.max(16,Math.min(80,Math.round(44*Math.pow(2,zoom-17))));
     const ancY=Math.round(sz*0.55);
-    const starSz=Math.max(10,Math.round(22*sz/44));
+    const starSz=Math.max(6,Math.round(11*sz/44));  // 縮一半
     ai.stunLabel.style.fontSize=starSz+'px';
     ai.stunLabel.style.left=(sp.x-starSz/2)+'px';
-    ai.stunLabel.style.top=(sp.y-ancY-starSz-2)+'px';
+    ai.stunLabel.style.top=(sp.y-ancY-starSz)+'px';  // 星星底部 = sprite 頭頂
 }
 function _updateAllStunLabels(){
     for(const ai of aiList) _positionStunLabel(ai);

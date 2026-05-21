@@ -1360,7 +1360,7 @@ const pIcon = L.divIcon({
         <img class="pf" src="/static/sprites/player/Arun5.png">
         <img class="pf" src="/static/sprites/player/Arun6.png">
     </div></div>`,
-    className: '', iconSize: [44,44], iconAnchor: [22,24]
+    className: '', iconSize: [44,44], iconAnchor: [22,40]
 });
 const pMarker = L.marker(START, {icon: pIcon, zIndexOffset: 1000}).addTo(map);
 // Leaflet 的 update() 內部呼叫 .round() 把像素強制整數，zoom 17 時每幀<1px 造成「一格一格」
@@ -1384,7 +1384,7 @@ function _updateSpriteSize(){
     // zoom 17 = 基準 52px；每級 ×2，範圍 20~96px
     const size=Math.max(16,Math.min(80,Math.round(44*Math.pow(2,zoom-17))));
     _sprSizeNow=size;
-    const anchorY=Math.round(size*0.55);
+    const anchorY=Math.round(size*0.90);  // 腳底：碰撞點對齊腳，不再停在肚臍
     const dot=document.getElementById('pdot');
     const psw=document.getElementById('psw');
     if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}

@@ -2022,7 +2022,6 @@ function _aiAstar(fLat, fLon, tLat, tLon) {
     return runRouteAstar(routeGrid,sfLat,sfLon,stLat,stLon);
 }
 // 統一 AI 路徑追蹤：定期重算 A*，路徑空時 fallback 直線移動
-const _AI_NODE_REACH = ROUTE_CELL*111111*1.5;  // 節點到達距離（約 1.5 格）
 function _aiFollowPath(ai, tLat, tLon, spd, dt, interval) {
     ai._pathCd=(ai._pathCd||0)-dt;
     if(ai._pathCd<=0&&!ai._astarPending){
@@ -2034,7 +2033,8 @@ function _aiFollowPath(ai, tLat, tLon, spd, dt, interval) {
             ai._astarPending=false;
         });
     }
-    while(ai.path&&ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<_AI_NODE_REACH) ai.path.shift();
+    const nodeReach=ROUTE_CELL*111111*1.5;
+    while(ai.path&&ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<nodeReach) ai.path.shift();
     if(ai.path&&ai.path.length>0){
         aiMove(ai,ai.path[0][0]-ai.lat,ai.path[0][1]-ai.lon,spd);
     } else {

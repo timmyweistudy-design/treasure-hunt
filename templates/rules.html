@@ -2,120 +2,130 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>遊玩規則 — 地圖尋寶大冒險</title>
+    <title>冒險規則 — 地圖尋寶大冒險</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #080c18; min-height: 100vh; color: #c8d8f0; }
+        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #080408; min-height: 100vh; color: #f5e0d0; }
 
+        /* ── Hero ── */
         .hero {
-            text-align: center;
-            background: linear-gradient(160deg, #0d1b2a 0%, #0a1428 50%, #0d2318 100%);
-            padding: 48px 20px 38px;
-            position: relative; overflow: hidden;
+            position: relative;
+            min-height: 32vh;
+            background: url('/static/bg.png') 55% 62% / cover no-repeat;
+            display: flex; align-items: flex-end; justify-content: center;
+            overflow: hidden;
         }
-        .hero::after {
+        .hero::before {
             content: '';
-            position: absolute; inset: 0; pointer-events: none;
-            background:
-                radial-gradient(ellipse 60% 80% at 20% 60%, rgba(26,115,232,.12) 0%, transparent 70%),
-                radial-gradient(ellipse 60% 80% at 80% 40%, rgba(52,168,83,.10) 0%, transparent 70%);
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom,
+                rgba(0,0,0,.15) 0%,
+                rgba(4,1,3,.28) 50%,
+                rgba(8,2,6,.85) 80%,
+                rgba(8,4,8,1)   100%);
         }
-        .hero-inner { position: relative; z-index: 1; }
+        .hero-inner {
+            position: relative; z-index: 1;
+            text-align: center; padding: 24px 24px 40px; width: 100%;
+        }
         .hero h1 {
             font-family: 'Orbitron', monospace; font-weight: 900;
-            font-size: clamp(1.5rem, 4vw, 2.2rem);
-            background: linear-gradient(90deg, #7ec8f8 0%, #34a853 50%, #ffd54f 100%);
+            font-size: clamp(1.4rem, 4vw, 2rem); letter-spacing: 2px;
+            background: linear-gradient(90deg, #FFD54F 0%, #F4A020 45%, #C2185B 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            letter-spacing: 2px; margin-bottom: 10px;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 2px 14px rgba(194,24,91,.45));
         }
-        .hero p { font-size: .95rem; color: #8aa8cc; }
+        .hero p { font-size: .95rem; color: #C8A0B0; text-shadow: 0 1px 8px rgba(0,0,0,.9); }
         .back-btn {
-            display: inline-block; margin-top: 18px;
+            display: inline-block; margin-top: 16px;
             padding: 8px 22px; font-size: 13px; font-family: inherit;
-            background: rgba(26,115,232,.2); color: #7ec8f8;
-            border: 1px solid rgba(26,115,232,.35); border-radius: 8px;
+            background: rgba(194,24,91,.15); color: #FF80AB;
+            border: 1px solid rgba(194,24,91,.3); border-radius: 8px;
             text-decoration: none; transition: background .2s;
         }
-        .back-btn:hover { background: rgba(26,115,232,.35); }
+        .back-btn:hover { background: rgba(194,24,91,.28); }
 
-        .container { max-width: 820px; margin: 32px auto 60px; padding: 0 20px; }
+        /* ── Layout ── */
+        .container { max-width: 820px; margin: 0 auto 60px; padding: 0 20px; }
 
+        /* ── Section cards ── */
         .section {
-            background: #0e1829;
-            border: 1px solid rgba(100,160,255,.13);
+            background: rgba(16,6,12,.92);
+            border: 1px solid rgba(194,24,91,.2);
             border-radius: 18px; padding: 26px 30px;
-            box-shadow: 0 8px 32px rgba(0,0,0,.5);
-            margin-bottom: 22px;
+            box-shadow: 0 6px 32px rgba(0,0,0,.6);
+            margin-bottom: 20px;
         }
         .section h2 {
-            font-size: 1rem; color: #7ec8f8; letter-spacing: .5px;
+            font-size: 1rem; color: #F4A020; letter-spacing: .5px;
             margin-bottom: 16px; padding-bottom: 10px;
-            border-bottom: 1px solid rgba(100,160,255,.12);
+            border-bottom: 1px solid rgba(194,24,91,.15);
         }
 
-        /* kbd table */
+        /* ── Keyboard table ── */
         .kbd-table { width: 100%; border-collapse: collapse; }
         .kbd-table tr { border-bottom: 1px solid rgba(255,255,255,.04); }
         .kbd-table tr:last-child { border-bottom: none; }
         .kbd-table td { padding: 9px 10px; font-size: 13.5px; vertical-align: middle; }
-        .kbd-table td:first-child { width: 160px; }
+        .kbd-table td:first-child { width: 170px; }
         kbd {
             display: inline-block;
-            background: #182030; border: 1px solid rgba(100,160,255,.25);
-            border-bottom: 3px solid rgba(100,160,255,.35);
+            background: rgba(194,24,91,.12); border: 1px solid rgba(194,24,91,.28);
+            border-bottom: 3px solid rgba(194,24,91,.4);
             border-radius: 6px; padding: 3px 10px;
-            font-family: 'Orbitron', monospace; font-size: 11px; color: #aee1ff;
+            font-family: 'Orbitron', monospace; font-size: 11px; color: #FF80AB;
             letter-spacing: .5px; white-space: nowrap;
         }
-        .desc { color: #8aa8cc; font-size: 13.5px; line-height: 1.65; }
-        .num { color: #ffd54f; font-weight: 700; }
+        .desc { color: #C0A8B0; font-size: 13.5px; line-height: 1.65; }
+        .num  { color: #F4A020; font-weight: 700; }
 
-        /* item grid */
-        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+        /* ── Item grid ── */
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
         .item-card {
-            background: rgba(255,255,255,.03); border: 1px solid rgba(100,160,255,.1);
+            background: rgba(194,24,91,.06); border: 1px solid rgba(194,24,91,.14);
             border-radius: 12px; padding: 14px 16px;
         }
         .item-card .icon { font-size: 1.6rem; margin-bottom: 6px; }
-        .item-card .name { font-size: .88rem; font-weight: 700; color: #c8d8f0; margin-bottom: 4px; }
-        .item-card .item-desc { font-size: 12.5px; color: #6888a8; line-height: 1.55; }
+        .item-card .name { font-size: .88rem; font-weight: 700; color: #F4A020; margin-bottom: 4px; }
+        .item-card .item-desc { font-size: 12.5px; color: #A08090; line-height: 1.55; }
         .item-card .item-desc .num { font-size: 12.5px; }
 
-        /* enemy / score rows */
+        /* ── Row list ── */
         .row-list { list-style: none; padding: 0; }
         .row-list li {
             display: flex; align-items: flex-start; gap: 12px;
             padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.04);
-            font-size: 13.5px; line-height: 1.55; color: #8aa8cc;
+            font-size: 13.5px; line-height: 1.55; color: #C0A8B0;
         }
         .row-list li:last-child { border-bottom: none; }
         .row-list .tag {
             flex-shrink: 0; min-width: 80px; text-align: center;
-            background: rgba(26,115,232,.18); color: #7ec8f8;
-            border: 1px solid rgba(26,115,232,.25); border-radius: 8px;
+            background: rgba(244,160,32,.14); color: #F4A020;
+            border: 1px solid rgba(244,160,32,.28); border-radius: 8px;
             padding: 3px 10px; font-size: 12px; font-weight: 700;
         }
-        .row-list .tag.danger { background: rgba(200,40,40,.18); color: #ff8080; border-color: rgba(200,40,40,.3); }
-        .row-list .tag.gold   { background: rgba(255,213,79,.12); color: #ffd54f; border-color: rgba(255,213,79,.25); }
-        .row-list .tag.green  { background: rgba(52,168,83,.15); color: #6fcf97; border-color: rgba(52,168,83,.25); }
+        .row-list .tag.danger { background: rgba(194,24,91,.16); color: #FF80AB; border-color: rgba(194,24,91,.3); }
+        .row-list .tag.gold   { background: rgba(244,160,32,.14); color: #FFD54F; border-color: rgba(244,160,32,.28); }
+        .row-list .tag.green  { background: rgba(100,180,100,.12); color: #A0D8A0; border-color: rgba(100,180,100,.25); }
 
-        /* tip box */
+        /* ── Tip box ── */
         .tip {
-            background: rgba(26,115,232,.08); border: 1px solid rgba(26,115,232,.2);
+            background: rgba(194,24,91,.07); border: 1px solid rgba(194,24,91,.18);
             border-radius: 10px; padding: 12px 16px; margin-top: 14px;
-            font-size: 13px; color: #8aa8cc; line-height: 1.65;
+            font-size: 13px; color: #A08090; line-height: 1.65;
         }
-        .tip b { color: #7ec8f8; }
+        .tip b { color: #F4A020; }
     </style>
 </head>
 <body>
 
 <div class="hero">
     <div class="hero-inner">
-        <h1>📖 遊玩規則</h1>
+        <h1>📜 冒險規則</h1>
         <p>地圖尋寶大冒險 — 完整快捷鍵與機制說明</p>
         <a href="/" class="back-btn">← 返回首頁</a>
     </div>
@@ -123,7 +133,6 @@
 
 <div class="container">
 
-    <!-- 基本操作 -->
     <div class="section">
         <h2>🕹️ 基本操作</h2>
         <table class="kbd-table">
@@ -150,7 +159,6 @@
         </table>
     </div>
 
-    <!-- 道具欄 -->
     <div class="section">
         <h2>🎒 道具欄系統</h2>
         <table class="kbd-table">
@@ -172,7 +180,6 @@
         </div>
     </div>
 
-    <!-- 戰鬥技能 -->
     <div class="section">
         <h2>⚔️ 戰鬥技能</h2>
         <table class="kbd-table">
@@ -200,7 +207,6 @@
         </table>
     </div>
 
-    <!-- 道具說明 -->
     <div class="section">
         <h2>✨ 地圖道具</h2>
         <div class="item-grid">
@@ -232,7 +238,6 @@
         </div>
     </div>
 
-    <!-- 敵人 -->
     <div class="section">
         <h2>👾 敵人類型</h2>
         <ul class="row-list">
@@ -254,7 +259,6 @@
         </div>
     </div>
 
-    <!-- 計分 -->
     <div class="section">
         <h2>🏆 計分規則</h2>
         <ul class="row-list">
@@ -281,7 +285,6 @@
         </ul>
     </div>
 
-    <!-- 特殊機制 -->
     <div class="section">
         <h2>🌀 特殊機制</h2>
         <ul class="row-list">
@@ -308,7 +311,6 @@
         </ul>
     </div>
 
-    <!-- HUD說明 -->
     <div class="section">
         <h2>🖥️ 介面說明</h2>
         <ul class="row-list">
@@ -322,7 +324,7 @@
             </li>
             <li>
                 <span class="tag">下方中央</span>
-                <span><b>道具欄（5 格）</b>：金色外框為當前選取槽，藍色外框表示有道具存入。</span>
+                <span><b>道具欄（5 格）</b>：金色外框為當前選取槽，有道具時顯示圖示。</span>
             </li>
             <li>
                 <span class="tag">下方左側</span>
@@ -330,7 +332,7 @@
             </li>
             <li>
                 <span class="tag">下方右側</span>
-                <span><b>天氣 / 連擊 / 通緝</b>：即時顯示當前天氣、連擊倍數倒數（22s 窗口）、通緝倒數（12s 窗口）。</span>
+                <span><b>天氣 / 連擊 / 通緝</b>：即時顯示當前天氣、連擊倍數倒數、通緝倒數。</span>
             </li>
             <li>
                 <span class="tag">效果列</span>

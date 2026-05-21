@@ -16,14 +16,14 @@
                display: flex; flex-direction: column; overflow: hidden; }
 
         /* ── Header ── */
-        .hd { background: linear-gradient(90deg,#0d1117,#161b2e);
+        .hd { background: linear-gradient(90deg,#0a0305,#120507);
               color: #fff; padding: 7px 16px; flex-shrink: 0;
               display: flex; flex-direction: column; gap: 5px;
-              border-bottom: 1px solid rgba(100,160,255,.12); }
+              border-bottom: 1px solid rgba(194,24,91,.15); }
         .hd-row1 { display: flex; justify-content: space-between; align-items: center; }
         .hd-title {
             font-size: 13px; font-weight: bold; letter-spacing: .5px;
-            background: linear-gradient(90deg,#7ec8f8,#34a853);
+            background: linear-gradient(90deg,#F4A020,#C2185B);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
         .hd-right  { display: flex; align-items: center; gap: 14px; }
@@ -32,7 +32,7 @@
         .stat .v { font-family: 'Orbitron', monospace; font-size: 22px; font-weight: 700; line-height: 1; letter-spacing: 1px; }
         .stat .l { font-size: 9px; opacity: .55; margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
         #v-score { color: #ffd54f; }
-        #timer   { color: #7ec8f8; }
+        #timer   { color: #F4A020; }
         #timer.danger { color: #ff5252; animation: blink .5s infinite; }
         @keyframes blink { 50% { opacity: .25; } }
         /* score pop */
@@ -158,12 +158,12 @@
 
         /* ── Sprint bar ── */
         .sprint-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-        .sprint-lbl  { min-width: 90px; font-size: 10.5px; color: #90caf9; }
+        .sprint-lbl  { min-width: 90px; font-size: 10.5px; color: #C2185B; }
         .sprint-track { flex: 1; height: 8px; background: rgba(0,0,0,.45);
                         border-radius: 6px; overflow: hidden;
                         border: 1px solid rgba(255,255,255,.06); }
         .sprint-fill  { height: 100%; width: 100%; border-radius: 6px;
-                        background: linear-gradient(90deg,#42a5f5,#7ec8f8);
+                        background: linear-gradient(90deg,#F4A020,#C2185B);
                         transition: width .1s linear, background .3s; }
         .sprint-fill.cooling  { background: linear-gradient(90deg,#e57373,#ef9a9a); }
         .sprint-fill.recharge { background: linear-gradient(90deg,#ffd54f,#fff176); }
@@ -179,10 +179,10 @@
         .sb-body { flex: 1; overflow-y: auto; padding: 10px; }
         .sb-foot { padding: 10px; border-top: 1px solid #ddd; }
 
-        .kbd-box { background: #0d1117; color: #c9d4e8; border-radius: 10px;
+        .kbd-box { background: rgba(10,3,5,.9); color: #c9b8bc; border-radius: 10px;
                    padding: 10px 12px; margin-bottom: 10px; font-size: 11.5px; line-height: 1.9;
-                   border: 1px solid rgba(100,160,255,.12); }
-        .kbd-box b { color: #7ec8f8; }
+                   border: 1px solid rgba(194,24,91,.15); }
+        .kbd-box b { color: #F4A020; }
         .key { display: inline-block; background: #1e293b; color: #94a3b8; padding: 1px 6px;
                border-radius: 4px; font-family: monospace; font-size: 11px;
                border: 1px solid #334155; border-bottom: 2px solid #475569; }
@@ -261,12 +261,12 @@
         .ld-retry:hover { background: rgba(194,24,91,.3); }
 
         /* ── 鍵盤說明折疊 ── */
-        .kbd-toggle { width:100%; background:#0d1117; color:#90caf9;
-                      border:1px solid rgba(100,160,255,.15); border-radius:8px;
+        .kbd-toggle { width:100%; background:rgba(10,3,5,.9); color:#C2185B;
+                      border:1px solid rgba(194,24,91,.2); border-radius:8px;
                       padding:7px 12px; font-size:12px; font-weight:bold; cursor:pointer;
                       text-align:left; margin-bottom:6px; font-family:inherit;
                       display:flex; justify-content:space-between; align-items:center; }
-        .kbd-toggle:hover { background:#111827; color:#7ec8f8; }
+        .kbd-toggle:hover { background:rgba(194,24,91,.1); color:#F4A020; }
         .kbd-body { display:none; }
         .kbd-body.open { display:block; }
         .ld-count { font-family: 'Orbitron', monospace; font-size: 88px; font-weight: 900;
@@ -275,7 +275,7 @@
                     line-height: 1; animation: count-pop .3s cubic-bezier(.17,.67,.51,1.35);
                     filter: drop-shadow(0 0 20px rgba(194,24,91,.6)); }
         @keyframes count-pop { 0%{transform:scale(1.5);opacity:.3} 100%{transform:scale(1);opacity:1} }
-        .ld-go { font-family: 'Orbitron', monospace; font-size: 46px; font-weight: 900;
+        .ld-go { font-family: 'Orbitron', monospace; font-size: 32px; font-weight: 900;
                  background: linear-gradient(135deg,#F4A020,#C2185B);
                  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
                  filter: drop-shadow(0 0 14px rgba(194,24,91,.5)); }
@@ -323,7 +323,7 @@
                  background: rgba(13,17,23,.9); color: #fff; padding: 9px 22px;
                  border-radius: 24px; font-size: 13px; z-index: 9999;
                  opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap;
-                 border: 1px solid rgba(100,160,255,.2); backdrop-filter: blur(8px);
+                 border: 1px solid rgba(194,24,91,.2); backdrop-filter: blur(8px);
                  box-shadow: 0 4px 20px rgba(0,0,0,.45); }
         .toast.show { opacity: 1; }
 
@@ -464,9 +464,9 @@
         /* ── Bottom HUD ── */
         #bottom-hud {
             position:absolute;bottom:0;left:0;right:268px;
-            height:54px;background:rgba(10,14,26,.93);
+            height:54px;background:rgba(10,3,5,.93);
             backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-            z-index:996;border-top:1px solid rgba(100,160,255,.2);
+            z-index:996;border-top:1px solid rgba(194,24,91,.2);
             display:flex;align-items:center;padding:0 10px;gap:6px;color:#fff;
         }
         .bhud-sep { width:1px;height:30px;background:rgba(255,255,255,.12);flex-shrink:0;margin:0 2px; }

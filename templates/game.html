@@ -383,9 +383,9 @@
 
         /* ── 巡邏守衛 ── */
         /* ── 守衛 Sprite ── */
-        .guard-dot { width:40px; height:40px; }
-        .gsw { position:relative; width:40px; height:40px; }
-        .gf  { position:absolute; top:0; left:0; width:40px; height:40px;
+        .guard-dot { width:44px; height:44px; }
+        .gsw { position:relative; width:44px; height:44px; }
+        .gf  { position:absolute; top:0; left:0; width:44px; height:44px;
                image-rendering:pixelated; pointer-events:none; display:none; }
         .gf.active { display:block; }
         .guard-dot.alert .gsw { filter:drop-shadow(0 0 8px #ef5350) brightness(1.2);
@@ -1999,8 +1999,8 @@ function spawnAI(forceType, silent=false) {
         toastMsg=`🦹 第 ${tn} 隻小偷現身！（獲得寶藏觸發，場上最多${THIEF_MAX}隻）偷竊 -20分！`;
     }
 
-    const _iSize=type==='patroller'?[40,40]:[30,30];
-    const _iAnchor=type==='patroller'?[20,22]:[15,15];
+    const _iSize=type==='patroller'?[44,44]:[30,30];
+    const _iAnchor=type==='patroller'?[22,24]:[15,15];
     const marker=L.marker([iLat,iLon],{
         icon:L.divIcon({html:iconHtml,className:'',iconSize:_iSize,iconAnchor:_iAnchor}),
         zIndexOffset:950

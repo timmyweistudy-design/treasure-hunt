@@ -745,17 +745,10 @@ let _ambientSrc  = null;     // 環境音 BufferSource
 let _ambientGain = null;     // 環境音音量節點
 let birdTimer    = 4 + Math.random()*4;    // 晴天小鳥叫下次觸發（秒）
 let thunderTimer = 2 + Math.random()*2;    // 雷雨打雷下次觸發（秒）
-// ── 主角 Sprite 動畫 ──────────────────────────────────────
-let _sprFrame=0, _sprMoving=false, _sprLeft=false;
+// ── 主角 Sprite 動畫（由 game loop 驅動，速度連動）───────
+let _sprFrame=0, _sprFrameAcc=0, _sprMoving=false, _sprLeft=false, _sprSpeed=0;
 const _sprSrcs=[1,2,3,4,5,6].map(n=>`/static/sprites/Arun${n}.png`);
 _sprSrcs.forEach(s=>{const i=new Image();i.src=s;});   // 預載所有幀
-setInterval(()=>{
-    const img=document.getElementById('player-sprite');
-    if(!img) return;
-    if(_sprMoving) _sprFrame=(_sprFrame+1)%6; else _sprFrame=0;
-    img.src=_sprSrcs[_sprFrame];
-    img.style.transform=_sprLeft?'scaleX(-1)':'scaleX(1)';
-},100);  // 10fps
 
 let _thunderBuffer    = null;  // 解碼後的 AudioBuffer（真實音檔）
 let _thunderArrayBuf  = null;  // 預抓的 ArrayBuffer（等 AudioContext 後再解碼）
@@ -1362,6 +1355,20 @@ pMarker.on('add',()=>{
     const el=pMarker.getElement();
     if(el) el.style.willChange='transform';
 });
+// ── 角色大小跟隨地圖縮放等比例變動 ──────────────────────
+function _updateSpriteSize(){
+    const zoom=map.getZoom();
+    // zoom 17 = 基準 52px；每級 ×2，範圍 20~96px
+    const size=Math.max(20,Math.min(96,Math.round(52*Math.pow(2,zoom-17))));
+    const anchorY=Math.round(size*0.92);
+    const dot=document.getElementById('pdot');
+    const img=document.getElementById('player-sprite');
+    if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}
+    if(img){img.style.width=size+'px';img.style.height=size+'px';}
+    const el=pMarker.getElement();
+    if(el){el.style.marginLeft=(-size/2)+'px';el.style.marginTop=(-anchorY)+'px';}
+}
+map.on('zoomend',_updateSpriteSize);
 const pCircle = L.circle(START, {
     radius: CLCT_R, color: '#1a73e8', weight: 1.5, fillColor: '#1a73e8', fillOpacity: .06
 }).addTo(map);
@@ -2955,6 +2962,7 @@ function loop(ts) {
                 }
             }
             tickPullingItems(dt);
+            _sprMoving=false; _sprSpeed=0;  // 預設：靜止
             if(stunTimer===0){  // 被定身時無法移動
                 let dx=0,dy=0;
                 if(keys['ArrowUp']   ||keys['w']) dy+=1;
@@ -2967,6 +2975,7 @@ function loop(ts) {
                     lastDx=dx; lastDy=dy;  // 記錄移動方向供手雷投擲使用
                     const n=Math.hypot(dx,dy);
                     const spd=(isSprinting?SPRINT_SPD:WALK_SPD)*(speedBoostTimer>0?2:1)*(invincTimer>0?1.5:1)*(weatherType==='storm'?0.85:1);
+                    _sprSpeed=spd;  // 供 sprite 動畫速度使用
                     // 子步驟：低幀率時分多次小步移動，防止單幀位移過大插入建築
                     const steps=Math.max(1,Math.round(dt/(1/60)));
                     const dtS=dt/steps;
@@ -2974,6 +2983,20 @@ function loop(ts) {
                     pushTrail(dt);
                 }
             }
+            // ── Sprite 幀更新（速度連動，只在幀號改變時更新 DOM）──
+            {const sprImg=document.getElementById('player-sprite');
+            if(sprImg){
+                if(_sprMoving){
+                    const animFps=8*(_sprSpeed/WALK_SPD);  // 走路8fps，加速等比加快
+                    _sprFrameAcc=(_sprFrameAcc+animFps*dt)%6;
+                    const f=Math.floor(_sprFrameAcc);
+                    if(f!==_sprFrame){_sprFrame=f;sprImg.src=_sprSrcs[f];}
+                } else {
+                    if(_sprFrame!==0){_sprFrame=0;_sprFrameAcc=0;sprImg.src=_sprSrcs[0];}
+                }
+                const t=_sprLeft?'scaleX(-1)':'scaleX(1)';
+                if(sprImg.style.transform!==t) sprImg.style.transform=t;
+            }}
             // 時間壓力：倒數 60s 以內顯示紅邊特效
             if(uiFrame){
                 const vig=document.getElementById('time-vignette');

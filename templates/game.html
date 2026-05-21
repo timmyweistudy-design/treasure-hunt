@@ -735,7 +735,7 @@ let weatherCD    = 60;       // 下次天氣觸發倒數
 let _ambientSrc  = null;     // 環境音 BufferSource
 let _ambientGain = null;     // 環境音音量節點
 let birdTimer    = 4 + Math.random()*4;    // 晴天小鳥叫下次觸發（秒）
-let thunderTimer = 14 + Math.random()*8;   // 雷雨打雷下次觸發（秒）
+let thunderTimer = 2 + Math.random()*2;    // 雷雨打雷下次觸發（秒）
 
 // 道具
 const items   = {};
@@ -1200,7 +1200,7 @@ function setWeather(type) {
         showToast('⛈️ 雷雨來了！AI 加速、玩家變慢 30 秒！',3000);
         playWeatherChange('storm');
         _startAmbient(600, 6000, 0.42);  // 雨聲（hp600→lp6000，高頻沙沙）
-        thunderTimer=12+Math.random()*10;
+        thunderTimer=1.5+Math.random()*1.5;  // 雷雨一開始 1.5~3s 就打第一聲
     }
 }
 function tickWeather(dt) {
@@ -1212,7 +1212,7 @@ function tickWeather(dt) {
         // 打雷計時
         if(weatherType==='storm'){
             thunderTimer=Math.max(0,thunderTimer-dt);
-            if(thunderTimer<=0){playThunder();thunderTimer=12+Math.random()*10;}
+            if(thunderTimer<=0){playThunder();thunderTimer=4+Math.random()*2;}  // 4~6s 一次
         }
         if(weatherTimer<=0) setWeather('sunny');
         return;

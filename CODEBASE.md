@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v4.8 — 打雷聲修正：duck 雨聲 + 提升音量）**
+> **最後更新：2026-05-21（v4.9 — 真實打雷音檔 CC0 MP3）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,17 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v4.9）真實打雷音檔
+
+**`static/thunder.mp3` — CC0 公共領域（BigSoundBank #2718，23秒單次雷擊）**
+- 頁面載入時立即 `fetch('/static/thunder.mp3')` 預下載，儲存為 `_thunderArrayBuf`
+- 首次 `playThunder()` 呼叫時 `decodeAudioData()` 解碼，存入 `_thunderBuffer`（後續直接重用）
+- 音檔就緒前：合成 fallback（原噪音版本）自動接替，不影響遊戲進行
+- 雨聲 duck 0.42→0.04 保留，真實音檔音量 gain 1.1
+- 授權：CC0 1.0 Universal（公共領域，無需署名）
 
 ---
 

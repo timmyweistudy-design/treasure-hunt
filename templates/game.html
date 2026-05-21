@@ -1442,6 +1442,25 @@ function _updateChaserSizes(){
     }
 }
 map.on('zoomend',_updateChaserSizes);
+
+// ── 暈眩星星：位置 + 大小跟隨 sprite 縮放 ──────────────────
+function _positionStunLabel(ai){
+    if(!ai.stunLabel) return;
+    const sp=map.latLngToContainerPoint([ai.lat,ai.lon]);
+    const zoom=map.getZoom();
+    const isSpr=(ai.type==='patroller'||ai.type==='chaser');
+    const sz=isSpr?Math.max(16,Math.min(80,Math.round(44*Math.pow(2,zoom-17)))):30;
+    const ancY=isSpr?Math.round(sz*0.55):15;
+    const starSz=Math.max(10,Math.round(22*sz/44));
+    ai.stunLabel.style.fontSize=starSz+'px';
+    ai.stunLabel.style.left=(sp.x-starSz/2)+'px';
+    ai.stunLabel.style.top=(sp.y-ancY-starSz-2)+'px';
+}
+function _updateAllStunLabels(){
+    for(const ai of aiList) _positionStunLabel(ai);
+}
+map.on('zoomend',_updateAllStunLabels);
+
 const pCircle = L.circle(START, {
     radius: CLCT_R, color: '#1a73e8', weight: 1.5, fillColor: '#1a73e8', fillOpacity: .06
 }).addTo(map);
@@ -1664,12 +1683,11 @@ function _stunAI(ai, dur) {
     }
     // persistent ⭐ orbit — removed when stun ends
     if(ai.stunLabel) ai.stunLabel.remove();
-    const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
     const lbl=document.createElement('div');
     lbl.className='stun-orbit'; lbl.textContent='⭐';
-    lbl.style.cssText=`left:${pt.x-11}px;top:${pt.y-38}px`;
     document.getElementById('map').appendChild(lbl);
     ai.stunLabel=lbl;
+    _positionStunLabel(ai);
 }
 // ── 手雷瞄準系統 ──────────────────────────────────────────
 function _grenadeCapTarget(lat, lon) {
@@ -3295,7 +3313,7 @@ function loop(ts) {
             camLat+=(pLat-camLat)*k; camLon+=(pLon-camLon)*k;
             map.setView([camLat,camLon],map.getZoom(),{animate:false,noMoveStart:true});}
             if(uiFrame){ updateMiniMap(); updateDistances(); if(grenadeAiming) _updateGrenadeAimVfx(); }
-            if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); if(ai.stunRing) ai.stunRing.setLatLng([ai.lat,ai.lon]); if(ai.stunLabel){const sp=map.latLngToContainerPoint([ai.lat,ai.lon]);ai.stunLabel.style.left=(sp.x-11)+'px';ai.stunLabel.style.top=(sp.y-38)+'px';} } }
+            if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); if(ai.stunRing) ai.stunRing.setLatLng([ai.lat,ai.lon]); if(ai.stunLabel) _positionStunLabel(ai); } }
         } catch(e) {
             console.error('[loop]', e);  // 記錄錯誤但不中斷循環
         }

@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（A* 建築膨脹修正 + AI 牆壁滑動 + 小偷偷寶後路徑重算）**
+> **最後更新：2026-05-21（AI 卡牆自動跳節點 + A* 膨脹 + 牆壁滑動 + 小偷偷寶路徑重算）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,15 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v4.4）AI 卡牆自動跳節點
+
+**`aiMove()` 新增回傳值 + `stuckTimer` 累計**
+- 每次 `aiMove` 位置沒變就累加 `ai.stuckTimer`（單位：速度累積量）
+- 卡住超過 0.4 後，跳過當前路徑節點（`path.shift()`）並立即重算路徑（`pathTimer=0`）
+- 套用於追跡者、巡邏守衛、小偷三種 AI
 
 ---
 

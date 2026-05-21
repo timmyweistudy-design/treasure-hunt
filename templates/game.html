@@ -2016,7 +2016,7 @@ function relocateTreasure(tId) {
 // ── AI 移動（含牆壁滑動，防止卡牆）────────────────────────
 function aiMove(ai, dLa, dLo, spd) {
     const len=Math.sqrt(dLa*dLa+dLo*dLo);
-    if(len<1e-6) return;
+    if(len<1e-6) return false;
     const mLa=dLa/len*spd, mLo=dLo/len*spd;
     const oLa=ai.lat, oLo=ai.lon;
     ai.lat+=mLa; ai.lon+=mLo;
@@ -2025,6 +2025,10 @@ function aiMove(ai, dLa, dLo, spd) {
         if(!isInBuilding(oLa+mLa,oLo)){ai.lat=oLa+mLa;}
         else if(!isInBuilding(oLa,oLo+mLo)){ai.lon=oLo+mLo;}
     }
+    const moved=(ai.lat!==oLa||ai.lon!==oLo);
+    if(moved){ai.stuckTimer=0;}
+    else{ai.stuckTimer=(ai.stuckTimer||0)+spd;}
+    return moved;
 }
 
 // ── 追跡者行為 ───────────────────────────────────────────
@@ -2043,6 +2047,7 @@ function tickChaser(ai,dt,s) {
         const tLat=ai.path.length>0?ai.path[0][0]:chLat, tLon=ai.path.length>0?ai.path[0][1]:chLon;
         const dLa=tLat-ai.lat, dLo=tLon-ai.lon;
         aiMove(ai,dLa,dLo,cs);
+        if((ai.stuckTimer||0)>0.4){ai.stuckTimer=0;ai.path.shift();ai.pathTimer=0;}
     }
     ai.attackCD=Math.max(0,ai.attackCD-dt);
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
@@ -2078,6 +2083,8 @@ function tickPatroller(ai,dt,s) {
             if(len>1e-6){
                 ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
                 aiMove(ai,dLa,dLo,s);
+                // 卡住 0.4s → 跳過當前節點並強制重算路徑
+                if((ai.stuckTimer||0)>0.4){ai.stuckTimer=0;ai.path.shift();ai.pathTimer=0;}
             }
             if(distM(ai.lat,ai.lon,wp.lat,wp.lon)<30){
                 ai.waypointIdx=(ai.waypointIdx+1)%OPTIMAL.length;
@@ -2171,6 +2178,7 @@ function tickThief(ai,dt,s) {
     const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
     const ts=ai.wanted?s*0.5:s*timePressure;  // 通緝中速度降半，讓玩家有機會追上
     aiMove(ai,dLa,dLo,ts);
+    if((ai.stuckTimer||0)>0.4){ai.stuckTimer=0;ai.path.shift();ai.pathTimer=0;}
     if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);

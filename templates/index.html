@@ -8,137 +8,135 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #0e0801; color: #f0e6d3; }
+        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #080408; color: #f5e0d0; }
 
-        /* ── Hero：背景圖區塊，不用 fixed，直接覆蓋整個 hero ── */
+        /* ── Hero：背景圖完整呈現，寶箱對焦 ── */
         .hero {
             position: relative;
-            min-height: 56vh;
-            background: url('/static/bg.jpg') 62% 68% / cover no-repeat;
+            min-height: 58vh;
+            background: url('/static/bg.png') 55% 62% / cover no-repeat;
             display: flex; align-items: flex-end; justify-content: center;
-            padding-bottom: 0;
             overflow: hidden;
         }
-        /* 非常淡的漸層遮罩：頂部幾乎透明，底部漸深方便文字銜接 */
+        /* 頂部幾乎透明，底部漸深銜接內容卡 */
         .hero::before {
             content: '';
             position: absolute; inset: 0;
             background: linear-gradient(
                 to bottom,
-                rgba(0,0,0,.18) 0%,
-                rgba(0,0,0,.28) 55%,
-                rgba(10,4,0,.75) 85%,
-                rgba(14,8,1,1)  100%
+                rgba(0,0,0,.12) 0%,
+                rgba(4,1,3,.22) 45%,
+                rgba(8,2,6,.80) 80%,
+                rgba(8,4,8,1)   100%
             );
         }
         .hero-inner {
             position: relative; z-index: 1;
             text-align: center;
-            padding: 36px 24px 44px;
+            padding: 32px 24px 48px;
             width: 100%;
         }
+        /* 標題：金色 → 深橘 → 玫紅，呼應寶箱與九重葛 */
         .hero h1 {
             font-family: 'Orbitron', monospace; font-weight: 900;
-            font-size: clamp(1.7rem, 5vw, 2.8rem);
-            background: linear-gradient(90deg, #ffd54f 0%, #f09c28 55%, #e06820 100%);
+            font-size: clamp(1.8rem, 5.5vw, 3rem);
+            background: linear-gradient(90deg, #FFD54F 0%, #F4A020 45%, #C2185B 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
             letter-spacing: 2px; margin-bottom: 10px;
-            filter: drop-shadow(0 2px 14px rgba(255,180,30,.5));
+            filter: drop-shadow(0 2px 18px rgba(194,24,91,.5));
         }
-        .hero p { font-size: 1rem; color: #d4b07a; text-shadow: 0 1px 8px rgba(0,0,0,.9); }
+        .hero p { font-size: 1rem; color: #D4A0B0; text-shadow: 0 1px 10px rgba(0,0,0,.9); }
 
-        /* ── Content section ── */
-        .content { background: #0e0801; padding: 0 0 56px; }
+        /* ── 內容區：深色底 ── */
+        .content { background: #080408; padding: 0 0 60px; }
         .container { max-width: 720px; margin: 0 auto; padding: 0 20px; }
 
-        /* ── Cards ── */
+        /* ── 卡片：暗色玻璃 + 玫紅邊框 ── */
         .card {
-            background: rgba(20,10,2,.92);
-            border: 1px solid rgba(200,134,10,.28);
+            background: rgba(16,6,12,.92);
+            border: 1px solid rgba(194,24,91,.22);
             border-radius: 20px; padding: 28px 32px;
-            box-shadow: 0 6px 32px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,210,80,.06);
+            box-shadow: 0 6px 36px rgba(0,0,0,.65), inset 0 1px 0 rgba(244,160,32,.06);
             margin-bottom: 22px;
         }
-        .card:first-child { margin-top: -2px; }
-        .card h2 { margin-bottom: 18px; font-size: 1.05rem; color: #ffd54f; letter-spacing: .5px; }
+        .card h2 { margin-bottom: 20px; font-size: 1.05rem; color: #F4A020; letter-spacing: .5px; }
 
-        /* ── Form ── */
+        /* ── 表單 ── */
         .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
         input[type="text"] {
             flex: 1; min-width: 130px;
             padding: 13px 16px; font-size: 14px; font-family: inherit;
-            background: rgba(6,3,0,.8); border: 1.5px solid rgba(200,134,10,.22);
-            border-radius: 11px; outline: none; color: #f0dfb8;
+            background: rgba(8,2,6,.75); border: 1.5px solid rgba(194,24,91,.2);
+            border-radius: 11px; outline: none; color: #f5e0d0;
             transition: border-color .2s, box-shadow .2s;
         }
-        input[type="text"]::placeholder { color: #5a3a14; }
+        input[type="text"]::placeholder { color: #5A2840; }
         input[type="text"]:focus {
-            border-color: #c8860a;
-            box-shadow: 0 0 0 3px rgba(200,134,10,.2);
+            border-color: #C2185B;
+            box-shadow: 0 0 0 3px rgba(194,24,91,.2);
         }
+        /* 按鈕：玫紅 → 深緋，呼應九重葛 */
         button[type="submit"] {
             padding: 13px 28px; font-size: 14px; font-weight: bold; font-family: inherit;
-            background: linear-gradient(135deg, #c8860a 0%, #9a5e06 100%);
-            color: #fff8e0; border: none; border-radius: 11px; cursor: pointer;
-            box-shadow: 0 4px 18px rgba(200,134,10,.5);
+            background: linear-gradient(135deg, #C2185B 0%, #880E4F 100%);
+            color: #FFE0EC; border: none; border-radius: 11px; cursor: pointer;
+            box-shadow: 0 4px 18px rgba(194,24,91,.45);
             transition: transform .15s, box-shadow .15s;
             white-space: nowrap;
         }
-        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(200,134,10,.65); }
+        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(194,24,91,.6); }
         button[type="submit"]:active { transform: translateY(0); }
 
-        /* ── Error ── */
+        /* ── 錯誤 ── */
         .error {
-            background: rgba(180,30,30,.15); color: #ff9090;
-            border: 1px solid rgba(180,30,30,.35); border-radius: 12px;
+            background: rgba(150,20,20,.18); color: #FF9090;
+            border: 1px solid rgba(150,20,20,.38); border-radius: 12px;
             padding: 12px 18px; margin-bottom: 20px;
         }
 
-        /* ── Loading hint ── */
-        #loading-hint { display:none; margin-top:14px; color:#c8a050; font-size:13px; text-align:center; }
+        /* ── 載入提示 ── */
+        #loading-hint { display:none; margin-top:14px; color:#C2185B; font-size:13px; text-align:center; }
 
-        /* ── Instructions ── */
-        ul { padding-left: 22px; line-height: 2.2; color: #907050; font-size: 14px; }
-        ul b { color: #ffd54f; }
+        /* ── 說明列表 ── */
+        ul { padding-left: 22px; line-height: 2.3; color: #8A5060; font-size: 14px; }
+        ul b { color: #F4A020; }
         .rules-link {
             display: inline-block; margin-top: 16px;
-            font-size: 13px; color: #c8a050; text-decoration: none;
-            border: 1px solid rgba(200,134,10,.25); padding: 7px 18px; border-radius: 9px;
-            background: rgba(200,134,10,.09); transition: background .2s, color .2s;
+            font-size: 13px; color: #C2185B; text-decoration: none;
+            border: 1px solid rgba(194,24,91,.28); padding: 7px 18px; border-radius: 9px;
+            background: rgba(194,24,91,.08); transition: background .2s, color .2s;
         }
-        .rules-link:hover { background: rgba(200,134,10,.22); color: #ffd54f; }
+        .rules-link:hover { background: rgba(194,24,91,.2); color: #FF4081; }
 
-        /* ── Leaderboard ── */
+        /* ── 排行榜 ── */
         table { width: 100%; border-collapse: collapse; }
-        thead tr { border-bottom: 1px solid rgba(200,134,10,.2); }
-        th { padding: 10px 12px; text-align: left; font-size: 11px; color: #7a5830;
+        thead tr { border-bottom: 1px solid rgba(194,24,91,.18); }
+        th { padding: 10px 12px; text-align: left; font-size: 11px; color: #6A2840;
              text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
-        td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px; color: #c8b090; }
-        tbody tr:hover { background: rgba(200,134,10,.07); }
-        tbody tr:nth-child(1) td { color: #ffd54f; }
-        tbody tr:nth-child(2) td { color: #d0c0a0; }
-        tbody tr:nth-child(3) td { color: #c89050; }
+        td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 14px; color: #C0A0A8; }
+        tbody tr:hover { background: rgba(194,24,91,.06); }
+        tbody tr:nth-child(1) td { color: #FFD54F; }
+        tbody tr:nth-child(2) td { color: #D8C8C0; }
+        tbody tr:nth-child(3) td { color: #F4A020; }
         td:first-child { font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 700; }
-        td b { font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: .5px; color: #ffd54f; }
+        td b { font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: .5px; color: #F4A020; }
         .badge {
             display: inline-block;
-            background: rgba(200,134,10,.18); color: #ffd54f;
+            background: rgba(194,24,91,.16); color: #FF80AB;
             padding: 2px 9px; border-radius: 10px; font-size: 11px;
-            border: 1px solid rgba(200,134,10,.28);
+            border: 1px solid rgba(194,24,91,.28);
         }
     </style>
 </head>
 <body>
 
-<!-- 背景圖 Hero：完整顯示寶箱油畫 -->
 <div class="hero">
     <div class="hero-inner">
         <h1>🗺️ 地圖尋寶大冒險</h1>
-        <p>在真實城市中尋找寶藏，規劃最短路線，挑戰排行榜！</p>
+        <p>踏上真實城市的冒險旅途，尋找寶藏，對抗敵人，挑戰排行榜！</p>
     </div>
 </div>
 
-<!-- 內容區：深色背景讓文字清晰 -->
 <div class="content">
     <div class="container">
         {% if error %}
@@ -146,26 +144,26 @@
         {% endif %}
 
         <div class="card">
-            <h2>🚀 開始遊戲</h2>
+            <h2>⚔️ 開始冒險</h2>
             <form action="/start" method="POST" id="start-form">
                 <div class="form-row">
-                    <input type="text" name="player_name" placeholder="你的名字" required maxlength="20">
-                    <input type="text" name="city" placeholder="城市（Taipei、Tokyo、Paris...）" value="Taipei" required>
-                    <button type="submit" id="start-btn">開始尋寶！</button>
+                    <input type="text" name="player_name" placeholder="冒險者名稱" required maxlength="20">
+                    <input type="text" name="city" placeholder="目標城市（Taipei、Tokyo、Paris...）" value="Taipei" required>
+                    <button type="submit" id="start-btn">出發！</button>
                 </div>
-                <div id="loading-hint">🌐 正在取得城市地點資料，請稍候…</div>
+                <div id="loading-hint">🗺️ 正在繪製冒險地圖，請稍候片刻…</div>
             </form>
         </div>
 
         <div class="card">
-            <h2>📖 遊戲說明</h2>
+            <h2>📜 冒險指南</h2>
             <ul>
-                <li>在 <b>真實城市地圖</b> 上尋找 10 個寶藏，所有地點都是真實存在的咖啡廳、博物館、公園等</li>
-                <li>AI 幫你規劃 <b>最短尋寶路線</b>，分數以寶藏距出生點的 <b>實際公尺數</b> 計算，越遠越值錢</li>
+                <li>在 <b>真實城市地圖</b> 上尋找 10 個寶藏，地點皆為真實存在的咖啡廳、博物館、公園等</li>
+                <li>AI 規劃 <b>最短尋寶路線</b>，分數以寶藏距出生點的 <b>實際公尺數</b> 計算，越遠越值錢</li>
                 <li>限時 <b>10 分鐘</b>，對抗 3 種 AI 敵人：<b>👁️ 巡邏守衛・👾 追跡者・🦹 小偷</b></li>
-                <li>收集地圖上的道具（⚡加速・⭐無敵・🔍廣域・❄️冰凍・🧲磁鐵），存入 <b>5 格道具欄</b></li>
-                <li>使用 <b>💣 手雷・💥 地雷・🎯 誘餌</b> 對付敵人，穿越 <b>傳送門</b> 瞬間移動</li>
-                <li>天氣隨時變化（☀️晴天・🌫️大霧・⛈️雷雨），連續收寶藏觸發 <b>連擊加成</b></li>
+                <li>拾取道具（⚡加速・⭐無敵・🔍廣域・❄️冰凍・🧲磁鐵），存入 <b>5 格道具欄</b></li>
+                <li>善用 <b>💣 手雷・💥 地雷・🎯 誘餌</b> 擊退敵人，穿越 <b>傳送門</b> 瞬間移動</li>
+                <li>天氣隨時變幻（☀️晴天・🌫️迷霧・⛈️雷雨），連續收寶觸發 <b>連擊加成</b></li>
             </ul>
             <div style="text-align:right">
                 <a href="/rules" class="rules-link">📖 完整規則 & 快捷鍵 →</a>
@@ -174,10 +172,10 @@
 
         {% if top10 %}
         <div class="card">
-            <h2>🏆 全球排行榜</h2>
+            <h2>🏆 全球冒險排行榜</h2>
             <table>
                 <thead>
-                    <tr><th>名次</th><th>玩家</th><th>城市</th><th>分數</th><th>寶藏</th><th>時間</th></tr>
+                    <tr><th>名次</th><th>冒險者</th><th>城市</th><th>分數</th><th>寶藏</th><th>用時</th></tr>
                 </thead>
                 <tbody>
                 {% for s in top10 %}
@@ -200,7 +198,7 @@
 <script>
     document.getElementById('start-form').addEventListener('submit', function(){
         const btn = document.getElementById('start-btn');
-        btn.textContent = '載入中…';
+        btn.textContent = '繪製地圖中…';
         btn.disabled = true;
         document.getElementById('loading-hint').style.display = 'block';
     });

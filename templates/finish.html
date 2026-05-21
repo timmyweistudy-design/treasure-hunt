@@ -2,19 +2,19 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>遊戲結束</title>
+    <title>冒險結算</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #0e0801; color: #f0e6d3; }
+        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #080408; color: #f5e0d0; }
 
-        /* ── Hero：完整顯示背景圖 ── */
+        /* ── Hero ── */
         .hero {
             position: relative;
-            min-height: 48vh;
-            background: url('/static/bg.jpg') 62% 68% / cover no-repeat;
+            min-height: 46vh;
+            background: url('/static/bg.png') 55% 62% / cover no-repeat;
             display: flex; align-items: flex-end; justify-content: center;
             overflow: hidden;
         }
@@ -23,86 +23,86 @@
             position: absolute; inset: 0;
             background: linear-gradient(
                 to bottom,
-                rgba(0,0,0,.18) 0%,
-                rgba(0,0,0,.28) 50%,
-                rgba(10,4,0,.78) 82%,
-                rgba(14,8,1,1)  100%
+                rgba(0,0,0,.12) 0%,
+                rgba(4,1,3,.25) 45%,
+                rgba(8,2,6,.82) 80%,
+                rgba(8,4,8,1)   100%
             );
         }
         .hero-inner {
             position: relative; z-index: 1;
             text-align: center;
-            padding: 28px 24px 40px;
+            padding: 28px 24px 44px;
             width: 100%;
         }
         .hero h1 {
             font-family: 'Orbitron', monospace; font-weight: 900;
-            font-size: clamp(1.6rem, 5vw, 2.4rem); letter-spacing: 2px;
-            background: linear-gradient(90deg, #ffd54f 0%, #f09c28 55%, #e06820 100%);
+            font-size: clamp(1.6rem, 5vw, 2.6rem); letter-spacing: 2px;
+            background: linear-gradient(90deg, #FFD54F 0%, #F4A020 45%, #C2185B 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
             margin-bottom: 10px;
-            filter: drop-shadow(0 2px 14px rgba(255,180,30,.5));
+            filter: drop-shadow(0 2px 18px rgba(194,24,91,.5));
         }
-        .hero p { font-size: 1rem; color: #d4b07a; text-shadow: 0 1px 8px rgba(0,0,0,.9); }
+        .hero p { font-size: 1rem; color: #D4A0B0; text-shadow: 0 1px 10px rgba(0,0,0,.9); }
 
-        /* ── Content ── */
-        .content { background: #0e0801; padding: 0 0 56px; }
+        /* ── 內容區 ── */
+        .content { background: #080408; padding: 0 0 60px; }
         .container { max-width: 640px; margin: 0 auto; padding: 0 20px; }
 
-        /* ── Card ── */
+        /* ── 卡片 ── */
         .card {
-            background: rgba(20,10,2,.92);
-            border: 1px solid rgba(200,134,10,.28);
+            background: rgba(16,6,12,.92);
+            border: 1px solid rgba(194,24,91,.22);
             border-radius: 20px; padding: 28px 32px;
-            box-shadow: 0 6px 32px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,210,80,.06);
+            box-shadow: 0 6px 36px rgba(0,0,0,.65), inset 0 1px 0 rgba(244,160,32,.06);
             margin-bottom: 22px;
         }
-        .card h2 { margin-bottom: 8px; color: #ffd54f; font-size: 1.05rem; }
-        .sub { font-size: 11px; color: #5a3a14; margin-bottom: 18px; }
+        .card h2 { margin-bottom: 8px; color: #F4A020; font-size: 1.05rem; }
+        .sub { font-size: 11px; color: #5A2840; margin-bottom: 18px; }
 
-        /* ── Stats grid ── */
+        /* ── 統計格 ── */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
         .stat { text-align: center; padding: 20px 10px; border-radius: 14px; }
-        .stat-total   { background: rgba(200,134,10,.14); border: 1px solid rgba(200,134,10,.3); }
-        .stat-treas   { background: rgba(52,168,83,.13);  border: 1px solid rgba(52,168,83,.28); }
-        .stat-time-b  { background: rgba(255,213,79,.11); border: 1px solid rgba(255,213,79,.28); }
-        .stat-elapsed { background: rgba(220,100,30,.13); border: 1px solid rgba(220,100,30,.28); }
+        .stat-total   { background: rgba(244,160,32,.13);  border: 1px solid rgba(244,160,32,.28); }
+        .stat-treas   { background: rgba(194,24,91,.12);   border: 1px solid rgba(194,24,91,.28); }
+        .stat-time-b  { background: rgba(48,63,159,.14);   border: 1px solid rgba(48,63,159,.3); }
+        .stat-elapsed { background: rgba(176,136,160,.12); border: 1px solid rgba(176,136,160,.28); }
 
         .stat .num {
             font-family: 'Orbitron', monospace; font-weight: 900;
             font-size: 2rem; line-height: 1; letter-spacing: 1px;
         }
-        .stat-total   .num { color: #ffd54f; }
-        .stat-treas   .num { color: #69d98a; }
-        .stat-time-b  .num { color: #ffe082; }
-        .stat-elapsed .num { color: #ff9060; }
-        .stat .label { font-size: 11px; color: #6a4820; margin-top: 8px; letter-spacing: .4px; text-transform: uppercase; }
+        .stat-total   .num { color: #FFD54F; }
+        .stat-treas   .num { color: #FF80AB; }
+        .stat-time-b  .num { color: #9FA8DA; }
+        .stat-elapsed .num { color: #CFC0C8; }
+        .stat .label { font-size: 11px; color: #5A2840; margin-top: 8px; letter-spacing: .4px; text-transform: uppercase; }
 
-        /* ── Hint ── */
-        .hint { font-size: 11px; color: #5a3a14; margin-bottom: 22px; text-align: center; line-height: 1.7; }
+        /* ── 提示 ── */
+        .hint { font-size: 11px; color: #4A1830; margin-bottom: 22px; text-align: center; line-height: 1.8; }
 
-        /* ── Back button ── */
+        /* ── 再出發按鈕 ── */
         .back-btn {
             display: block; text-align: center; padding: 15px;
-            background: linear-gradient(135deg, #c8860a, #9a5e06);
-            color: #fff8e0; text-decoration: none;
+            background: linear-gradient(135deg, #C2185B, #880E4F);
+            color: #FFE0EC; text-decoration: none;
             border-radius: 12px; font-size: 15px; font-weight: bold;
-            box-shadow: 0 4px 18px rgba(200,134,10,.5);
+            box-shadow: 0 4px 18px rgba(194,24,91,.45);
             transition: transform .15s, box-shadow .15s;
         }
-        .back-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(200,134,10,.65); }
+        .back-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(194,24,91,.6); }
 
-        /* ── Leaderboard ── */
+        /* ── 排行榜 ── */
         table { width: 100%; border-collapse: collapse; }
-        thead tr { border-bottom: 1px solid rgba(200,134,10,.2); }
-        th { padding: 9px 12px; text-align: left; font-size: 11px; color: #7a5830;
+        thead tr { border-bottom: 1px solid rgba(194,24,91,.18); }
+        th { padding: 9px 12px; text-align: left; font-size: 11px; color: #6A2840;
              text-transform: uppercase; letter-spacing: .5px; }
-        td { padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px; color: #c8b090; }
-        tbody tr:hover { background: rgba(200,134,10,.07); }
-        .me td { background: rgba(200,134,10,.12) !important; color: #ffd54f !important; }
+        td { padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px; color: #C0A0A8; }
+        tbody tr:hover { background: rgba(194,24,91,.06); }
+        .me td { background: rgba(244,160,32,.1) !important; color: #FFD54F !important; }
         td:first-child { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 14px; }
-        td b { font-family: 'Orbitron', monospace; font-size: 13px; color: #ffd54f; }
-        td:nth-child(4), td:nth-child(5) { color: #907050; }
+        td b { font-family: 'Orbitron', monospace; font-size: 13px; color: #F4A020; }
+        td:nth-child(4), td:nth-child(5) { color: #805060; }
     </style>
 </head>
 <body>
@@ -111,10 +111,10 @@
     <div class="hero-inner">
         <h1>
             {% if found_count == total %}🎉 完美通關！
-            {% elif found_count >= total // 2 %}🌟 表現不錯！
-            {% else %}💪 繼續加油！{% endif %}
+            {% elif found_count >= total // 2 %}🌟 表現出色！
+            {% else %}💪 繼續磨練！{% endif %}
         </h1>
-        <p>{{ player.name }} 的冒險結束了</p>
+        <p>{{ player.name }} 的冒險畫上句點</p>
     </div>
 </div>
 
@@ -139,17 +139,17 @@
                     <div class="label">用時</div>
                 </div>
             </div>
-            <p class="hint">寶藏分（距出生點公尺數，約 200~1000m）+ 順序 +50 / 連擊加成 + 時間獎勵（剩餘秒 ×1，最多 +600）</p>
-            <a href="/" class="back-btn">🔄 再玩一次</a>
+            <p class="hint">寶藏分（距出生點公尺數，約 200~1000m）＋ 順序 +50 ／ 連擊加成 ＋ 時間獎勵（剩餘秒 ×1，最多 +600）</p>
+            <a href="/" class="back-btn">🗺️ 再次出發</a>
         </div>
 
         {% if top10 %}
         <div class="card">
-            <h2>🏆 {{ city }} 排行榜</h2>
-            <p class="sub">同城市玩家最高分</p>
+            <h2>🏆 {{ city }} 冒險排行榜</h2>
+            <p class="sub">同城市冒險者最高紀錄</p>
             <table>
                 <thead>
-                    <tr><th>名次</th><th>玩家</th><th>分數</th><th>寶藏</th><th>時間</th></tr>
+                    <tr><th>名次</th><th>冒險者</th><th>分數</th><th>寶藏</th><th>用時</th></tr>
                 </thead>
                 <tbody>
                 {% for s in top10 %}

@@ -2025,10 +2025,14 @@ function aiMove(ai, dLa, dLo, spd) {
         if(!isInBuilding(oLa+mLa,oLo)){ai.lat=oLa+mLa;}
         else if(!isInBuilding(oLa,oLo+mLo)){ai.lon=oLo+mLo;}
     }
-    const moved=(ai.lat!==oLa||ai.lon!==oLo);
-    if(moved){ai.stuckTimer=0;}
-    else{ai.stuckTimer=(ai.stuckTimer||0)+spd;}
-    return moved;
+    return (ai.lat!==oLa||ai.lon!==oLo);
+}
+// 解卡：往垂直方向推一格，讓 AI 繞出牆角
+function aiUnstick(ai, dLa, dLo, spd) {
+    const len=Math.sqrt(dLa*dLa+dLo*dLo)||1;
+    const pLa=-dLo/len*spd*8, pLo=dLa/len*spd*8;  // 垂直方向，放大 8 倍
+    if(!isInBuilding(ai.lat+pLa,ai.lon+pLo)){ai.lat+=pLa;ai.lon+=pLo;}
+    else if(!isInBuilding(ai.lat-pLa,ai.lon-pLo)){ai.lat-=pLa;ai.lon-=pLo;}
 }
 
 // ── 追跡者行為 ───────────────────────────────────────────
@@ -2046,8 +2050,10 @@ function tickChaser(ai,dt,s) {
         while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
         const tLat=ai.path.length>0?ai.path[0][0]:chLat, tLon=ai.path.length>0?ai.path[0][1]:chLon;
         const dLa=tLat-ai.lat, dLo=tLon-ai.lon;
-        aiMove(ai,dLa,dLo,cs);
-        if((ai.stuckTimer||0)>0.4){ai.stuckTimer=0;ai.path.shift();ai.pathTimer=0;}
+        if(!aiMove(ai,dLa,dLo,cs)){
+            ai.stuckTime=(ai.stuckTime||0)+dt;
+            if(ai.stuckTime>0.5){ai.stuckTime=0;aiUnstick(ai,dLa,dLo,cs);ai.path.shift();ai.pathTimer=0;}
+        } else {ai.stuckTime=0;}
     }
     ai.attackCD=Math.max(0,ai.attackCD-dt);
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
@@ -2082,9 +2088,10 @@ function tickPatroller(ai,dt,s) {
             const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
             if(len>1e-6){
                 ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
-                aiMove(ai,dLa,dLo,s);
-                // 卡住 0.4s → 跳過當前節點並強制重算路徑
-                if((ai.stuckTimer||0)>0.4){ai.stuckTimer=0;ai.path.shift();ai.pathTimer=0;}
+                if(!aiMove(ai,dLa,dLo,s)){
+                    ai.stuckTime=(ai.stuckTime||0)+dt;
+                    if(ai.stuckTime>0.5){ai.stuckTime=0;aiUnstick(ai,dLa,dLo,s);ai.path.shift();ai.pathTimer=0;}
+                } else {ai.stuckTime=0;}
             }
             if(distM(ai.lat,ai.lon,wp.lat,wp.lon)<30){
                 ai.waypointIdx=(ai.waypointIdx+1)%OPTIMAL.length;
@@ -2177,8 +2184,10 @@ function tickThief(ai,dt,s) {
     const dLa=mLat-ai.lat, dLo=mLon-ai.lon;
     const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
     const ts=ai.wanted?s*0.5:s*timePressure;  // 通緝中速度降半，讓玩家有機會追上
-    aiMove(ai,dLa,dLo,ts);
-    if((ai.stuckTimer||0)>0.4){ai.stuckTimer=0;ai.path.shift();ai.pathTimer=0;}
+    if(!aiMove(ai,dLa,dLo,ts)){
+        ai.stuckTime=(ai.stuckTime||0)+dt;
+        if(ai.stuckTime>0.5){ai.stuckTime=0;aiUnstick(ai,dLa,dLo,ts);ai.path.shift();ai.pathTimer=0;}
+    } else {ai.stuckTime=0;}
     if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);

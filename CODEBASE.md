@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v4.7 — 7 項 Bug 修正：競態/DOM洩漏/AI路徑/死程式碼）**
+> **最後更新：2026-05-21（v4.8 — 打雷聲修正：duck 雨聲 + 提升音量）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,17 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v4.8）打雷聲修正
+
+**`playThunder()` 徹底重寫讓雷聲壓過雨聲**
+- 打雷時 duck 環境雨聲：`_ambientGain` 0.42 → 0.04（80ms 內降低），1.6s 後恢復
+- Crack 層移除 bandpass filter（原本與雨聲 600-6000Hz 頻段衝突），gain 0.70 → 1.5
+- Roll 層 gain 0.52 → 0.95，lowpass 140Hz → 200Hz 增加飽滿感
+- 閃電與打雷同步觸發（`_triggerLightning()` 於 `playThunder()` 開頭呼叫）
+- thunderTimer 間隔：初始 2~4s，之後每次 4~6s（先前已修正，此版合并）
 
 ---
 

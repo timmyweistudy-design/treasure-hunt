@@ -226,78 +226,77 @@ class MapAPI:
     @staticmethod
     def fetch_poi_all(lat: float, lon: float) -> list:
         """
-        Return all named POIs as {lat,lon,name,category}.
-        Runs three Overpass queries in parallel; merges all results.
-        Falls back to empty list on total failure (caller will pad with mystery spots).
+        Return named POIs as {lat,lon,name,category}.
+        1) Fast node-only Overpass query (no centroid computation).
+        2) Nominatim keyword fallback if Overpass fully fails.
         """
-        d = 0.015   # ±1670 m — covers 1000 m tier with margin
+        d = 0.015   # ±1670 m bbox
         bb = f"{lat-d},{lon-d},{lat+d},{lon+d}"
-        queries = [
-            # 景點、地標、博物館、廟宇、歷史古蹟（nwr 含面要素）
-            (f'[out:json][timeout:14];'
-             f'(nwr["tourism"~"attraction|museum|viewpoint|artwork|monument|gallery|theme_park"]({bb});'
-             f'nwr["historic"]({bb});'
-             f'nwr["amenity"~"place_of_worship|theatre|cinema"]({bb});'
-             f');out center;'),
-            # 公園、自然、學校、圖書館、咖啡廳、餐廳
-            (f'[out:json][timeout:14];'
-             f'(nwr["leisure"~"park|nature_reserve|garden"]({bb});'
-             f'nwr["natural"~"peak|waterfall|beach"]({bb});'
-             f'nwr["amenity"~"library|school|cafe|restaurant"]({bb});'
-             f');out center;'),
-            # 純 node 快速 fallback（最輕量，最可能成功）
-            (f'[out:json][timeout:10];'
-             f'(node["name"]["amenity"]({bb});'
-             f'node["name"]["tourism"]({bb});'
-             f'node["name"]["leisure"]({bb});'
-             f');out body;'),
-        ]
-
-        # 三條查詢全部並行發出
-        all_elements = [None, None, None]
-        threads = []
-        def _run_query(idx, q):
-            try:
-                els = _parallel_post(
-                    q,
-                    handler=lambda j: j.get("elements", []),
-                    per_timeout=16, total_timeout=18,
-                )
-                all_elements[idx] = els or []
-            except Exception:
-                all_elements[idx] = []
-
-        for i, q in enumerate(queries):
-            t = threading.Thread(target=_run_query, args=(i, q), daemon=True)
-            t.start()
-            threads.append(t)
-        for t in threads:
-            t.join(timeout=20)   # 最多等 20s（三條查詢都在這 20s 內並行）
-
-        elements = []
-        for els in all_elements:
-            if els:
-                elements += els
+        # node-only: far lighter than nwr, no out center needed
+        query = (
+            f'[out:json][timeout:18];'
+            f'(node["amenity"]["name"]({bb});'
+            f' node["tourism"]["name"]({bb});'
+            f' node["leisure"]["name"]({bb});'
+            f' node["historic"]["name"]({bb});'
+            f' node["natural"]["name"]({bb});'
+            f');out body;'
+        )
+        els = _parallel_post(
+            query,
+            handler=lambda j: j.get("elements", []),
+            per_timeout=20, total_timeout=22,
+        ) or []
 
         result = []
         seen = set()
-        for e in elements:
+        for e in els:
             tags = e.get("tags", {})
             name = tags.get("name", "")
             if not name or name in seen:
-                continue
-            if e.get("type") == "node":
-                elat, elon = e.get("lat"), e.get("lon")
-            else:
-                center = e.get("center", {})
-                elat, elon = center.get("lat"), center.get("lon")
-            if elat is None or elon is None:
                 continue
             seen.add(name)
             category = (tags.get("tourism") or tags.get("historic") or
                         tags.get("natural") or tags.get("amenity") or
                         tags.get("leisure", "place"))
-            result.append({"lat": elat, "lon": elon, "name": name, "category": category})
+            result.append({"lat": e["lat"], "lon": e["lon"],
+                           "name": name, "category": category})
+
+        if not result:
+            result = MapAPI._nominatim_poi_raw(lat, lon)
+        return result
+
+    @staticmethod
+    def _nominatim_poi_raw(lat: float, lon: float) -> list:
+        """Nominatim fallback — returns same dict format as fetch_poi_all."""
+        import time as _t
+        d = 0.015
+        viewbox = f"{lon-d},{lat+d},{lon+d},{lat-d}"
+        keywords = ["restaurant", "cafe", "museum", "park",
+                    "school", "hotel", "temple", "library"]
+        result = []
+        seen = set()
+        for kw in keywords:
+            if len(result) >= 80:
+                break
+            try:
+                params = {"q": kw, "format": "json", "limit": 15,
+                          "viewbox": viewbox, "bounded": 1}
+                r = requests.get(f"{NOMINATIM_URL}/search", params=params,
+                                 headers=HEADERS, timeout=6)
+                for item in r.json():
+                    name = (item.get("name") or
+                            item.get("display_name", "").split(",")[0].strip())
+                    if not name or name in seen:
+                        continue
+                    seen.add(name)
+                    result.append({
+                        "lat": float(item["lat"]), "lon": float(item["lon"]),
+                        "name": name, "category": item.get("type", "place"),
+                    })
+            except Exception:
+                pass
+            _t.sleep(1.1)   # Nominatim ToS: max 1 req/s
         return result
 
     @staticmethod

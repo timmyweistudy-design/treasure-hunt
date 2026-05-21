@@ -68,9 +68,8 @@
         .stun-orbit { position:absolute;z-index:10000;pointer-events:none;font-size:22px;
                       animation:stun-spin .75s linear infinite;
                       text-shadow:0 0 10px rgba(255,230,0,.95); }
-        /* wanted thief flash */
+        /* wanted thief: flash via per-img class, see .wanted-spr */
         @keyframes wanted-flash { 0%,100%{background:rgba(198,40,40,.45)} 50%{background:rgba(255,82,82,.75)} }
-        .thief-dot.wanted { animation:wanted-flash .5s ease-in-out infinite; }
         /* penalty score float */
         .score-float.penalty { color:#ff5252!important;
             text-shadow:0 2px 8px rgba(0,0,0,.9),0 0 10px rgba(255,82,82,.5)!important; }
@@ -406,15 +405,21 @@
         .guard-dot:not(.alert) .gsw { animation:patrol-pulse .9s ease-in-out infinite; }
 
         /* ── 寶物小偷 ── */
-        .thief-dot { width:30px;height:30px;border-radius:50%;
-                     background:radial-gradient(circle at 35% 35%,#757575,#212121);
-                     display:flex;align-items:center;justify-content:center;font-size:15px;
-                     border:2.5px solid rgba(255,255,255,.78);
-                     animation:thief-sneak .8s ease-in-out infinite;
-                     box-shadow:0 2px 8px rgba(33,33,33,.6); }
-        @keyframes thief-sneak {
-            0%,100%{ box-shadow:0 2px 8px rgba(33,33,33,.6), 0 0 0 3px rgba(66,66,66,.45);opacity:1 }
-            50%    { box-shadow:0 2px 8px rgba(33,33,33,.6), 0 0 0 9px rgba(66,66,66,.08);opacity:.72 } }
+        /* ── 小偷 Sprite ── */
+        .thief-dot { width:44px; height:44px; }
+        .tsw { position:relative; width:44px; height:44px; }
+        .tf  { position:absolute; top:0; left:0; width:44px; height:44px;
+               image-rendering:pixelated; pointer-events:none; display:none; }
+        .tf.active { display:block; }
+        .thurt { position:absolute; top:0; left:0; width:44px; height:44px;
+                 image-rendering:pixelated; pointer-events:none; display:none; }
+        .thurt.active { display:block; }
+        @keyframes thief-sneak { 0%,100%{opacity:1} 50%{opacity:.72} }
+        .thief-dot .tsw { animation:thief-sneak .8s ease-in-out infinite; }
+        @keyframes wanted-flash-img {
+            0%,100%{ filter:drop-shadow(0 0 6px rgba(255,100,0,.95)) brightness(1.1) }
+            50%    { filter:drop-shadow(0 0 16px rgba(255,30,0,1)) brightness(1.4) } }
+        .tf.wanted-spr,.thurt.wanted-spr { animation:wanted-flash-img .5s ease-in-out infinite; }
 
         /* ── 定身電擊光圈（玩家被 AI 定身時） ── */
         #stun-glow { display:none;position:absolute;inset:0;pointer-events:none;z-index:986;
@@ -1443,14 +1448,37 @@ function _updateChaserSizes(){
 }
 map.on('zoomend',_updateChaserSizes);
 
+// ── 小偷大小跟隨地圖縮放（與玩家相同公式）────────────────────
+let _thiefSizeNow=44;
+function _updateThiefSizes(){
+    const zoom=map.getZoom();
+    const size=Math.max(16,Math.min(80,Math.round(44*Math.pow(2,zoom-17))));
+    _thiefSizeNow=size;
+    const anchorY=Math.round(size*0.55);
+    for(const ai of aiList){
+        if(ai.type!=='thief') continue;
+        const el=ai.marker.getElement();
+        if(!el) continue;
+        const dot=el.querySelector('.thief-dot');
+        const tsw=el.querySelector('.tsw');
+        if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}
+        if(tsw){
+            tsw.style.width=size+'px';tsw.style.height=size+'px';
+            el.querySelectorAll('.tf,.thurt').forEach(img=>{img.style.width=size+'px';img.style.height=size+'px';});
+        }
+        el.style.marginLeft=(-size/2)+'px';
+        el.style.marginTop=(-anchorY)+'px';
+    }
+}
+map.on('zoomend',_updateThiefSizes);
+
 // ── 暈眩星星：位置 + 大小跟隨 sprite 縮放 ──────────────────
 function _positionStunLabel(ai){
     if(!ai.stunLabel) return;
     const sp=map.latLngToContainerPoint([ai.lat,ai.lon]);
     const zoom=map.getZoom();
-    const isSpr=(ai.type==='patroller'||ai.type==='chaser');
-    const sz=isSpr?Math.max(16,Math.min(80,Math.round(44*Math.pow(2,zoom-17)))):30;
-    const ancY=isSpr?Math.round(sz*0.55):15;
+    const sz=Math.max(16,Math.min(80,Math.round(44*Math.pow(2,zoom-17))));
+    const ancY=Math.round(sz*0.55);
     const starSz=Math.max(10,Math.round(22*sz/44));
     ai.stunLabel.style.fontSize=starSz+'px';
     ai.stunLabel.style.left=(sp.x-starSz/2)+'px';
@@ -1654,6 +1682,7 @@ function _applyAIFilter(ai, filterStr){
     if(!el) return;
     if(ai.type==='patroller') el.querySelectorAll('.gf,.ghurt').forEach(img=>img.style.filter=filterStr);
     else if(ai.type==='chaser') el.querySelectorAll('.cf,.churt,.cattack').forEach(img=>img.style.filter=filterStr);
+    else if(ai.type==='thief') el.querySelectorAll('.tf,.thurt').forEach(img=>img.style.filter=filterStr);
     else el.style.filter=filterStr;
 }
 function _stunAI(ai, dur) {
@@ -1678,6 +1707,15 @@ function _stunAI(ai, dur) {
             _hs.forEach((img,i)=>{if(i===0)img.classList.add('active');else img.classList.remove('active');});
         }
         ai._gFrame=0; ai._gFrameAcc=0; ai._ghurtFrame=0; ai._ghurtFrameAcc=0;
+    } else if(ai.type==='thief'){
+        // switch to hurt animation; no gray filter for thief
+        const _sel=ai.marker.getElement();
+        if(_sel){
+            _sel.querySelectorAll('.tf').forEach(img=>img.classList.remove('active'));
+            const _hs=_sel.querySelectorAll('.thurt');
+            _hs.forEach((img,i)=>{if(i===0)img.classList.add('active');else img.classList.remove('active');});
+        }
+        ai._tFrame=0; ai._tFrameAcc=0; ai._thurtFrame=0; ai._thurtFrameAcc=0;
     } else {
         _applyAIFilter(ai,'saturate(0) brightness(1.5)');
     }
@@ -1899,6 +1937,16 @@ function tickCombatStun(dt) {
                         _gfs.forEach(img=>img.style.filter=_freezeFilter);
                     }
                     ai._ghurtFrame=0; ai._ghurtFrameAcc=0; ai._gFrame=0; ai._gFrameAcc=0;
+                } else if(ai.type==='thief'){
+                    const _se=ai.marker.getElement();
+                    if(_se){
+                        _se.querySelectorAll('.thurt').forEach(img=>{img.classList.remove('active');img.style.filter='';});
+                        const _tfs=_se.querySelectorAll('.tf');
+                        _tfs.forEach(img=>img.classList.remove('active'));
+                        if(_tfs.length) _tfs[0].classList.add('active');
+                        _tfs.forEach(img=>img.style.filter=_freezeFilter);
+                    }
+                    ai._thurtFrame=0; ai._thurtFrameAcc=0; ai._tFrame=0; ai._tFrameAcc=0;
                 } else {
                     _applyAIFilter(ai,_freezeFilter);
                 }
@@ -1921,8 +1969,7 @@ function tickCombatStun(dt) {
                 ai.wanted=false;
                 if(ai.catchCircle){map.removeLayer(ai.catchCircle);ai.catchCircle=null;}
                 if(ai.miniMarker) ai.miniMarker.setStyle({fillColor:'#424242',color:'#fff'});
-                const dot=ai.marker.getElement()?.querySelector('.thief-dot');
-                if(dot) dot.classList.remove('wanted');
+                ai.marker.getElement()?.querySelectorAll('.tf,.thurt').forEach(img=>img.classList.remove('wanted-spr'));
             }
         } else if(!ai.wanted&&ai.catchCircle){
             map.removeLayer(ai.catchCircle); ai.catchCircle=null;
@@ -2134,14 +2181,26 @@ function spawnAI(forceType, silent=false) {
         miniColor='#6a1b9a';
         toastMsg='👁️ 巡邏守衛出現！走入視野範圍 -30分！';
     } else {
-        iconHtml='<div class="thief-dot">🦹</div>';
+        iconHtml=`<div class="thief-dot"><div class="tsw">
+            <img class="tf active" src="/static/sprites/thief/Trun1.png">
+            <img class="tf" src="/static/sprites/thief/Trun2.png">
+            <img class="tf" src="/static/sprites/thief/Trun3.png">
+            <img class="tf" src="/static/sprites/thief/Trun4.png">
+            <img class="tf" src="/static/sprites/thief/Trun5.png">
+            <img class="tf" src="/static/sprites/thief/Trun6.png">
+            <img class="tf" src="/static/sprites/thief/Trun7.png">
+            <img class="tf" src="/static/sprites/thief/Trun8.png">
+            <img class="thurt" src="/static/sprites/thief/Thurt1.png">
+            <img class="thurt" src="/static/sprites/thief/Thurt2.png">
+            <img class="thurt" src="/static/sprites/thief/Thurt3.png">
+        </div></div>`;
         miniColor='#424242';
         const tn=thiefCount+1;
         toastMsg=`🦹 第 ${tn} 隻小偷現身！（獲得寶藏觸發，場上最多${THIEF_MAX}隻）偷竊 -20分！`;
     }
 
-    const _iSize=(type==='patroller'||type==='chaser')?[44,44]:[30,30];
-    const _iAnchor=(type==='patroller'||type==='chaser')?[22,24]:[15,15];
+    const _iSize=[44,44];
+    const _iAnchor=[22,24];
     const marker=L.marker([iLat,iLon],{
         icon:L.divIcon({html:iconHtml,className:'',iconSize:_iSize,iconAnchor:_iAnchor}),
         zIndexOffset:950
@@ -2175,8 +2234,9 @@ function spawnAI(forceType, silent=false) {
     }
 
     aiList.push(ai);
-    if(type==='patroller') _updateGuardSizes();   // 新守衛立即套用當前縮放大小
-    if(type==='chaser')    _updateChaserSizes();  // 新追跡者立即套用當前縮放大小
+    if(type==='patroller') _updateGuardSizes();
+    if(type==='chaser')    _updateChaserSizes();
+    if(type==='thief')     _updateThiefSizes();
     if(!silent) showToast(toastMsg,3200);
 }
 
@@ -2405,8 +2465,7 @@ function tickThief(ai,dt,s) {
         applyScorePenalty(20,`🦹 小偷把「${name}」搬走了！-20分！🚨 ${THIEF_WANTED_DUR}秒內按Space反制！`);
         playThiefSteal();
         ai.wanted=true; ai.wantedTimer=THIEF_WANTED_DUR; ai.stolenAmt=20;
-        const dot=ai.marker.getElement()?.querySelector('.thief-dot');
-        if(dot) dot.classList.add('wanted');
+        ai.marker.getElement()?.querySelectorAll('.tf,.thurt').forEach(img=>img.classList.add('wanted-spr'));
         if(ai.targetMarker){map.removeLayer(ai.targetMarker);ai.targetMarker=null;}
         ai.targetTId=null; ai._prevTargetTId=null;
         ai.stealCD=15; ai.path=[]; ai.pathTimer=0;
@@ -2574,6 +2633,63 @@ function tickAI(dt) {
         if(csw){const t=ai._cLeft?'scaleX(-1)':'scaleX(1)'; if(csw.style.transform!==t) csw.style.transform=t;}
         ai._prevLat=ai.lat; ai._prevLon=ai.lon;
     }
+    // ── 小偷 Sprite 幀更新 ────────────────────────────────
+    for(const ai of aiList){
+        if(ai.type!=='thief') continue;
+        const _tel=ai.marker.getElement();
+        if(!_tel) continue;
+        const tfs=_tel.querySelectorAll('.tf');
+        const thurts=_tel.querySelectorAll('.thurt');
+        const tsw=_tel.querySelector('.tsw');
+        if(!tfs?.length) continue;
+        if(!ai._tFrame) ai._tFrame=0;
+        if(!ai._tFrameAcc) ai._tFrameAcc=0;
+        if(!ai._thurtFrame) ai._thurtFrame=0;
+        if(!ai._thurtFrameAcc) ai._thurtFrameAcc=0;
+        const _ts=ai.combatStun>0?'hurt':'run';
+        if(_ts!==ai._tAnimState){
+            tfs.forEach(img=>img.classList.remove('active'));
+            thurts.forEach(img=>img.classList.remove('active'));
+            if(_ts==='run'){ai._tFrame=0;ai._tFrameAcc=0;tfs[0]?.classList.add('active');}
+            else{ai._thurtFrame=0;ai._thurtFrameAcc=0;thurts[0]?.classList.add('active');}
+            ai._tAnimState=_ts;
+        }
+        if(_ts==='hurt'){
+            ai._thurtFrameAcc=(ai._thurtFrameAcc+6*dt)%3;
+            const f=Math.floor(ai._thurtFrameAcc);
+            if(f!==ai._thurtFrame){
+                thurts[ai._thurtFrame]?.classList.remove('active');
+                thurts[f]?.classList.add('active');
+                ai._thurtFrame=f;
+            }
+        } else {
+            const moved=(ai._prevLat!==undefined&&(ai.lat!==ai._prevLat||ai.lon!==ai._prevLon));
+            if(moved){
+                const cosLat=Math.cos(ai.lat*Math.PI/180);
+                const dLo=(ai.lon-(ai._prevLon||ai.lon))*111111*cosLat;
+                if(dLo<-1e-6) ai._tLeft=true; else if(dLo>1e-6) ai._tLeft=false;
+                const zoom=map.getZoom();
+                const pxPerDeg=256*Math.pow(2,zoom)/360;
+                const onScreenPx=AI_SPD*pxPerDeg*Math.cos(ai.lat*Math.PI/180);
+                const tAnimFps=Math.max(6,Math.min(18,onScreenPx/_thiefSizeNow*18));
+                ai._tFrameAcc=(ai._tFrameAcc+tAnimFps*dt)%8;
+                const f=Math.floor(ai._tFrameAcc);
+                if(f!==ai._tFrame){
+                    tfs[ai._tFrame].classList.remove('active');
+                    tfs[f].classList.add('active');
+                    ai._tFrame=f;
+                }
+            } else {
+                if(ai._tFrame!==0){
+                    tfs[ai._tFrame].classList.remove('active');
+                    tfs[0].classList.add('active');
+                    ai._tFrame=0; ai._tFrameAcc=0;
+                }
+            }
+        }
+        if(tsw){const t=ai._tLeft?'scaleX(-1)':'scaleX(1)'; if(tsw.style.transform!==t) tsw.style.transform=t;}
+        ai._prevLat=ai.lat; ai._prevLon=ai.lon;
+    }
     // ── 動態 chip 標籤（15fps 足夠）──────────────────────
     if(uiFrame){
         const cntEl=document.getElementById('ai-count-txt');
@@ -2617,7 +2733,7 @@ function tickEffects(dt) {
     if(wasFreeze) aiFrozenTimer=Math.max(0,aiFrozenTimer-dt);
     if(wasFreeze&&aiFrozenTimer<=0){
         for(const ai of aiList){
-            _applyAIFilter(ai,(ai.combatStun>0&&ai.type!=='chaser'&&ai.type!=='patroller')?'saturate(0) brightness(1.5)':'');
+            _applyAIFilter(ai,(ai.combatStun>0&&ai.type!=='chaser'&&ai.type!=='patroller'&&ai.type!=='thief')?'saturate(0) brightness(1.5)':'');
         }
     }
     // 持續飄雪特效

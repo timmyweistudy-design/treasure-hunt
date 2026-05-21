@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（AI 卡牆自動跳節點 + A* 膨脹 + 牆壁滑動 + 小偷偷寶路徑重算）**
+> **最後更新：2026-05-21（AI 全改走 A* 路徑，不再直線衝 + 膨脹 + 滑牆 + 小偷偷寶路徑重算）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -27,13 +27,14 @@
 
 ---
 
-### 2026-05-21（v4.4）AI 卡牆自動解卡（使用 dt 計時）
+### 2026-05-21（v4.4）AI 全面改走 A* 路徑，移除直線 fallback
 
-**`aiMove()` 回傳 bool，各 tick 用 `dt` 累計 `stuckTime`**
-- 舊版 stuckTimer 用 `spd`（≈0.000003/幀）累計，門檻 0.4 需 12 萬幀，完全無效
-- 改為各 tick 函式用 `dt`（秒）累計：0.5s 卡住觸發解卡
-- 解卡動作：`aiUnstick()` 往垂直方向推移 ×8 倍，跳過當前路徑節點，pathTimer=0 重算
-- 套用於追跡者、巡邏守衛、小偷三種 AI
+**根本修正：AI 路徑空了立刻重算，不做直線移動**
+- 舊版：`ai.path` 空時直接往目標衝（穿牆、卡牆的根源）
+- 新版：`ai.path.length===0 && !pending` 時立刻設 `pathTimer=0` 觸發重算
+- `if(ai.path.length>0)` 才移動，沒有路徑就等 A* 回傳
+- 移除 `aiUnstick`、`stuckTime` 等補丁邏輯
+- pathTimer 從 2.0s 縮短至 1.0s（chaser/thief），守衛維持 1.5s
 
 ---
 

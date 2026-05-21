@@ -377,6 +377,9 @@
         .cf  { position:absolute; top:0; left:0; width:44px; height:44px;
                image-rendering:pixelated; pointer-events:none; display:none; }
         .cf.active { display:block; }
+        .churt { position:absolute; top:0; left:0; width:44px; height:44px;
+                 image-rendering:pixelated; pointer-events:none; display:none; }
+        .churt.active { display:block; }
         @keyframes ai-pulse {
             0%,100%{ filter:drop-shadow(0 0 5px rgba(183,28,28,.9)) }
             50%    { filter:drop-shadow(0 0 14px rgba(183,28,28,.3)) } }
@@ -1426,7 +1429,7 @@ function _updateChaserSizes(){
         if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}
         if(csw){
             csw.style.width=size+'px';csw.style.height=size+'px';
-            el.querySelectorAll('.cf').forEach(img=>{img.style.width=size+'px';img.style.height=size+'px';});
+            el.querySelectorAll('.cf,.churt').forEach(img=>{img.style.width=size+'px';img.style.height=size+'px';});
         }
         el.style.marginLeft=(-size/2)+'px';
         el.style.marginTop=(-anchorY)+'px';
@@ -1625,14 +1628,25 @@ function _applyAIFilter(ai, filterStr){
     const el=ai.marker.getElement();
     if(!el) return;
     if(ai.type==='patroller') el.querySelectorAll('.gf').forEach(img=>img.style.filter=filterStr);
-    else if(ai.type==='chaser') el.querySelectorAll('.cf').forEach(img=>img.style.filter=filterStr);
+    else if(ai.type==='chaser') el.querySelectorAll('.cf,.churt').forEach(img=>img.style.filter=filterStr);
     else el.style.filter=filterStr;
 }
 function _stunAI(ai, dur) {
     ai.combatStun=dur;
     ai.path=[]; ai.pathTimer=dur;
     if(ai.invis) _thiefSetInvis(ai,false);   // 被炸中解除隱身
-    _applyAIFilter(ai,'saturate(0) brightness(1.5)');
+    if(ai.type==='chaser'){
+        // switch to hurt animation; no gray filter for chaser
+        const _sel=ai.marker.getElement();
+        if(_sel){
+            _sel.querySelectorAll('.cf').forEach(img=>img.classList.remove('active'));
+            const _hs=_sel.querySelectorAll('.churt');
+            _hs.forEach((img,i)=>{if(i===0)img.classList.add('active');else img.classList.remove('active');});
+        }
+        ai._cFrame=0; ai._cFrameAcc=0; ai._churtFrame=0; ai._churtFrameAcc=0;
+    } else {
+        _applyAIFilter(ai,'saturate(0) brightness(1.5)');
+    }
     // persistent ⭐ orbit — removed when stun ends
     if(ai.stunLabel) ai.stunLabel.remove();
     const pt=map.latLngToContainerPoint([ai.lat,ai.lon]);
@@ -1831,7 +1845,20 @@ function tickCombatStun(dt) {
         if(ai.combatStun>0){
             ai.combatStun=Math.max(0,ai.combatStun-dt);
             if(ai.combatStun<=0){
-                _applyAIFilter(ai,aiFrozenTimer>0?'sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))':'');
+                if(ai.type==='chaser'){
+                    const _se=ai.marker.getElement();
+                    if(_se){
+                        _se.querySelectorAll('.churt').forEach(img=>{img.classList.remove('active');img.style.filter='';});
+                        const _cfs=_se.querySelectorAll('.cf');
+                        _cfs.forEach(img=>img.classList.remove('active'));
+                        if(_cfs.length) _cfs[0].classList.add('active');
+                        const _ff=aiFrozenTimer>0?'sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))':'';
+                        _cfs.forEach(img=>img.style.filter=_ff);
+                    }
+                    ai._churtFrame=0; ai._churtFrameAcc=0; ai._cFrame=0; ai._cFrameAcc=0;
+                } else {
+                    _applyAIFilter(ai,aiFrozenTimer>0?'sepia(1) hue-rotate(185deg) saturate(5) brightness(1.4) drop-shadow(0 0 10px rgba(80,180,255,.9))':'');
+                }
                 if(ai.stunLabel){ai.stunLabel.remove();ai.stunLabel=null;}
             }
         }
@@ -2036,6 +2063,8 @@ function spawnAI(forceType, silent=false) {
             <img class="cf" src="/static/sprites/chaser/Crun4.png">
             <img class="cf" src="/static/sprites/chaser/Crun5.png">
             <img class="cf" src="/static/sprites/chaser/Crun6.png">
+            <img class="churt" src="/static/sprites/chaser/Churt1.png">
+            <img class="churt" src="/static/sprites/chaser/Churt2.png">
         </div></div>`;
         miniColor='#c62828';
         const n=chaserCount+1;
@@ -2405,33 +2434,49 @@ function tickAI(dt) {
     // ── 追跡者 Sprite 幀更新 ──────────────────────────────
     for(const ai of aiList){
         if(ai.type!=='chaser') continue;
-        const cfs=ai.marker.getElement()?.querySelectorAll('.cf');
-        const csw=ai.marker.getElement()?.querySelector('.csw');
+        const _cel=ai.marker.getElement();
+        if(!_cel) continue;
+        const cfs=_cel.querySelectorAll('.cf');
+        const churts=_cel.querySelectorAll('.churt');
+        const csw=_cel.querySelector('.csw');
         if(!cfs?.length) continue;
         if(!ai._cFrame) ai._cFrame=0;
         if(!ai._cFrameAcc) ai._cFrameAcc=0;
-        const moved=(ai._prevLat!==undefined&&(ai.lat!==ai._prevLat||ai.lon!==ai._prevLon));
-        if(moved){
-            const cosLat=Math.cos(ai.lat*Math.PI/180);
-            const dLo=(ai.lon-(ai._prevLon||ai.lon))*111111*cosLat;
-            if(dLo<-1e-6) ai._cLeft=true; else if(dLo>1e-6) ai._cLeft=false;
-            const zoom=map.getZoom();
-            const pxPerDeg=256*Math.pow(2,zoom)/360;
-            const chaserSpd=AI_SPD*(ai.speedMult||1);
-            const onScreenPx=chaserSpd*pxPerDeg*Math.cos(ai.lat*Math.PI/180);
-            const cAnimFps=Math.max(6,Math.min(20,onScreenPx/_chaserSizeNow*18));
-            ai._cFrameAcc=(ai._cFrameAcc+cAnimFps*dt)%6;
-            const f=Math.floor(ai._cFrameAcc);
-            if(f!==ai._cFrame){
-                cfs[ai._cFrame].classList.remove('active');
-                cfs[f].classList.add('active');
-                ai._cFrame=f;
+        if(!ai._churtFrame) ai._churtFrame=0;
+        if(!ai._churtFrameAcc) ai._churtFrameAcc=0;
+        if(ai.combatStun>0){
+            // hurt animation: 2 frames at 6fps
+            ai._churtFrameAcc=(ai._churtFrameAcc+6*dt)%2;
+            const f=Math.floor(ai._churtFrameAcc);
+            if(f!==ai._churtFrame){
+                churts[ai._churtFrame]?.classList.remove('active');
+                churts[f]?.classList.add('active');
+                ai._churtFrame=f;
             }
         } else {
-            if(ai._cFrame!==0){
-                cfs[ai._cFrame].classList.remove('active');
-                cfs[0].classList.add('active');
-                ai._cFrame=0; ai._cFrameAcc=0;
+            const moved=(ai._prevLat!==undefined&&(ai.lat!==ai._prevLat||ai.lon!==ai._prevLon));
+            if(moved){
+                const cosLat=Math.cos(ai.lat*Math.PI/180);
+                const dLo=(ai.lon-(ai._prevLon||ai.lon))*111111*cosLat;
+                if(dLo<-1e-6) ai._cLeft=true; else if(dLo>1e-6) ai._cLeft=false;
+                const zoom=map.getZoom();
+                const pxPerDeg=256*Math.pow(2,zoom)/360;
+                const chaserSpd=AI_SPD*(ai.speedMult||1);
+                const onScreenPx=chaserSpd*pxPerDeg*Math.cos(ai.lat*Math.PI/180);
+                const cAnimFps=Math.max(6,Math.min(20,onScreenPx/_chaserSizeNow*18));
+                ai._cFrameAcc=(ai._cFrameAcc+cAnimFps*dt)%6;
+                const f=Math.floor(ai._cFrameAcc);
+                if(f!==ai._cFrame){
+                    cfs[ai._cFrame].classList.remove('active');
+                    cfs[f].classList.add('active');
+                    ai._cFrame=f;
+                }
+            } else {
+                if(ai._cFrame!==0){
+                    cfs[ai._cFrame].classList.remove('active');
+                    cfs[0].classList.add('active');
+                    ai._cFrame=0; ai._cFrameAcc=0;
+                }
             }
         }
         if(csw){const t=ai._cLeft?'scaleX(-1)':'scaleX(1)'; if(csw.style.transform!==t) csw.style.transform=t;}
@@ -2480,7 +2525,7 @@ function tickEffects(dt) {
     if(wasFreeze) aiFrozenTimer=Math.max(0,aiFrozenTimer-dt);
     if(wasFreeze&&aiFrozenTimer<=0){
         for(const ai of aiList){
-            _applyAIFilter(ai,ai.combatStun>0?'saturate(0) brightness(1.5)':'');
+            _applyAIFilter(ai,(ai.combatStun>0&&ai.type!=='chaser')?'saturate(0) brightness(1.5)':'');
         }
     }
     // 持續飄雪特效

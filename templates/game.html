@@ -382,17 +382,18 @@
             50%    { box-shadow:0 2px 8px rgba(183,28,28,.5), 0 0 0 13px rgba(183,28,28,.04) } }
 
         /* ── 巡邏守衛 ── */
-        .patrol-dot { width:30px;height:30px;border-radius:50%;
-                      background:radial-gradient(circle at 35% 35%,#ce93d8,#6a1b9a);
-                      display:flex;align-items:center;justify-content:center;font-size:15px;
-                      border:2.5px solid rgba(255,255,255,.88);
-                      animation:patrol-pulse .9s ease-in-out infinite;
-                      box-shadow:0 2px 8px rgba(106,27,154,.5); }
+        /* ── 守衛 Sprite ── */
+        .guard-dot { width:40px; height:40px; }
+        .gsw { position:relative; width:40px; height:40px; }
+        .gf  { position:absolute; top:0; left:0; width:40px; height:40px;
+               image-rendering:pixelated; pointer-events:none; display:none; }
+        .gf.active { display:block; }
+        .guard-dot.alert .gsw { filter:drop-shadow(0 0 8px #ef5350) brightness(1.2);
+                                 animation:ai-pulse .4s ease-in-out infinite; }
         @keyframes patrol-pulse {
-            0%,100%{ box-shadow:0 2px 8px rgba(106,27,154,.5), 0 0 0 4px rgba(106,27,154,.4) }
-            50%    { box-shadow:0 2px 8px rgba(106,27,154,.5), 0 0 0 13px rgba(106,27,154,.06) } }
-        .patrol-dot.alert { background:radial-gradient(circle at 35% 35%,#ef5350,#c62828) !important;
-                            animation:ai-pulse .4s ease-in-out infinite !important; }
+            0%,100%{ filter:drop-shadow(0 0 4px rgba(106,27,154,.7)) }
+            50%    { filter:drop-shadow(0 0 12px rgba(106,27,154,.3)) } }
+        .guard-dot:not(.alert) .gsw { animation:patrol-pulse .9s ease-in-out infinite; }
 
         /* ── 寶物小偷 ── */
         .thief-dot { width:30px;height:30px;border-radius:50%;
@@ -1979,7 +1980,16 @@ function spawnAI(forceType, silent=false) {
         const n=chaserCount+1;
         toastMsg=n===1?'👾 追跡者出現了！被抓到 -50分！':`👾 第 ${n} 隻追跡者！速度更快，小心！`;
     } else if(type==='patroller'){
-        iconHtml='<div class="patrol-dot">👁️</div>';
+        iconHtml=`<div class="guard-dot"><div class="gsw">
+            <img class="gf active" src="/static/sprites/Grun1.png">
+            <img class="gf" src="/static/sprites/Grun2.png">
+            <img class="gf" src="/static/sprites/Grun3.png">
+            <img class="gf" src="/static/sprites/Grun4.png">
+            <img class="gf" src="/static/sprites/Grun5.png">
+            <img class="gf" src="/static/sprites/Grun6.png">
+            <img class="gf" src="/static/sprites/Grun7.png">
+            <img class="gf" src="/static/sprites/Grun8.png">
+        </div></div>`;
         miniColor='#6a1b9a';
         toastMsg='👁️ 巡邏守衛出現！走入視野範圍 -30分！';
     } else {
@@ -1989,8 +1999,10 @@ function spawnAI(forceType, silent=false) {
         toastMsg=`🦹 第 ${tn} 隻小偷現身！（獲得寶藏觸發，場上最多${THIEF_MAX}隻）偷竊 -20分！`;
     }
 
+    const _iSize=type==='patroller'?[40,40]:[30,30];
+    const _iAnchor=type==='patroller'?[20,37]:[15,15];
     const marker=L.marker([iLat,iLon],{
-        icon:L.divIcon({html:iconHtml,className:'',iconSize:[30,30],iconAnchor:[15,15]}),
+        icon:L.divIcon({html:iconHtml,className:'',iconSize:_iSize,iconAnchor:_iAnchor}),
         zIndexOffset:950
     }).addTo(map);
     const miniMarker=L.circleMarker([iLat,iLon],{
@@ -2161,12 +2173,12 @@ function tickPatroller(ai,dt,s) {
             ai.alertTimer=3; ai.alertCD=10;
             applyScorePenalty(30,'👁️ 巡邏守衛發現你了！-30分！');
             playPatrollerAlert();
-            const dot=ai.marker.getElement()?.querySelector('.patrol-dot');
+            const dot=ai.marker.getElement()?.querySelector('.guard-dot');
             if(dot) dot.classList.add('alert');
         }
     }
     if(ai.alertTimer<=0){
-        const dot=ai.marker.getElement()?.querySelector('.patrol-dot');
+        const dot=ai.marker.getElement()?.querySelector('.guard-dot');
         if(dot) dot.classList.remove('alert');
     }
     // FOV 多邊形：每 0.1s 更新一次（10fps），降低每幀 DOM 操作量
@@ -2292,6 +2304,36 @@ function tickAI(dt) {
         else if(ai.type==='patroller')  dToP=tickPatroller(ai,dt,s);
         else                            dToP=tickThief(ai,dt,s);
         if(dToP<nearestDist) nearestDist=dToP;
+    }
+    // ── 守衛 Sprite 幀更新 ────────────────────────────────
+    for(const ai of aiList){
+        if(ai.type!=='patroller') continue;
+        const gfs=ai.marker.getElement()?.querySelectorAll('.gf');
+        const gsw=ai.marker.getElement()?.querySelector('.gsw');
+        if(!gfs?.length) continue;
+        if(!ai._gFrame) ai._gFrame=0;
+        if(!ai._gFrameAcc) ai._gFrameAcc=0;
+        const moved=(ai._prevLat!==undefined&&(ai.lat!==ai._prevLat||ai.lon!==ai._prevLon));
+        if(moved){
+            const cosLat=Math.cos(ai.lat*Math.PI/180);
+            const dLo=(ai.lon-(ai._prevLon||ai.lon))*111111*cosLat;
+            if(dLo<-1e-6) ai._gLeft=true; else if(dLo>1e-6) ai._gLeft=false;
+            ai._gFrameAcc=(ai._gFrameAcc+10*dt)%8;
+            const f=Math.floor(ai._gFrameAcc);
+            if(f!==ai._gFrame){
+                gfs[ai._gFrame].classList.remove('active');
+                gfs[f].classList.add('active');
+                ai._gFrame=f;
+            }
+        } else {
+            if(ai._gFrame!==0){
+                gfs[ai._gFrame].classList.remove('active');
+                gfs[0].classList.add('active');
+                ai._gFrame=0; ai._gFrameAcc=0;
+            }
+        }
+        if(gsw){const t=ai._gLeft?'scaleX(-1)':'scaleX(1)'; if(gsw.style.transform!==t) gsw.style.transform=t;}
+        ai._prevLat=ai.lat; ai._prevLon=ai.lon;
     }
     // ── 動態 chip 標籤（15fps 足夠）──────────────────────
     if(uiFrame){

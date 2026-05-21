@@ -1516,7 +1516,7 @@ function _updateAllStunLabels(){
 map.on('zoomend',_updateAllStunLabels);
 
 const pCircle = L.circle(START, {
-    radius: CLCT_R, color: '#C2185B', weight: 1.5, fillColor: '#C2185B', fillOpacity: .06
+    radius: CLCT_R, color: '#1a73e8', weight: 1.5, fillColor: '#1a73e8', fillOpacity: .06
 }).addTo(map);
 L.marker(START, {
     icon: L.divIcon({
@@ -3586,6 +3586,7 @@ updateDistances();
 
 // ── 收集寶藏 ──────────────────────────────────────────────
 async function collect(id, tLat, tLon) {
+    if(!gameReady) return;
     const tCurrent=TREASURES.find(t=>t.id===id);
     if(tCurrent){tLat=tCurrent.lat;tLon=tCurrent.lon;}
     if(collected.has(id)||inFlight.has(id)) return;
@@ -3679,6 +3680,7 @@ async function collect(id, tLat, tLon) {
         if(thiefCount<THIEF_MAX) spawnAI('thief');
 
         if(data.status==='win' || collected.size>=TOTAL){
+            gameReady=false;
             clearInterval(ticker);
             playWin();
             showToast('🎉 全部收集完成！計算獎勵…',3000);
@@ -3735,6 +3737,7 @@ async function startCountdown(){
             if(!alarmPlayed){alarmPlayed=true;playAlarm();}
         }
         if(remaining<=0){
+            gameReady=false;
             clearInterval(ticker);
             showToast('⏰ 時間到！',2000);
             setTimeout(()=>location.href='/finish',2000);
@@ -3820,8 +3823,8 @@ async function fetchBuildingsCached(){
 async function loadBuildingsBackground(){
     // 立即畫出遊玩邊界框，讓玩家看到遊玩範圍
     L.rectangle([[BOUNDS.s,BOUNDS.w],[BOUNDS.n,BOUNDS.e]],{
-        color:'#C2185B', weight:2, dashArray:'10 6',
-        fill:false, interactive:false, opacity:.55
+        color:'#1a73e8', weight:2, dashArray:'10 6',
+        fill:false, interactive:false, opacity:.65
     }).addTo(map);
 
     try{

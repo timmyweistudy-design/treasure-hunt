@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v5.7 — 小偷完整 Sprite 系統）**
+> **最後更新：2026-05-21（v5.9 — 全站視覺主題完整統一）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -25,6 +25,109 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 9. [技術架構筆記](#9-技術架構筆記)
+
+---
+
+### 2026-05-21（v5.9）全站視覺主題完整統一（第二輪補完）
+
+**問題：`/start` 載入頁面（app.py 直接回傳 HTML）未改主題**
+- `body` 背景：`#0d1117` → `#080408` + `bg.png` 背景圖 + 半透明暗色蒙版 `rgba(4,1,3,.62)`
+- `.card`：深藍 `#1a2540` → 暗酒紅 `rgba(16,5,11,.9)` + 緋紅邊框 + `backdrop-filter:blur(18px)`
+- 旋轉圈：藍色 `#7ec8f8` → 緋紅 `#C2185B`
+- 標題：藍→綠漸層 → 金→緋紅漸層（Orbitron 字型）
+- 步驟/副標文字：藍 `#90caf9`/`#546e7a` → 金 `#F4A020`/暖粉 `#9A7080`
+- 載入步驟文案：統一為冒險風格（搜尋景點 → 規劃路線 → 描繪城市 → 即將出發！）
+- 返回按鈕：紅色 → 緋紅漸層
+
+**遊戲頁面：頂部/底部/右側背景太暗，提亮**
+- Header `.hd`：`#0a0305/#120507`（近黑） → `#1e0810/#280d18`（可見深酒紅）
+- 右側 sidebar `.sb`：`rgba(10,3,7,.97)` → `rgba(28,10,18,.97)`
+- 底部 HUD `#bottom-hud`：`rgba(10,3,5,.93)` → `rgba(28,8,16,.93)`
+- sidebar 內卡片（羅盤框/寶藏卡/.kbd-box/.kbd-toggle）：`rgba(20,6,12)` → `rgba(38,12,22)`
+
+**全頁文字可讀性（深酒紅色系統一提亮）**
+- `#4A1830`/`#5A2840` → `#9A7080`（幾乎不可見 → 清楚可讀）
+- `#6A2840` → `#A07080`
+- `#6A3040` → `#A07880`
+- `#7A4050` → `#B08090`
+- `#A08090`/`#C0A8B0` → `#C8B0BC`/`#D8C8D0`
+- 表格 `th` 顏色：`#6A2840` → `#A06878`（index/finish）
+- 表格 `td` 顏色：`#C0A0A8` → `#C8B0B8`
+- `.rules-link`（「完整規則 & 快捷鍵 →」）：`#C2185B`（暗緋，難讀） → `#FF80AB`（亮粉，清楚）
+- Leaflet popup 內 span 顏色 `#777` → `#C0A0B0`
+
+**檔案異動**：`app.py`、`templates/game.html`、`templates/index.html`、`templates/finish.html`、`templates/rules.html`
+
+---
+
+### 2026-05-21（v5.8）全站視覺主題 crimson/gold 統一（第一輪）
+
+**背景圖：`static/bg.png`（448×296 RGBA，地中海風格寶箱水彩畫，無浮水印）**
+- 所有頁面 hero 區塊套用：`background: url('/static/bg.png') 55% 62% / cover no-repeat`
+- 漸層遮罩：頂部透明 → 底部不透明（`rgba(0,0,0,.12)` → `rgba(8,4,8,1)`），頂部顯示畫、底部卡片可讀
+
+**主題色盤**
+| 角色 | 色值 |
+|---|---|
+| 主底色 | `#080408`（近黑帶紫） |
+| 緋紅（九重葛/花） | `#C2185B` |
+| 深緋 | `#880E4F` |
+| 金色（寶箱） | `#F4A020` |
+| 亮金 | `#FFD54F` |
+| 亮粉（強調） | `#FF80AB` |
+| 卡片底色 | `rgba(16,6,12,.92)` |
+
+**寶藏圖標改為 PNG**
+- `static/chest.png`（534×534 RGBA，透明背景寶箱）
+- `.tbadge` 改為 `<img class="tb-chest-img">` + `.tb-num` 數字角標（badge）
+- `.tbadge.done`：`grayscale(1)` filter；`.tbadge.target`：緋紅 drop-shadow；`.tbadge.inrange`：pulse 動畫；`.tbadge.golden`：金色光暈
+
+**角色尺寸：44px → 52px**
+- 所有 CSS 寬高（`.player-dot/.psw/.pf/.chaser-dot/.csw/.cf/.churt/.cattack/.guard-dot/.gsw/.gf/.ghurt/.thief-dot/.tsw/.tf/.thurt`）全部改為 52px
+- JS 基準值：`_sprSizeNow=52`（玩家）、`_guardSizeNow=52`、`_chaserSizeNow=52`、`_thiefSizeNow=52`
+- zoom 公式：`Math.round(52 * Math.pow(2, zoom-17))`，clamp 16–80px
+- `iconSize:[52,52]`、玩家 `iconAnchor:[26,47]`（腳底 90%）、AI `iconAnchor:[26,29]`（肚臍 55%）
+- 暈眩星 size 公式：`Math.max(7, Math.round(13*sz/52))`
+
+**遊戲頁面載入覆蓋層主題化**
+- `#loading-overlay`：`bg.png` 背景 + `rgba(4,1,3,.55)` 暗色蒙版
+- `.ld-card`：暗酒紅 `rgba(14,4,10,.88)` + 緋邊框 + backdrop-blur
+- `.ld-title/.ld-step`：金色 `#F4A020`；`.ld-spin`：緋紅 `#C2185B`
+- `.ld-count`：金→緋紅漸層（Orbitron 88px）；`.ld-go`：金→緋紅 32px（原 46px，縮小讓「⚔️ 冒險啟程！」一行顯示）
+- 載入文案：「✦ 召喚地圖中…」/「⚡ 從卷軸喚醒…」/「🏛️ 描繪城市…」/「⚔️ 冒險啟程！」
+
+**遊戲頁面頂部/底部/側欄主題化**
+- Header `.hd`：深藍 → 暗酒紅；`.hd-title` gradient：藍→綠 → 金→緋紅
+- Timer `#timer`：`#7ec8f8` → `#F4A020`
+- Sprint bar：藍色 → 金→緋紅漸層；sprint-lbl → `#C2185B`
+- `.kbd-box`/`.kbd-toggle`：深藍底 → 暗酒紅底，文字金色
+- `.key` 鍵盤按鍵：石板藍 → 緋粉
+- 底部 HUD border：藍 → 緋紅；mini-map border：藍 → 緋紅
+- Toast：深藍黑 → 暗酒紅
+- Sidebar `.sb`：亮灰 `#f8f9fa` → 暗酒紅 `rgba(28,10,18,.97)`
+- 羅盤框 `.compass-box`：白底藍字 → 暗底金色距離文字
+- 進度條：淺灰底+綠色 → 暗底+金→緋漸層
+- 寶藏卡 `.tc`：白底藍邊框 → 暗底緋邊框；`.cbtn` 藍色 → 緋紅
+- Leaflet popup：白色 → 暗酒紅 + 緋邊框（CSS override）
+- 地圖元素：收集圓/起點標記/mini-map 玩家點/邊界框/recenter btn 全改緋紅；trail 改金色
+
+**新頁面：`templates/rules.html`（完整重寫）**
+- Hero：`bg.png` 32vh，金→緋紅漸層標題
+- Section cards：`rgba(16,6,12,.92)` + 緋紅邊框
+- `<kbd>` 快捷鍵：緋粉樣式（`#FF80AB`）
+- item-grid、row-list、tip-box 全部暗色主題
+
+**`templates/finish.html`** — 同主題：bg.png hero、金/緋/靛藍統計磚、緋紅「再次出發」按鈕
+
+**`templates/index.html`** — 同主題：`ul` 說明文字 `#C8B4BC`；rules-link 緋紅→亮粉
+
+**`templates/game.html`** — Bug 修正（此版一併提交）：
+- `_stunAI` chaser 分支：補加 `ai._animState='hurt'`
+- `_stunAI` thief 分支：補加 `ai._tAnimState='hurt'`
+- `tickCombatStun` chaser/thief stun-end：補還原 state 為 `'run'`
+- `gfs[ai._gFrame]?.classList`：加 optional chaining 防 NodeList 長度不符的 TypeError
+
+**檔案異動**：`app.py`、`static/bg.png`（新增）、`static/chest.png`（新增）、`templates/game.html`、`templates/index.html`、`templates/finish.html`、`templates/rules.html`（重寫）
 
 ---
 

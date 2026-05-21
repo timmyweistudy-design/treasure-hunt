@@ -1384,6 +1384,30 @@ function _updateSpriteSize(){
 }
 map.on('zoomend',_updateSpriteSize);
 _updateSpriteSize();  // 初始化，避免載入時短暫顯示 CSS 預設大小
+
+// ── 守衛大小跟隨地圖縮放（與玩家相同公式）────────────────
+let _guardSizeNow=44;
+function _updateGuardSizes(){
+    const zoom=map.getZoom();
+    const size=Math.max(16,Math.min(80,Math.round(44*Math.pow(2,zoom-17))));
+    _guardSizeNow=size;
+    const anchorY=Math.round(size*0.55);
+    for(const ai of aiList){
+        if(ai.type!=='patroller') continue;
+        const el=ai.marker.getElement();
+        if(!el) continue;
+        const dot=el.querySelector('.guard-dot');
+        const gsw=el.querySelector('.gsw');
+        if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}
+        if(gsw){
+            gsw.style.width=size+'px';gsw.style.height=size+'px';
+            el.querySelectorAll('.gf').forEach(img=>{img.style.width=size+'px';img.style.height=size+'px';});
+        }
+        el.style.marginLeft=(-size/2)+'px';
+        el.style.marginTop=(-anchorY)+'px';
+    }
+}
+map.on('zoomend',_updateGuardSizes);
 const pCircle = L.circle(START, {
     radius: CLCT_R, color: '#1a73e8', weight: 1.5, fillColor: '#1a73e8', fillOpacity: .06
 }).addTo(map);
@@ -2039,6 +2063,7 @@ function spawnAI(forceType, silent=false) {
     }
 
     aiList.push(ai);
+    if(type==='patroller') _updateGuardSizes();  // 新守衛立即套用當前縮放大小
     if(!silent) showToast(toastMsg,3200);
 }
 
@@ -2323,7 +2348,11 @@ function tickAI(dt) {
             const cosLat=Math.cos(ai.lat*Math.PI/180);
             const dLo=(ai.lon-(ai._prevLon||ai.lon))*111111*cosLat;
             if(dLo<-1e-6) ai._gLeft=true; else if(dLo>1e-6) ai._gLeft=false;
-            ai._gFrameAcc=(ai._gFrameAcc+10*dt)%8;
+            const zoom=map.getZoom();
+            const pxPerDeg=256*Math.pow(2,zoom)/360;
+            const onScreenPx=AI_SPD*pxPerDeg*Math.cos(ai.lat*Math.PI/180);
+            const gAnimFps=Math.max(6,Math.min(18,onScreenPx/_guardSizeNow*18));
+            ai._gFrameAcc=(ai._gFrameAcc+gAnimFps*dt)%8;
             const f=Math.floor(ai._gFrameAcc);
             if(f!==ai._gFrame){
                 gfs[ai._gFrame].classList.remove('active');

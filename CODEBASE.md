@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v5.6 — 守衛受傷動畫 + 追跡者攻擊動畫）**
+> **最後更新：2026-05-21（v5.7 — 小偷完整 Sprite 系統）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -25,6 +25,22 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 9. [技術架構筆記](#9-技術架構筆記)
+
+---
+
+### 2026-05-21（v5.7）小偷完整 Sprite 系統
+
+`characters/thief/run_spritesheet.png`（1024×128，8 幀）→ `Trun1-8.png`
+`characters/thief/hurt_spritesheet.png`（384×128，3 幀）→ `Thurt1-3.png`
+
+- `.thief-dot` 改為 sprite 架構（`.tsw` wrapper + `.tf`/`.thurt` 幀），取代舊的 emoji 圓球
+- iconSize/iconAnchor 統一為 `[44,44]/[22,24]`（所有 AI 類型相同）
+- `_updateThiefSizes()`：zoom-aware 縮放，`zoomend` 鉤子 + spawn 時立即套用
+- Run 動畫：8 幀，zoom-aware fps，左右方向翻轉（`.tsw scaleX(-1)`）
+- Hurt 動畫：`combatStun>0` 時播 3 幀 6fps 循環，不套灰色 filter
+- Wanted 閃爍：改為 `.tf,.thurt` 加 `.wanted-spr` class（CSS `wanted-flash-img` filter 動畫），不再用背景色閃爍
+- `_applyAIFilter`/`tickCombatStun`/freeze-end 全部支援 thief 分支
+- `_positionStunLabel`：所有 AI 型別統一使用 sprite 公式（44px × 2^(zoom-17)）
 
 ---
 
@@ -78,7 +94,8 @@
 static/sprites/
 ├── player/  (Arun1-6.png)
 ├── guard/   (Grun1-8.png, Ghurt1-3.png)
-└── chaser/  (Crun1-6.png, Churt1-2.png, Cattack1-5.png)
+├── chaser/  (Crun1-6.png, Churt1-2.png, Cattack1-5.png)
+└── thief/   (Trun1-8.png, Thurt1-3.png)
 
 characters/
 ├── player/
@@ -87,10 +104,13 @@ characters/
 ├── guard/
 │   ├── run_spritesheet.png
 │   └── Hurt (1).png  (3 幀原始受傷動作)
-└── chaser/
-    ├── run_spritesheet.png
-    ├── Hurt.png      (2 幀原始受傷動作)
-    └── Attack_4.png  (5 幀原始攻擊動作)
+├── chaser/
+│   ├── run_spritesheet.png
+│   ├── Hurt.png      (2 幀原始受傷動作)
+│   └── Attack_4.png  (5 幀原始攻擊動作)
+└── thief/
+    ├── run_spritesheet.png  (8 幀原始跑步)
+    └── hurt_spritesheet.png (3 幀原始受傷)
 ```
 
 所有 game.html 路徑同步更新（`/static/sprites/Xrun` → `/static/sprites/character/Xrun`）。

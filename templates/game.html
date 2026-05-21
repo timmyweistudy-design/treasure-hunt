@@ -320,12 +320,12 @@
 
         /* ── Leaflet icons — Player sprite ── */
         .player-dot {
-            width:36px; height:36px;
+            width:44px; height:44px;
             display:flex; align-items:center; justify-content:center;
             animation:ppulse 2s ease-in-out infinite;
         }
         /* 所有 6 幀疊在同一位置，用 display 切換（比 src 切換更不閃爍）*/
-        .psw { position:relative; width:36px; height:36px; }
+        .psw { position:relative; width:44px; height:44px; }
         .pf  {
             position:absolute; top:0; left:0;
             width:64px; height:64px;
@@ -746,7 +746,7 @@ let _ambientGain = null;     // 環境音音量節點
 let birdTimer    = 4 + Math.random()*4;    // 晴天小鳥叫下次觸發（秒）
 let thunderTimer = 2 + Math.random()*2;    // 雷雨打雷下次觸發（秒）
 // ── 主角 Sprite 動畫（由 game loop 驅動，速度連動）───────
-let _sprFrame=0, _sprFrameAcc=0, _sprMoving=false, _sprLeft=false, _sprSpeed=0, _sprSizeNow=36;
+let _sprFrame=0, _sprFrameAcc=0, _sprMoving=false, _sprLeft=false, _sprSpeed=0, _sprSizeNow=44;
 const _sprSrcs=[1,2,3,4,5,6].map(n=>`/static/sprites/Arun${n}.png`);
 _sprSrcs.forEach(s=>{const i=new Image();i.src=s;});   // 預載所有幀
 
@@ -1344,7 +1344,7 @@ const pIcon = L.divIcon({
         <img class="pf" src="/static/sprites/Arun5.png">
         <img class="pf" src="/static/sprites/Arun6.png">
     </div></div>`,
-    className: '', iconSize: [36,36], iconAnchor: [18,33]
+    className: '', iconSize: [44,44], iconAnchor: [22,40]
 });
 const pMarker = L.marker(START, {icon: pIcon, zIndexOffset: 1000}).addTo(map);
 // Leaflet 的 update() 內部呼叫 .round() 把像素強制整數，zoom 17 時每幀<1px 造成「一格一格」
@@ -1366,7 +1366,7 @@ pMarker.on('add',()=>{
 function _updateSpriteSize(){
     const zoom=map.getZoom();
     // zoom 17 = 基準 52px；每級 ×2，範圍 20~96px
-    const size=Math.max(14,Math.min(72,Math.round(36*Math.pow(2,zoom-17))));
+    const size=Math.max(16,Math.min(80,Math.round(44*Math.pow(2,zoom-17))));
     _sprSizeNow=size;
     const anchorY=Math.round(size*0.92);
     const dot=document.getElementById('pdot');

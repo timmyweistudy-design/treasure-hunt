@@ -2056,18 +2056,10 @@ function tickChaser(ai,dt,s) {
     const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
     const cs=s*(ai.speedMult||1)*timePressure;
     if(invincTimer>0){
-        const dLaP=ai.lat-pLat, dLoP=ai.lon-pLon;
-        aiMove(ai,dLaP,dLoP,cs);
-        ai.path=[]; ai.pathTimer=1.5;
+        aiMove(ai, ai.lat-pLat, ai.lon-pLon, cs);
     } else {
         const chLat=decoyActive?decoyLat:pLat, chLon=decoyActive?decoyLon:pLon;
-        if(ai.path.length===0&&!ai._astarPending) ai.pathTimer=0;
-        if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=1.0;const fl=ai.lat,fo=ai.lon,tl=chLat,to=chLon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
-        while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
-        if(ai.path.length>0){
-            const dLa=ai.path[0][0]-ai.lat, dLo=ai.path[0][1]-ai.lon;
-            aiMove(ai,dLa,dLo,cs);
-        }
+        aiMove(ai, chLat-ai.lat, chLon-ai.lon, cs);
     }
     ai.attackCD=Math.max(0,ai.attackCD-dt);
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
@@ -2092,38 +2084,16 @@ function tickPatroller(ai,dt,s) {
         ai.facingLat=pLat; ai.facingLon=pLon;
         if(ai.alertTimer===0){ai.path=[];ai.pathTimer=0;}
     } else {
-        // 隨機巡邏：到達目的地後換下一個隨機可走點
-        if(!ai.destLat){
-            const [dl,do_]=_randWalkable(ai.lat,ai.lon);
-            ai.destLat=dl; ai.destLon=do_;
+        // 隨機巡邏：直線走向目的地（aiMove 負責滑牆），到了換下一個
+        if(!ai.destLat||distM(ai.lat,ai.lon,ai.destLat,ai.destLon)<50){
+            ai.destLat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
+            ai.destLon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
         }
-        if(ai.path.length===0&&!ai._astarPending) ai.pathTimer=0;
-        if(ai.pathTimer<=0&&!ai._astarPending){
-            ai._astarPending=true; ai.pathTimer=1.5;
-            const fl=ai.lat,fo=ai.lon,tl=ai.destLat,to=ai.destLon;
-            (requestIdleCallback||setTimeout)(()=>{
-                ai.path=runAstar(fl,fo,tl,to);
-                ai._astarPending=false;
-                // A* 找不到路（同格或不可達）→ 立刻換目的地
-                if(ai.path.length===0){
-                    const [dl,do_]=_randWalkable(ai.lat,ai.lon);
-                    ai.destLat=dl; ai.destLon=do_;
-                }
-            });
-        }
-        while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
-        if(ai.path.length>0){
-            const dLa=ai.path[0][0]-ai.lat, dLo=ai.path[0][1]-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
-            if(len>1e-6){
-                ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
-                aiMove(ai,dLa,dLo,s);
-            }
-        }
-        // 閾值用 2 個格子寬（~88m），避免最後一節點和目的地同格導致 A* 失敗
-        if(distM(ai.lat,ai.lon,ai.destLat,ai.destLon)<NAV_CELL*111111*2){
-            const [dl,do_]=_randWalkable(ai.lat,ai.lon);
-            ai.destLat=dl; ai.destLon=do_;
-            ai.path=[]; ai.pathTimer=0;
+        const dLa=ai.destLat-ai.lat, dLo=ai.destLon-ai.lon;
+        const len=Math.sqrt(dLa*dLa+dLo*dLo);
+        if(len>1e-6){
+            ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
+            aiMove(ai,dLa,dLo,s);
         }
         // 視野偵測
         if(ai.alertCD===0&&invincTimer===0&&inPatrollerFOV(ai)){
@@ -2205,15 +2175,9 @@ function tickThief(ai,dt,s) {
     }
     const tgt=TREASURES.find(t=>t.id===ai.targetTId);
     if(!tgt){ai.targetTId=null; return 9999;}
-    if(ai.path.length===0&&!ai._astarPending) ai.pathTimer=0;
-    if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=1.0;const fl=ai.lat,fo=ai.lon,tl=tgt.lat,to=tgt.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
-    while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
     const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
     const ts=ai.wanted?s*0.5:s*timePressure;
-    if(ai.path.length>0){
-        const dLa=ai.path[0][0]-ai.lat, dLo=ai.path[0][1]-ai.lon;
-        aiMove(ai,dLa,dLo,ts);
-    }
+    aiMove(ai, tgt.lat-ai.lat, tgt.lon-ai.lon, ts);
     if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);
@@ -2256,7 +2220,6 @@ function tickAI(dt) {
             if(d<nearestDist) nearestDist=d;
             continue;
         }
-        ai.pathTimer-=dt;
         const s=AI_SPD*dt*(weatherType==='storm'?1.15:1);
         let dToP;
         if(ai.type==='chaser')         dToP=tickChaser(ai,dt,s);

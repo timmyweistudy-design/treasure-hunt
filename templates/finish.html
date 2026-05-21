@@ -8,99 +8,115 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #080c18; min-height: 100vh; color: #c8d8f0; }
+
+        body {
+            font-family: 'Noto Sans TC', Arial, sans-serif;
+            background: url('/static/bg.jpg') center 40% / cover fixed no-repeat;
+            min-height: 100vh;
+            color: #f0e6d3;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(4,2,1,.48) 0%,
+                rgba(6,3,1,.72) 30%,
+                rgba(7,3,1,.84) 60%,
+                rgba(8,4,1,.92) 100%
+            );
+            pointer-events: none; z-index: 0;
+        }
 
         /* ── Hero ── */
         .hero {
+            position: relative; z-index: 1;
             text-align: center;
-            background: linear-gradient(160deg, #0d2318 0%, #0a1428 50%, #1a0a0a 100%);
-            padding: 56px 20px 44px;
-            position: relative; overflow: hidden;
+            padding: 80px 20px 60px;
         }
         .hero::after {
             content: '';
             position: absolute; inset: 0; pointer-events: none;
-            background:
-                radial-gradient(ellipse 70% 90% at 30% 50%, rgba(52,168,83,.12) 0%, transparent 70%),
-                radial-gradient(ellipse 70% 90% at 70% 50%, rgba(26,115,232,.10) 0%, transparent 70%);
+            background: radial-gradient(ellipse 70% 90% at 50% 55%,
+                rgba(220,160,20,.16) 0%, transparent 70%);
         }
         .hero-inner { position: relative; z-index: 1; }
+
         .hero h1 {
             font-family: 'Orbitron', monospace; font-weight: 900;
-            font-size: clamp(1.6rem, 5vw, 2.4rem); letter-spacing: 2px;
-            background: linear-gradient(90deg, #00e676, #7ec8f8);
+            font-size: clamp(1.7rem, 5vw, 2.6rem); letter-spacing: 2px;
+            background: linear-gradient(90deg, #ffd54f 0%, #f09c28 55%, #e06820 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 2px 16px rgba(255,180,30,.45));
         }
-        .hero p { font-size: 1rem; color: #8aa8cc; }
+        .hero p { font-size: 1rem; color: #c0965a; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
 
         /* ── Container ── */
-        .container { max-width: 640px; margin: 36px auto; padding: 0 20px; }
+        .container { position: relative; z-index: 1; max-width: 640px; margin: 0 auto 56px; padding: 0 20px; }
 
         /* ── Card ── */
         .card {
-            background: #0e1829;
-            border: 1px solid rgba(100,160,255,.13);
-            border-radius: 18px; padding: 28px 30px;
-            box-shadow: 0 8px 32px rgba(0,0,0,.5);
+            background: rgba(8,4,1,.80);
+            border: 1px solid rgba(200,134,10,.28);
+            border-radius: 20px; padding: 30px 32px;
+            box-shadow: 0 8px 40px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,210,80,.07);
             margin-bottom: 24px;
+            backdrop-filter: blur(16px);
         }
 
         /* ── Stats grid ── */
-        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
         .stat {
-            text-align: center; padding: 20px 10px;
+            text-align: center; padding: 22px 10px;
             border-radius: 14px;
         }
-        .stat-total  { background: linear-gradient(135deg,rgba(26,115,232,.18),rgba(26,115,232,.06));
-                       border: 1px solid rgba(26,115,232,.25); }
-        .stat-treas  { background: linear-gradient(135deg,rgba(52,168,83,.18),rgba(52,168,83,.06));
-                       border: 1px solid rgba(52,168,83,.25); }
-        .stat-time-b { background: linear-gradient(135deg,rgba(255,213,79,.18),rgba(255,213,79,.06));
-                       border: 1px solid rgba(255,213,79,.25); }
-        .stat-elapsed{ background: linear-gradient(135deg,rgba(255,87,34,.18),rgba(255,87,34,.06));
-                       border: 1px solid rgba(255,87,34,.25); }
+        .stat-total  { background: rgba(200,134,10,.14); border: 1px solid rgba(200,134,10,.3); }
+        .stat-treas  { background: rgba(52,168,83,.14);  border: 1px solid rgba(52,168,83,.3); }
+        .stat-time-b { background: rgba(255,213,79,.12); border: 1px solid rgba(255,213,79,.3); }
+        .stat-elapsed{ background: rgba(220,100,30,.14); border: 1px solid rgba(220,100,30,.3); }
 
         .stat .num {
             font-family: 'Orbitron', monospace; font-weight: 900;
             font-size: 2rem; line-height: 1; letter-spacing: 1px;
         }
-        .stat-total  .num { color: #7ec8f8; }
+        .stat-total  .num { color: #ffd54f; }
         .stat-treas  .num { color: #69d98a; }
-        .stat-time-b .num { color: #ffd54f; }
-        .stat-elapsed .num { color: #ff8a65; }
+        .stat-time-b .num { color: #ffe082; }
+        .stat-elapsed .num { color: #ff9060; }
 
-        .stat .label { font-size: 11px; color: #4a6080; margin-top: 7px; letter-spacing: .4px; text-transform: uppercase; }
+        .stat .label { font-size: 11px; color: #6a4820; margin-top: 8px; letter-spacing: .4px; text-transform: uppercase; }
 
-        /* ── Score formula hint ── */
-        .hint { font-size: 11px; color: #3a5070; margin-bottom: 20px; text-align: center; }
+        /* ── Hint ── */
+        .hint { font-size: 11px; color: #5a3a14; margin-bottom: 22px; text-align: center; line-height: 1.7; }
 
         /* ── Back button ── */
         .back-btn {
-            display: block; text-align: center; padding: 14px;
-            background: linear-gradient(135deg,#1a73e8,#0d47a1);
-            color: #fff; text-decoration: none;
+            display: block; text-align: center; padding: 15px;
+            background: linear-gradient(135deg, #c8860a, #9a5e06);
+            color: #fff8e0; text-decoration: none;
             border-radius: 12px; font-size: 15px; font-weight: bold;
-            box-shadow: 0 4px 16px rgba(26,115,232,.4);
+            box-shadow: 0 4px 18px rgba(200,134,10,.5);
             transition: transform .15s, box-shadow .15s;
         }
-        .back-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,115,232,.55); }
+        .back-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(200,134,10,.65); }
 
         /* ── Leaderboard ── */
-        .card h2 { margin-bottom: 6px; color: #7ec8f8; font-size: 1.05rem; }
-        .sub { font-size: 11px; color: #3a5070; margin-bottom: 16px; }
+        .card h2 { margin-bottom: 6px; color: #ffd54f; font-size: 1.05rem; }
+        .sub { font-size: 11px; color: #5a3a14; margin-bottom: 18px; }
 
         table { width: 100%; border-collapse: collapse; }
-        thead tr { border-bottom: 1px solid rgba(100,160,255,.15); }
-        th { padding: 9px 12px; text-align: left; font-size: 11px; color: #3a5070;
+        thead tr { border-bottom: 1px solid rgba(200,134,10,.2); }
+        th { padding: 9px 12px; text-align: left; font-size: 11px; color: #7a5830;
              text-transform: uppercase; letter-spacing: .5px; }
-        td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 14px; }
-        tbody tr:hover { background: rgba(255,255,255,.03); }
-        .me td { background: rgba(52,168,83,.08) !important; }
+        td { padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px; color: #c8b090; }
+        tbody tr:hover { background: rgba(200,134,10,.07); }
+        .me td { background: rgba(200,134,10,.1) !important; color: #ffd54f !important; }
         td:first-child { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 14px; }
-        td b { font-family: 'Orbitron', monospace; font-size: 13px; color: #7ec8f8; }
-        td:nth-child(4) { color: #8aa8cc; }
-        td:nth-child(5) { color: #8aa8cc; }
+        td b { font-family: 'Orbitron', monospace; font-size: 13px; color: #ffd54f; }
+        td:nth-child(4) { color: #a08060; }
+        td:nth-child(5) { color: #a08060; }
     </style>
 </head>
 <body>
@@ -165,7 +181,6 @@
 </div>
 
 <script>
-    // Score roll-up animation
     const el = document.getElementById('final-score');
     const target = parseInt(el.dataset.target, 10);
     const dur = 1200;

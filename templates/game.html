@@ -318,22 +318,30 @@
                  box-shadow: 0 4px 20px rgba(0,0,0,.45); }
         .toast.show { opacity: 1; }
 
-        /* ── Leaflet icons — Player ── */
+        /* ── Leaflet icons — Player sprite ── */
         .player-dot {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, #42a5f5, #1565c0);
-            border: 2.5px solid rgba(255,255,255,.92);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 16px; animation: ppulse 2s ease-in-out infinite;
-            box-shadow: 0 2px 8px rgba(21,101,192,.55);
+            width:64px; height:64px;
+            display:flex; align-items:center; justify-content:center;
+            animation:ppulse 2s ease-in-out infinite;
         }
-        .player-dot.sprint {
-            background: radial-gradient(circle at 35% 35%, #ffb74d, #e65100);
-            box-shadow: 0 2px 10px rgba(230,81,0,.65);
+        .psprite {
+            width:64px; height:64px;
+            image-rendering:pixelated;
+            pointer-events:none;
+        }
+        .player-dot.sprint .psprite {
+            filter:drop-shadow(0 0 6px rgba(255,120,0,.95)) brightness(1.15);
+        }
+        .player-dot.invinc .psprite {
+            animation:invinc-spr .5s ease-in-out infinite;
+        }
+        @keyframes invinc-spr {
+            0%,100%{ filter:drop-shadow(0 0 6px gold) brightness(1.3) }
+            50%    { filter:drop-shadow(0 0 16px rgba(255,215,0,.7)) brightness(1.55) }
         }
         @keyframes ppulse {
-            0%,100%{ box-shadow:0 2px 8px rgba(21,101,192,.55), 0 0 0 4px rgba(26,115,232,.28) }
-            50%    { box-shadow:0 2px 8px rgba(21,101,192,.55), 0 0 0 12px rgba(26,115,232,.05) }
+            0%,100%{ filter:drop-shadow(0 2px 8px rgba(21,101,192,.75)) }
+            50%    { filter:drop-shadow(0 2px 4px rgba(21,101,192,.2)) }
         }
         .tbadge { width: 34px; height: 34px; border-radius: 50%; color: #fff;
                   font-weight: 900; font-size: 14px;
@@ -405,8 +413,9 @@
             50%    {box-shadow:inset 0 0 130px rgba(255,130,0,.9)} }
         .player-dot.stunned { animation:stun-dot .3s ease-in-out infinite !important; }
         @keyframes stun-dot {
-            0%,100%{box-shadow:0 0 0 8px rgba(255,200,0,.7)}
-            50%    {box-shadow:0 0 0 20px rgba(255,150,0,.2)} }
+            0%,100%{ filter:drop-shadow(0 0 10px rgba(255,200,0,1)) }
+            50%    { filter:drop-shadow(0 0 22px rgba(255,150,0,.4)) }
+        }
 
         /* ── 無敵彩虹光圈 ── */
         #invinc-glow { display:none;position:absolute;inset:0;pointer-events:none;z-index:987;
@@ -736,6 +745,18 @@ let _ambientSrc  = null;     // 環境音 BufferSource
 let _ambientGain = null;     // 環境音音量節點
 let birdTimer    = 4 + Math.random()*4;    // 晴天小鳥叫下次觸發（秒）
 let thunderTimer = 2 + Math.random()*2;    // 雷雨打雷下次觸發（秒）
+// ── 主角 Sprite 動畫 ──────────────────────────────────────
+let _sprFrame=0, _sprMoving=false, _sprLeft=false;
+const _sprSrcs=[1,2,3,4,5,6].map(n=>`/static/sprites/Arun${n}.png`);
+_sprSrcs.forEach(s=>{const i=new Image();i.src=s;});   // 預載所有幀
+setInterval(()=>{
+    const img=document.getElementById('player-sprite');
+    if(!img) return;
+    if(_sprMoving) _sprFrame=(_sprFrame+1)%6; else _sprFrame=0;
+    img.src=_sprSrcs[_sprFrame];
+    img.style.transform=_sprLeft?'scaleX(-1)':'scaleX(1)';
+},100);  // 10fps
+
 let _thunderBuffer    = null;  // 解碼後的 AudioBuffer（真實音檔）
 let _thunderArrayBuf  = null;  // 預抓的 ArrayBuffer（等 AudioContext 後再解碼）
 fetch('/static/thunder.mp3').then(r=>r.arrayBuffer()).then(ab=>{_thunderArrayBuf=ab;}).catch(()=>{});
@@ -1322,8 +1343,8 @@ _mainTile.on('tileerror', function(){
 });
 
 const pIcon = L.divIcon({
-    html: '<div class="player-dot" id="pdot">🏃</div>',
-    className: '', iconSize: [32,32], iconAnchor: [16,16]
+    html: '<div class="player-dot" id="pdot"><img id="player-sprite" class="psprite" src="/static/sprites/Arun1.png"></div>',
+    className: '', iconSize: [64,64], iconAnchor: [32,60]
 });
 const pMarker = L.marker(START, {icon: pIcon, zIndexOffset: 1000}).addTo(map);
 // Leaflet 的 update() 內部呼叫 .round() 把像素強制整數，zoom 17 時每幀<1px 造成「一格一格」
@@ -2337,7 +2358,7 @@ function tickEffects(dt) {
     document.getElementById('chip-star').style.display=invincTimer>0?'inline-block':'none';
     if(invincTimer>0) document.getElementById('invinc-t').textContent=Math.ceil(invincTimer);
     document.getElementById('invinc-glow').style.display=invincTimer>0?'block':'none';
-    if(dot) dot.style.background=invincTimer>0?'linear-gradient(135deg,#FFD700,#FF6F00,#FFD700)':'';
+    if(dot) dot.classList.toggle('invinc', invincTimer>0);
 
     document.getElementById('chip-range').style.display=rangeBoostTimer>0?'inline-block':'none';
     if(rangeBoostTimer>0) document.getElementById('range-t').textContent=Math.ceil(rangeBoostTimer);
@@ -2940,6 +2961,8 @@ function loop(ts) {
                 if(keys['ArrowDown'] ||keys['s']) dy-=1;
                 if(keys['ArrowRight']||keys['d']) dx+=1;
                 if(keys['ArrowLeft'] ||keys['a']) dx-=1;
+                _sprMoving=!!(dx||dy);
+                if(dx<0) _sprLeft=true; else if(dx>0) _sprLeft=false;
                 if(dx||dy){
                     lastDx=dx; lastDy=dy;  // 記錄移動方向供手雷投擲使用
                     const n=Math.hypot(dx,dy);

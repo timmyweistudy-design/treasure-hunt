@@ -316,20 +316,20 @@
 
         /* ── Leaflet icons — Player ── */
         .player-dot {
-            width: 32px; height: 32px; border-radius: 50%;
+            width: 44px; height: 44px; border-radius: 50%;
             background: radial-gradient(circle at 35% 35%, #42a5f5, #1565c0);
-            border: 2.5px solid rgba(255,255,255,.92);
+            border: 3px solid rgba(255,255,255,.92);
             display: flex; align-items: center; justify-content: center;
-            font-size: 16px; animation: ppulse 2s ease-in-out infinite;
-            box-shadow: 0 2px 8px rgba(21,101,192,.55);
+            font-size: 22px; animation: ppulse 2s ease-in-out infinite;
+            box-shadow: 0 3px 10px rgba(21,101,192,.55);
         }
         .player-dot.sprint {
             background: radial-gradient(circle at 35% 35%, #ffb74d, #e65100);
-            box-shadow: 0 2px 10px rgba(230,81,0,.65);
+            box-shadow: 0 3px 14px rgba(230,81,0,.65);
         }
         @keyframes ppulse {
-            0%,100%{ box-shadow:0 2px 8px rgba(21,101,192,.55), 0 0 0 4px rgba(26,115,232,.28) }
-            50%    { box-shadow:0 2px 8px rgba(21,101,192,.55), 0 0 0 12px rgba(26,115,232,.05) }
+            0%,100%{ box-shadow:0 3px 10px rgba(21,101,192,.55), 0 0 0 6px rgba(26,115,232,.28) }
+            50%    { box-shadow:0 3px 10px rgba(21,101,192,.55), 0 0 0 16px rgba(26,115,232,.05) }
         }
         .tbadge { width: 34px; height: 34px; border-radius: 50%; color: #fff;
                   font-weight: 900; font-size: 14px;
@@ -359,39 +359,39 @@
             0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.12)} }
 
         /* ── AI 追跡者 ── */
-        .ai-dot { width:30px;height:30px;border-radius:50%;
+        .ai-dot { width:42px;height:42px;border-radius:50%;
                   background:radial-gradient(circle at 35% 35%,#ef5350,#b71c1c);
-                  display:flex;align-items:center;justify-content:center;font-size:15px;
-                  border:2.5px solid rgba(255,255,255,.88);
+                  display:flex;align-items:center;justify-content:center;font-size:20px;
+                  border:3px solid rgba(255,255,255,.88);
                   animation:ai-pulse .6s ease-in-out infinite;
-                  box-shadow:0 2px 8px rgba(183,28,28,.5); }
+                  box-shadow:0 3px 10px rgba(183,28,28,.5); }
         @keyframes ai-pulse {
-            0%,100%{ box-shadow:0 2px 8px rgba(183,28,28,.5), 0 0 0 4px rgba(183,28,28,.4) }
-            50%    { box-shadow:0 2px 8px rgba(183,28,28,.5), 0 0 0 13px rgba(183,28,28,.04) } }
+            0%,100%{ box-shadow:0 3px 10px rgba(183,28,28,.5), 0 0 0 5px rgba(183,28,28,.4) }
+            50%    { box-shadow:0 3px 10px rgba(183,28,28,.5), 0 0 0 18px rgba(183,28,28,.04) } }
 
         /* ── 巡邏守衛 ── */
-        .patrol-dot { width:30px;height:30px;border-radius:50%;
+        .patrol-dot { width:42px;height:42px;border-radius:50%;
                       background:radial-gradient(circle at 35% 35%,#ce93d8,#6a1b9a);
-                      display:flex;align-items:center;justify-content:center;font-size:15px;
-                      border:2.5px solid rgba(255,255,255,.88);
+                      display:flex;align-items:center;justify-content:center;font-size:20px;
+                      border:3px solid rgba(255,255,255,.88);
                       animation:patrol-pulse .9s ease-in-out infinite;
-                      box-shadow:0 2px 8px rgba(106,27,154,.5); }
+                      box-shadow:0 3px 10px rgba(106,27,154,.5); }
         @keyframes patrol-pulse {
-            0%,100%{ box-shadow:0 2px 8px rgba(106,27,154,.5), 0 0 0 4px rgba(106,27,154,.4) }
-            50%    { box-shadow:0 2px 8px rgba(106,27,154,.5), 0 0 0 13px rgba(106,27,154,.06) } }
+            0%,100%{ box-shadow:0 3px 10px rgba(106,27,154,.5), 0 0 0 5px rgba(106,27,154,.4) }
+            50%    { box-shadow:0 3px 10px rgba(106,27,154,.5), 0 0 0 18px rgba(106,27,154,.06) } }
         .patrol-dot.alert { background:radial-gradient(circle at 35% 35%,#ef5350,#c62828) !important;
                             animation:ai-pulse .4s ease-in-out infinite !important; }
 
         /* ── 寶物小偷 ── */
-        .thief-dot { width:30px;height:30px;border-radius:50%;
+        .thief-dot { width:42px;height:42px;border-radius:50%;
                      background:radial-gradient(circle at 35% 35%,#757575,#212121);
-                     display:flex;align-items:center;justify-content:center;font-size:15px;
-                     border:2.5px solid rgba(255,255,255,.78);
+                     display:flex;align-items:center;justify-content:center;font-size:20px;
+                     border:3px solid rgba(255,255,255,.78);
                      animation:thief-sneak .8s ease-in-out infinite;
-                     box-shadow:0 2px 8px rgba(33,33,33,.6); }
+                     box-shadow:0 3px 10px rgba(33,33,33,.6); }
         @keyframes thief-sneak {
-            0%,100%{ box-shadow:0 2px 8px rgba(33,33,33,.6), 0 0 0 3px rgba(66,66,66,.45);opacity:1 }
-            50%    { box-shadow:0 2px 8px rgba(33,33,33,.6), 0 0 0 9px rgba(66,66,66,.08);opacity:.72 } }
+            0%,100%{ box-shadow:0 3px 10px rgba(33,33,33,.6), 0 0 0 4px rgba(66,66,66,.45);opacity:1 }
+            50%    { box-shadow:0 3px 10px rgba(33,33,33,.6), 0 0 0 12px rgba(66,66,66,.08);opacity:.72 } }
 
         /* ── 定身電擊光圈（玩家被 AI 定身時） ── */
         #stun-glow { display:none;position:absolute;inset:0;pointer-events:none;z-index:986;
@@ -1285,7 +1285,7 @@ _mainTile.on('tileerror', function(){
 
 const pIcon = L.divIcon({
     html: '<div class="player-dot" id="pdot">🏃</div>',
-    className: '', iconSize: [32,32], iconAnchor: [16,16]
+    className: '', iconSize: [44,44], iconAnchor: [22,22]
 });
 const pMarker = L.marker(START, {icon: pIcon, zIndexOffset: 1000}).addTo(map);
 // Leaflet 的 update() 內部呼叫 .round() 把像素強制整數，zoom 17 時每幀<1px 造成「一格一格」
@@ -1904,7 +1904,7 @@ function spawnAI(forceType, silent=false) {
     }
 
     const marker=L.marker([iLat,iLon],{
-        icon:L.divIcon({html:iconHtml,className:'',iconSize:[30,30],iconAnchor:[15,15]}),
+        icon:L.divIcon({html:iconHtml,className:'',iconSize:[42,42],iconAnchor:[21,21]}),
         zIndexOffset:950
     }).addTo(map);
     const miniMarker=L.circleMarker([iLat,iLon],{
@@ -2010,44 +2010,6 @@ function relocateTreasure(tId) {
     }
     if(miniTMarkers[tId]) miniTMarkers[tId].setLatLng([nLat,nLon]);
     updateDistances();
-    setTimeout(rebuildOptimalRouteAstar, 50);
-}
-
-// ── 隨機可走點（直接從 navGrid 未封鎖格取樣，保證 A* 可達）
-function _randWalkable(fromLat, fromLon){
-    if(navGrid){
-        const {rows,cols,blocked}=navGrid;
-        for(let i=0;i<120;i++){
-            const r=Math.floor(Math.random()*rows);
-            const c=Math.floor(Math.random()*cols);
-            if(blocked[r*cols+c]) continue;
-            const [la,lo]=rcToLL(r,c);
-            if(!fromLat||distM(la,lo,fromLat,fromLon)>NAV_CELL*111111*4) return [la,lo];
-        }
-    }
-    // navGrid 尚未建立時 fallback
-    for(let i=0;i<30;i++){
-        const lat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
-        const lon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
-        if(!isInBuilding(lat,lon)) return [lat,lon];
-    }
-    const t=TREASURES[Math.floor(Math.random()*TREASURES.length)];
-    return t?[t.lat,t.lon]:[ORIGIN_LAT,ORIGIN_LON];
-}
-
-// ── AI 移動（含牆壁滑動，防止卡牆）────────────────────────
-function aiMove(ai, dLa, dLo, spd) {
-    const len=Math.sqrt(dLa*dLa+dLo*dLo);
-    if(len<1e-6) return false;
-    const mLa=dLa/len*spd, mLo=dLo/len*spd;
-    const oLa=ai.lat, oLo=ai.lon;
-    ai.lat+=mLa; ai.lon+=mLo;
-    if(isInBuilding(ai.lat,ai.lon)){
-        ai.lat=oLa; ai.lon=oLo;
-        if(!isInBuilding(oLa+mLa,oLo)){ai.lat=oLa+mLa;}
-        else if(!isInBuilding(oLa,oLo+mLo)){ai.lon=oLo+mLo;}
-    }
-    return (ai.lat!==oLa||ai.lon!==oLo);
 }
 
 // ── 追跡者行為 ───────────────────────────────────────────
@@ -2056,10 +2018,17 @@ function tickChaser(ai,dt,s) {
     const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
     const cs=s*(ai.speedMult||1)*timePressure;
     if(invincTimer>0){
-        aiMove(ai, ai.lat-pLat, ai.lon-pLon, cs);
+        const dLaP=ai.lat-pLat, dLoP=ai.lon-pLon;
+        const lenP=Math.sqrt(dLaP*dLaP+dLoP*dLoP);
+        if(lenP>1e-6){ai.lat+=dLaP/lenP*cs;ai.lon+=dLoP/lenP*cs;}
+        ai.path=[]; ai.pathTimer=1.5;
     } else {
         const chLat=decoyActive?decoyLat:pLat, chLon=decoyActive?decoyLon:pLon;
-        aiMove(ai, chLat-ai.lat, chLon-ai.lon, cs);
+        if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=1.5;const fl=ai.lat,fo=ai.lon,tl=chLat,to=chLon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
+        while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
+        const tLat=ai.path.length>0?ai.path[0][0]:chLat, tLon=ai.path.length>0?ai.path[0][1]:chLon;
+        const dLa=tLat-ai.lat, dLo=tLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
+        if(len>1e-6){ai.lat+=dLa/len*cs;ai.lon+=dLo/len*cs;}
     }
     ai.attackCD=Math.max(0,ai.attackCD-dt);
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
@@ -2084,16 +2053,22 @@ function tickPatroller(ai,dt,s) {
         ai.facingLat=pLat; ai.facingLon=pLon;
         if(ai.alertTimer===0){ai.path=[];ai.pathTimer=0;}
     } else {
-        // 隨機巡邏：直線走向目的地（aiMove 負責滑牆），到了換下一個
-        if(!ai.destLat||distM(ai.lat,ai.lon,ai.destLat,ai.destLon)<50){
-            ai.destLat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
-            ai.destLon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
-        }
-        const dLa=ai.destLat-ai.lat, dLo=ai.destLon-ai.lon;
-        const len=Math.sqrt(dLa*dLa+dLo*dLo);
-        if(len>1e-6){
-            ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
-            aiMove(ai,dLa,dLo,s);
+        // 沿 OPTIMAL 路標巡邏
+        const wpId=OPTIMAL[ai.waypointIdx%OPTIMAL.length];
+        const wp=TREASURES.find(t=>t.id===wpId);
+        if(wp){
+            if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=2.0;const fl=ai.lat,fo=ai.lon,tl=wp.lat,to=wp.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
+            while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
+            const mLat=ai.path.length>0?ai.path[0][0]:wp.lat, mLon=ai.path.length>0?ai.path[0][1]:wp.lon;
+            const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
+            if(len>1e-6){
+                ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
+                ai.lat+=dLa/len*s; ai.lon+=dLo/len*s;
+            }
+            if(distM(ai.lat,ai.lon,wp.lat,wp.lon)<30){
+                ai.waypointIdx=(ai.waypointIdx+1)%OPTIMAL.length;
+                ai.path=[]; ai.pathTimer=0;
+            }
         }
         // 視野偵測
         if(ai.alertCD===0&&invincTimer===0&&inPatrollerFOV(ai)){
@@ -2175,9 +2150,13 @@ function tickThief(ai,dt,s) {
     }
     const tgt=TREASURES.find(t=>t.id===ai.targetTId);
     if(!tgt){ai.targetTId=null; return 9999;}
+    if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=2.0;const fl=ai.lat,fo=ai.lon,tl=tgt.lat,to=tgt.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
+    while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
+    const mLat=ai.path.length>0?ai.path[0][0]:tgt.lat, mLon=ai.path.length>0?ai.path[0][1]:tgt.lon;
+    const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
     const timePressure=remaining<30?1.4:remaining<60?1.2:1.0;
-    const ts=ai.wanted?s*0.5:s*timePressure;
-    aiMove(ai, tgt.lat-ai.lat, tgt.lon-ai.lon, ts);
+    const ts=ai.wanted?s*0.5:s*timePressure;  // 通緝中速度降半，讓玩家有機會追上
+    if(len>1e-6){ai.lat+=dLa/len*ts;ai.lon+=dLo/len*ts;}
     if(ai.stealCD===0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);
@@ -2220,6 +2199,7 @@ function tickAI(dt) {
             if(d<nearestDist) nearestDist=d;
             continue;
         }
+        ai.pathTimer-=dt;
         const s=AI_SPD*dt*(weatherType==='storm'?1.15:1);
         let dToP;
         if(ai.type==='chaser')         dToP=tickChaser(ai,dt,s);
@@ -2388,24 +2368,13 @@ class MinHeap{
     _up(i){while(i>0){const p=(i-1)>>1;if(this.h[p][0]<=this.h[i][0])break;[this.h[p],this.h[i]]=[this.h[i],this.h[p]];i=p;}}
     _down(i){const n=this.h.length;for(;;){let m=i,l=2*i+1,r=2*i+2;if(l<n&&this.h[l][0]<this.h[m][0])m=l;if(r<n&&this.h[r][0]<this.h[m][0])m=r;if(m===i)break;[this.h[m],this.h[i]]=[this.h[i],this.h[m]];i=m;}}
 }
-function inflateBlocked(bl, rows, cols){
-    const out=new Uint8Array(bl);
-    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-        if(!bl[r*cols+c]) continue;
-        for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
-            const nr=r+dr,nc=c+dc;
-            if(nr>=0&&nr<rows&&nc>=0&&nc<cols) out[nr*cols+nc]=1;
-        }
-    }
-    return out;
-}
 function buildNavGrid(){
     const rows=Math.ceil((BOUNDS.n-BOUNDS.s)/NAV_CELL)+1;
     const cols=Math.ceil((BOUNDS.e-BOUNDS.w)/NAV_CELL)+1;
     const bl=new Uint8Array(rows*cols);
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
         if(isInBuilding(BOUNDS.s+r*NAV_CELL,BOUNDS.w+c*NAV_CELL)) bl[r*cols+c]=1;
-    navGrid={rows,cols,blocked:inflateBlocked(bl,rows,cols)};
+    navGrid={rows,cols,blocked:bl};
 }
 function llToRC(lat,lon){
     const r=Math.max(0,Math.min(navGrid.rows-1,Math.round((lat-BOUNDS.s)/NAV_CELL)));
@@ -2430,9 +2399,6 @@ function nearestWalkable(lat,lon){
 }
 function runAstar(fLat,fLon,tLat,tLon){
     if(!navGrid) return [];
-    // snap start/goal to nearest walkable cell (inflated grid can block AI's current pos)
-    [fLat,fLon]=nearestWalkable(fLat,fLon);
-    [tLat,tLon]=nearestWalkable(tLat,tLon);
     const {rows,cols,blocked}=navGrid;
     const [r0,c0]=llToRC(fLat,fLon);
     const [rG,cG]=llToRC(tLat,tLon);
@@ -2443,7 +2409,7 @@ function runAstar(fLat,fLon,tLat,tLon){
     const sk=kf(r0,c0); g.set(sk,0); open.push([h(r0,c0),r0,c0]);
     const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
     let vis=0;
-    while(open.size&&vis<8000){
+    while(open.size&&vis<3000){
         const [,r,c]=open.pop();
         const k=kf(r,c); if(closed.has(k)) continue; closed.add(k); vis++;
         if(r===rG&&c===cG){
@@ -2480,7 +2446,7 @@ function buildRouteGrid(){
     const bl=new Uint8Array(rows*cols);
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++)
         if(isInBuilding(BOUNDS.s+r*ROUTE_CELL,BOUNDS.w+c*ROUTE_CELL)) bl[r*cols+c]=1;
-    return {rows,cols,blocked:inflateBlocked(bl,rows,cols)};
+    return {rows,cols,blocked:bl};
 }
 
 function runRouteAstar(rg,fLat,fLon,tLat,tLon){
@@ -3165,7 +3131,7 @@ async function collect(id, tLat, tLon) {
         // 收集寶藏觸發小偷生成（第1、2、3、4個寶藏各+1隻，場上上限4）
         if(thiefCount<THIEF_MAX) spawnAI('thief');
 
-        if(data.status==='win' || collected.size>=TOTAL){
+        if(data.status==='win'){
             clearInterval(ticker);
             playWin();
             showToast('🎉 全部收集完成！計算獎勵…',3000);

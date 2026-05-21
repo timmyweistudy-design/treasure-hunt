@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v5.3 — 追跡者 Sprite 動畫，比照守衛完整實作）**
+> **最後更新：2026-05-21（v5.4 — 灰色方框根本修正 + 角色資料夾整理）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -25,6 +25,36 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 9. [技術架構筆記](#9-技術架構筆記)
+
+---
+
+### 2026-05-21（v5.4）灰色方框根本修正 + 角色資料夾整理
+
+**灰色方框根本修正**
+
+原因：`filter` 套在 wrapper `<div>` 會建立 GPU 合成層，瀏覽器有時以不透明底色渲染該層邊界框。
+
+修正：將 `_aiFilterEl()` 改為 `_applyAIFilter(ai, filterStr)`，直接用 `querySelectorAll('.gf'/.cf')` 把 filter 套在每張 `<img>` 幀本身。`<img>` 只渲染圖片內容，不建立有背景的合成層，徹底消除灰框。
+
+**資料夾整理**
+
+```
+static/sprites/
+├── player/  (Arun1-6.png)
+├── guard/   (Grun1-8.png)
+└── chaser/  (Crun1-6.png)
+
+characters/
+├── player/
+│   ├── 跑步/  (Arun1-6.png 原始幀)
+│   └── 普攻/  (Aattack1-6.png + Ablood.png)
+├── guard/
+│   └── run_spritesheet.png
+└── chaser/
+    └── run_spritesheet.png
+```
+
+所有 game.html 路徑同步更新（`/static/sprites/Xrun` → `/static/sprites/character/Xrun`）。
 
 ---
 
@@ -969,7 +999,7 @@ AI扣分     = 被追跡者觸碰 -50 分（8秒冷卻）
 | `tickGrenades(dt)` | 每幀推進手雷飛行動畫，管理充能計時器 |
 | `tickMines(dt)` | 每幀偵測 AI 踩雷並觸發爆炸，管理充能計時器 |
 | `_stunAI(ai, dur)` | 設定 AI 暈眩：清路徑、置灰濾鏡、spawn ⭐ 旋轉標籤 |
-| `_aiFilterEl(ai)` | 回傳該 AI 應套用 filter 的元素（守衛→.gsw；追跡者→.csw；其他→外層 div） |
+| `_applyAIFilter(ai, filterStr)` | 對 AI 套用 CSS filter：sprite 類型對每張 `<img>` 幀直接設定（無灰框），其他類型套在外層 div |
 | `tickCombatStun(dt)` | 遞減所有 AI 暈眩計時，時間到恢復樣式並移除 ⭐ 標籤 |
 | `catchWantedThief()` | 嘗試逮捕通緝小偷，成功返還被盜分數 + 獎勵 |
 | `_spawnExplosionVfx(lat, lon, radiusM)` | 在地圖上建立爆炸環 DOM 動畫 |

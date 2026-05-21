@@ -787,13 +787,13 @@ let muted     = false;
 function getAudio() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        // 建立 master 壓縮鏈：所有非天氣音效都走這裡
-        const comp = audioCtx.createDynamicsCompressor();
-        comp.threshold.value = -18; comp.knee.value = 12;
-        comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.25;
-        comp.connect(audioCtx.destination);
+        // 建立 master 輸出鏈：GainNode(1.4x) → Limiter(-3dB 防爆音) → destination
+        const lim = audioCtx.createDynamicsCompressor();
+        lim.threshold.value = -3; lim.knee.value = 2;
+        lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.1;
+        lim.connect(audioCtx.destination);
         const mg = audioCtx.createGain(); mg.gain.value = 1.4;
-        mg.connect(comp);
+        mg.connect(lim);
         masterOut = mg;
     }
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -1121,26 +1121,19 @@ function _triggerLightning() {
     el.classList.add('strike');
     setTimeout(()=>el.classList.remove('strike'), 900);
 }
-function _thunderOut(ctx) { return _dest(); }
+function _thunderOut(ctx) { return ctx.destination; }  // 雷聲直通，不走 master limiter
 function playThunder() {
     _triggerLightning();
     snd(ctx=>{
         const t=ctx.currentTime;
-        // 雨聲幾乎靜音，3s 後慢慢恢復（讓雷聲完全凸出）
-        if(_ambientGain){
-            _ambientGain.gain.cancelScheduledValues(t);
-            _ambientGain.gain.setValueAtTime(0.42,t);
-            _ambientGain.gain.linearRampToValueAtTime(0.005,t+.06);
-            _ambientGain.gain.linearRampToValueAtTime(0.42,t+3.0);
-        }
         // ── 使用真實音檔（已解碼）──
         if(_thunderBuffer){
             const out=_thunderOut(ctx);
             const src=ctx.createBufferSource();
             src.buffer=_thunderBuffer;
             const g=ctx.createGain();
-            g.gain.setValueAtTime(3.0,t);
-            g.gain.setValueAtTime(3.0,t+4.5);
+            g.gain.setValueAtTime(6.0,t);
+            g.gain.setValueAtTime(6.0,t+4.5);
             g.gain.linearRampToValueAtTime(0,t+6);
             src.connect(g); g.connect(out);
             src.start(t); src.stop(t+6.1);
@@ -1159,8 +1152,8 @@ function playThunder() {
         osc.frequency.exponentialRampToValueAtTime(22,t+2.0);
         const oscG=ctx.createGain();
         oscG.gain.setValueAtTime(0,t);
-        oscG.gain.linearRampToValueAtTime(2.5,t+.07);
-        oscG.gain.setValueAtTime(2.5,t+.25);
+        oscG.gain.linearRampToValueAtTime(5.0,t+.07);
+        oscG.gain.setValueAtTime(5.0,t+.25);
         oscG.gain.exponentialRampToValueAtTime(.001,t+2.5);
         osc.connect(oscG); oscG.connect(out);
         osc.start(t); osc.stop(t+2.6);
@@ -1171,8 +1164,8 @@ function playThunder() {
         lp.type='lowpass'; lp.frequency.setValueAtTime(220,t); lp.frequency.exponentialRampToValueAtTime(80,t+1.8);
         const nG=ctx.createGain();
         nG.gain.setValueAtTime(0,t);
-        nG.gain.linearRampToValueAtTime(1.8,t+.1);
-        nG.gain.setValueAtTime(1.8,t+.5);
+        nG.gain.linearRampToValueAtTime(3.5,t+.1);
+        nG.gain.setValueAtTime(3.5,t+.5);
         nG.gain.exponentialRampToValueAtTime(.001,t+3.8);
         nSrc.connect(lp); lp.connect(nG); nG.connect(out);
         nSrc.start(t); nSrc.stop(t+4.0);

@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v5.1 — Sprite 動畫 DOM display 切換 + 縮放感知 fps）**
+> **最後更新：2026-05-21（v5.2 — 守衛精靈縮放同步 + 函式速查加入 CODEBASE.md）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -14,7 +14,8 @@
 4. [遊戲設定（config.py）](#4-遊戲設定)
 5. [計分公式](#5-計分公式)
 6. [後端路由總覽](#6-後端路由總覽)
-7. [完整程式碼](#7-完整程式碼)
+7. [函式速查](#7-函式速查)
+8. [完整程式碼](#8-完整程式碼)
    - [config.py](#configpy)
    - [app.py](#apppy)
    - [game/models.py](#gamemodelsry)
@@ -23,7 +24,7 @@
    - [templates/index.html](#templatesindexhtml)
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
-8. [技術架構筆記](#8-技術架構筆記)
+9. [技術架構筆記](#9-技術架構筆記)
 
 ---
 
@@ -867,7 +868,143 @@ AI扣分     = 被追跡者觸碰 -50 分（8秒冷卻）
 
 ---
 
-## 7. 完整程式碼
+## 7. 函式速查
+
+> 每次新增或修改函式時，請同步更新此表。
+
+### game/map_api.py
+
+| 函式 | 說明 |
+|------|------|
+| `_haversine_m(a, b)` | 計算兩座標（lat/lon tuple）之間的直線距離（公尺） |
+| `_spread_select(elements, count)` | 貪婪選取彼此間距最大的 POI（避免寶藏擠在同一區） |
+| `_parallel_post(query, handler, ...)` | 同時向所有 Overpass 鏡像 POST，回傳第一個成功的結果 |
+| `MapAPI.geocode(city_name)` | 城市名稱 → 座標（呼叫 Nominatim） |
+| `MapAPI.fetch_roads(lat, lon)` | 以單點為中心 900m 範圍查詢建築物（備援用） |
+| `MapAPI.fetch_roads_focused(points, radius_deg)` | 多點小 bbox union 查詢建築物，比全 bbox 省 60–80% 資料量 |
+| `MapAPI.fetch_roads_bbox(s, n, w, e)` | 以完整遊戲邊界查詢建築物（主要入口） |
+| `MapAPI._parse_map_data(data)` | 將 Overpass 回傳 JSON 解析為 `{roads, buildings}` 格式 |
+| `MapAPI.fetch_poi_all(lat, lon)` | 查詢附近所有有名稱的 POI（node-only 輕量查詢）；失敗時走 Nominatim 備援 |
+| `MapAPI._nominatim_poi_raw(lat, lon)` | Nominatim 關鍵字備援查詢（8 種類型，每次 1.1s 間隔） |
+| `MapAPI.fetch_poi(lat, lon)` | 查詢 POI 並轉換為 `Treasure` 物件清單（舊版入口，現已改用 `fetch_poi_all`） |
+| `MapAPI.get_route(coords)` | 呼叫 OSRM 取得步行路線座標串列 |
+
+### game/pathfinder.py
+
+| 函式 | 說明 |
+|------|------|
+| `solve_tsp_exact(start, treasures)` | 暴力枚舉所有排列，回傳距離最短的寶藏訪問順序（≤8 點） |
+| `calculate_total_distance(start, route)` | 計算起點→路線所有點的 Haversine 總距離 |
+
+### game/models.py
+
+| 函式 / 類別 | 說明 |
+|-------------|------|
+| `rate_limit(calls_per_second)` | decorator，限制函式每秒最多呼叫幾次（用於 Nominatim 速率限制） |
+| `_gh_load()` | 從 GitHub Contents API 讀取 scores.json，回傳 (scores, sha) |
+| `_gh_save(scores, sha)` | 把 scores.json 寫回 GitHub（帶 sha 防止競態覆蓋） |
+| `Scoreboard.save_score(player, city)` | 新增分數至排行榜，先寫 GitHub 再備份本機 |
+| `Scoreboard.get_top10(city)` | 取得指定城市分數最高的前 10 筆 |
+| `Treasure.to_dict()` | 將寶藏轉為可序列化 dict（傳給前端 JSON） |
+| `Player.elapsed_time` | property，回傳遊戲已用秒數 |
+
+### templates/game.html（前端 JS）
+
+#### 音效
+| 函式 | 說明 |
+|------|------|
+| `getAudio()` | 初始化 AudioContext + 主音量鏈（Gain→Compressor→destination） |
+| `snd(fn)` | 靜音保護執行音效 callback |
+| `_dest()` | 回傳 masterOut（所有一般音效的輸出節點） |
+| `_thunderOut(ctx)` | 回傳 ctx.destination（雷聲繞過 master limiter，避免被壓縮） |
+| `playThunder()` | 播放真實雷聲 MP3 + 觸發閃電視覺；第一次呼叫只做解碼 |
+| `_triggerLightning()` | 觸發閃電白屏 + 音效視覺效果 |
+| `_startAmbient(type)` | 開始環境音（晴天鳥聲 / 大霧風聲 / 雷雨雨聲） |
+| `_stopAmbient()` | 停止所有環境音節點 |
+
+#### 玩家移動 & 碰撞
+| 函式 | 說明 |
+|------|------|
+| `tryMove(dLat, dLon)` | 嘗試移動玩家，處理建築碰撞（軸分離滑牆）與邊界夾擠 |
+| `isInBuilding(lat, lon)` | 判斷座標是否落在任何建築物多邊形內 |
+| `ensureOutsideBuilding()` | BFS 找最近可行走格子並傳送玩家（卡牆逃脫用） |
+| `clampToBounds(lat, lon)` | 將座標夾在遊戲邊界內 |
+
+#### 遊戲邏輯
+| 函式 | 說明 |
+|------|------|
+| `collectNearest()` | Space 鍵：依序嘗試傳送門→寶藏收集→逮捕小偷 |
+| `collect(id)` | POST /collect/<id>，更新分數並觸發視覺效果 |
+| `applyScorePenalty(amt, msg)` | 扣分並同步後端 /penalty |
+| `effectiveR()` | 回傳當前有效收集半徑（廣域道具啟用時 ×3） |
+| `useNearestPortal()` | 傳送玩家至最近傳送門的配對出口 |
+
+#### 道具
+| 函式 | 說明 |
+|------|------|
+| `spawnItem()` | 在地圖上生成隨機道具（優先靠近未收集寶藏） |
+| `applyItem(type)` | 觸發撿到的道具效果（加速/無敵/磁鐵/廣域/冰凍） |
+| `tickPullingItems(dt)` | 磁鐵吸引動畫：每幀把飛行中的道具推近玩家 |
+| `dropDecoy()` | 放置誘餌，吸引附近 AI 改往誘餌走 |
+| `tickDecoy(dt)` | 更新誘餌計時，到期後重置被吸引 AI 的路徑 |
+
+#### 戰鬥
+| 函式 | 說明 |
+|------|------|
+| `throwGrenade()` | 消耗手雷，建立飛行動畫，抵達後爆炸暈眩範圍內 AI |
+| `placeMine()` | 在玩家腳下放置地雷（0.8s 武裝延遲） |
+| `tickGrenades(dt)` | 每幀推進手雷飛行動畫，管理充能計時器 |
+| `tickMines(dt)` | 每幀偵測 AI 踩雷並觸發爆炸，管理充能計時器 |
+| `_stunAI(ai, dur)` | 設定 AI 暈眩：清路徑、置灰濾鏡、spawn ⭐ 旋轉標籤 |
+| `_aiFilterEl(ai)` | 回傳該 AI 應套用 filter 的元素（守衛→.gsw；其他→外層 div） |
+| `tickCombatStun(dt)` | 遞減所有 AI 暈眩計時，時間到恢復樣式並移除 ⭐ 標籤 |
+| `catchWantedThief()` | 嘗試逮捕通緝小偷，成功返還被盜分數 + 獎勵 |
+| `_spawnExplosionVfx(lat, lon, radiusM)` | 在地圖上建立爆炸環 DOM 動畫 |
+
+#### AI
+| 函式 | 說明 |
+|------|------|
+| `spawnAI(type, silent)` | 生成 AI（巡邏守衛/追跡者/小偷），隨機選位並加到 aiList |
+| `tickChaser(ai, dt, s)` | 追跡者每幀更新：A* 追玩家，觸碰扣分 |
+| `tickPatroller(ai, dt, s)` | 巡邏守衛每幀更新：沿路標巡邏，FOV 偵測玩家，靠近定身 |
+| `tickThief(ai, dt, s)` | 小偷每幀更新：追寶藏偷竊，隱身，被通緝時逃跑 |
+| `inPatrollerFOV(ai)` | 判斷玩家是否在守衛視野錐形（長方形）內 |
+| `updateFOVPoly(ai)` | 重繪守衛視野 FOV 多邊形（10fps 更新） |
+| `_thiefSetInvis(ai, on)` | 切換小偷隱形：更新 marker/miniMarker/catchCircle 透明度 |
+
+#### 路徑規劃
+| 函式 | 說明 |
+|------|------|
+| `buildNavGrid()` | 從建築物多邊形建立 AI 導航格（每格約 44m） |
+| `buildRouteGrid()` | 建立路線顯示用精細格（每格約 11m） |
+| `runAstar(sLat, sLon, eLat, eLon)` | A* 路徑規劃，回傳 AI 導航 waypoint 陣列 |
+| `runRouteAstar(...)` | 細格 A* 路徑規劃，用於繪製地圖綠色路線 |
+| `snapToUnblocked(rg, lat, lon)` | BFS 找最近未被建築阻擋的格子（路線端點吸附用） |
+| `smoothRoutePath(path)` | 視線判斷去除 A* 鋸齒中間點，讓路線更自然 |
+| `rebuildOptimalRouteAstar()` | 重算 TSP 最佳路線並更新地圖綠色連線 |
+
+#### 精靈動畫 & 視覺
+| 函式 | 說明 |
+|------|------|
+| `_updateSpriteSize()` | 依地圖縮放更新玩家精靈大小（44px 基準，16–80px 範圍） |
+| `_updateGuardSizes()` | 依地圖縮放更新所有守衛精靈大小（與玩家相同公式） |
+| `pushTrail(dt)` | 記錄玩家移動軌跡點（供尾跡線繪製） |
+| `showToast(msg, dur)` | 顯示遊戲右上角提示訊息 |
+| `showScoreFloat(lat, lon, gained)` | 收集寶藏時在寶藏位置浮出 +N 分動畫 |
+| `spawnParticles(lat, lon)` | 收集寶藏時噴射粒子特效 |
+
+#### 主迴圈 & 天氣
+| 函式 | 說明 |
+|------|------|
+| `loop(ts)` | 主遊戲迴圈（requestAnimationFrame），每幀執行所有 tick |
+| `tickWeather(dt)` | 天氣計時器：倒數並在時間到時切換天氣，管理打雷間隔 |
+| `setWeather(type)` | 切換天氣狀態（sunny/fog/storm），更新視覺覆蓋層與音效 |
+| `updateDistances()` | 更新 HUD 距離顯示、羅盤方向、最近 AI 距離 |
+| `updateMiniMap()` | 更新小地圖上玩家與 AI 的位置標記 |
+
+---
+
+## 8. 完整程式碼
 
 ---
 

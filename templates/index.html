@@ -8,75 +8,66 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #0e0801; color: #f0e6d3; }
 
-        body {
-            font-family: 'Noto Sans TC', Arial, sans-serif;
-            background: url('/static/bg.jpg') center 40% / cover fixed no-repeat;
-            min-height: 100vh;
-            color: #f0e6d3;
+        /* ── Hero：背景圖區塊，不用 fixed，直接覆蓋整個 hero ── */
+        .hero {
             position: relative;
+            min-height: 56vh;
+            background: url('/static/bg.jpg') 62% 68% / cover no-repeat;
+            display: flex; align-items: flex-end; justify-content: center;
+            padding-bottom: 0;
+            overflow: hidden;
         }
-        /* 漸層遮罩：頂部較透明讓背景圖顯現，往下加深方便閱讀 */
-        body::before {
+        /* 非常淡的漸層遮罩：頂部幾乎透明，底部漸深方便文字銜接 */
+        .hero::before {
             content: '';
-            position: fixed; inset: 0;
+            position: absolute; inset: 0;
             background: linear-gradient(
                 to bottom,
-                rgba(4,2,1,.42) 0%,
-                rgba(6,3,1,.68) 35%,
-                rgba(7,3,1,.82) 65%,
-                rgba(8,4,1,.90) 100%
+                rgba(0,0,0,.18) 0%,
+                rgba(0,0,0,.28) 55%,
+                rgba(10,4,0,.75) 85%,
+                rgba(14,8,1,1)  100%
             );
-            pointer-events: none; z-index: 0;
         }
-
-        /* ── Hero ── */
-        .hero {
+        .hero-inner {
             position: relative; z-index: 1;
             text-align: center;
-            padding: 96px 20px 64px;
+            padding: 36px 24px 44px;
+            width: 100%;
         }
-        .hero::after {
-            content: '';
-            position: absolute; inset: 0; pointer-events: none;
-            background: radial-gradient(ellipse 60% 80% at 50% 55%,
-                rgba(220,150,20,.18) 0%, transparent 70%);
-        }
-        .hero-inner { position: relative; z-index: 1; }
-
         .hero h1 {
             font-family: 'Orbitron', monospace; font-weight: 900;
-            font-size: clamp(1.9rem, 5.5vw, 3rem);
+            font-size: clamp(1.7rem, 5vw, 2.8rem);
             background: linear-gradient(90deg, #ffd54f 0%, #f09c28 55%, #e06820 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            letter-spacing: 2px; margin-bottom: 14px;
-            filter: drop-shadow(0 2px 16px rgba(255,180,30,.45));
+            letter-spacing: 2px; margin-bottom: 10px;
+            filter: drop-shadow(0 2px 14px rgba(255,180,30,.5));
         }
-        .hero p {
-            font-size: 1.05rem; color: #c8a060; letter-spacing: .4px;
-            text-shadow: 0 1px 6px rgba(0,0,0,.8);
-        }
+        .hero p { font-size: 1rem; color: #d4b07a; text-shadow: 0 1px 8px rgba(0,0,0,.9); }
 
-        /* ── Container ── */
-        .container { position: relative; z-index: 1; max-width: 720px; margin: 0 auto 56px; padding: 0 20px; }
+        /* ── Content section ── */
+        .content { background: #0e0801; padding: 0 0 56px; }
+        .container { max-width: 720px; margin: 0 auto; padding: 0 20px; }
 
         /* ── Cards ── */
         .card {
-            background: rgba(8,4,1,.80);
+            background: rgba(20,10,2,.92);
             border: 1px solid rgba(200,134,10,.28);
-            border-radius: 20px; padding: 30px 34px;
-            box-shadow: 0 8px 40px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,210,80,.07);
-            margin-bottom: 24px;
-            backdrop-filter: blur(16px);
+            border-radius: 20px; padding: 28px 32px;
+            box-shadow: 0 6px 32px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,210,80,.06);
+            margin-bottom: 22px;
         }
-        .card h2 { margin-bottom: 20px; font-size: 1.08rem; color: #ffd54f; letter-spacing: .5px; }
+        .card:first-child { margin-top: -2px; }
+        .card h2 { margin-bottom: 18px; font-size: 1.05rem; color: #ffd54f; letter-spacing: .5px; }
 
         /* ── Form ── */
         .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
         input[type="text"] {
             flex: 1; min-width: 130px;
             padding: 13px 16px; font-size: 14px; font-family: inherit;
-            background: rgba(4,2,0,.65); border: 1.5px solid rgba(200,134,10,.22);
+            background: rgba(6,3,0,.8); border: 1.5px solid rgba(200,134,10,.22);
             border-radius: 11px; outline: none; color: #f0dfb8;
             transition: border-color .2s, box-shadow .2s;
         }
@@ -86,15 +77,14 @@
             box-shadow: 0 0 0 3px rgba(200,134,10,.2);
         }
         button[type="submit"] {
-            padding: 13px 30px; font-size: 14px; font-weight: bold; font-family: inherit;
+            padding: 13px 28px; font-size: 14px; font-weight: bold; font-family: inherit;
             background: linear-gradient(135deg, #c8860a 0%, #9a5e06 100%);
             color: #fff8e0; border: none; border-radius: 11px; cursor: pointer;
             box-shadow: 0 4px 18px rgba(200,134,10,.5);
             transition: transform .15s, box-shadow .15s;
-            letter-spacing: .3px;
             white-space: nowrap;
         }
-        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(200,134,10,.65); }
+        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(200,134,10,.65); }
         button[type="submit"]:active { transform: translateY(0); }
 
         /* ── Error ── */
@@ -104,8 +94,11 @@
             padding: 12px 18px; margin-bottom: 20px;
         }
 
+        /* ── Loading hint ── */
+        #loading-hint { display:none; margin-top:14px; color:#c8a050; font-size:13px; text-align:center; }
+
         /* ── Instructions ── */
-        ul { padding-left: 22px; line-height: 2.2; color: #a08060; font-size: 14px; }
+        ul { padding-left: 22px; line-height: 2.2; color: #907050; font-size: 14px; }
         ul b { color: #ffd54f; }
         .rules-link {
             display: inline-block; margin-top: 16px;
@@ -118,11 +111,8 @@
         /* ── Leaderboard ── */
         table { width: 100%; border-collapse: collapse; }
         thead tr { border-bottom: 1px solid rgba(200,134,10,.2); }
-        th {
-            padding: 10px 12px; text-align: left;
-            font-size: 11px; color: #7a5830;
-            text-transform: uppercase; letter-spacing: .6px; font-weight: 700;
-        }
+        th { padding: 10px 12px; text-align: left; font-size: 11px; color: #7a5830;
+             text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
         td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px; color: #c8b090; }
         tbody tr:hover { background: rgba(200,134,10,.07); }
         tbody tr:nth-child(1) td { color: #ffd54f; }
@@ -130,20 +120,17 @@
         tbody tr:nth-child(3) td { color: #c89050; }
         td:first-child { font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 700; }
         td b { font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: .5px; color: #ffd54f; }
-
         .badge {
             display: inline-block;
             background: rgba(200,134,10,.18); color: #ffd54f;
             padding: 2px 9px; border-radius: 10px; font-size: 11px;
             border: 1px solid rgba(200,134,10,.28);
         }
-
-        /* ── Loading hint ── */
-        #loading-hint { display:none; margin-top:14px; color:#c8a050; font-size:13px; text-align:center; }
     </style>
 </head>
 <body>
 
+<!-- 背景圖 Hero：完整顯示寶箱油畫 -->
 <div class="hero">
     <div class="hero-inner">
         <h1>🗺️ 地圖尋寶大冒險</h1>
@@ -151,60 +138,63 @@
     </div>
 </div>
 
-<div class="container">
-    {% if error %}
-    <div class="error">⚠️ {{ error }}</div>
-    {% endif %}
+<!-- 內容區：深色背景讓文字清晰 -->
+<div class="content">
+    <div class="container">
+        {% if error %}
+        <div class="error">⚠️ {{ error }}</div>
+        {% endif %}
 
-    <div class="card">
-        <h2>🚀 開始遊戲</h2>
-        <form action="/start" method="POST" id="start-form">
-            <div class="form-row">
-                <input type="text" name="player_name" placeholder="你的名字" required maxlength="20">
-                <input type="text" name="city" placeholder="城市（Taipei、Tokyo、Paris...）" value="Taipei" required>
-                <button type="submit" id="start-btn">開始尋寶！</button>
-            </div>
-            <div id="loading-hint">🌐 正在取得城市地點資料，請稍候…</div>
-        </form>
-    </div>
-
-    <div class="card">
-        <h2>📖 遊戲說明</h2>
-        <ul>
-            <li>在 <b>真實城市地圖</b> 上尋找 10 個寶藏，所有地點都是真實存在的咖啡廳、博物館、公園等</li>
-            <li>AI 幫你規劃 <b>最短尋寶路線</b>，分數以寶藏距出生點的 <b>實際公尺數</b> 計算，越遠越值錢</li>
-            <li>限時 <b>10 分鐘</b>，對抗 3 種 AI 敵人：<b>👁️ 巡邏守衛・👾 追跡者・🦹 小偷</b></li>
-            <li>收集地圖上的道具（⚡加速・⭐無敵・🔍廣域・❄️冰凍・🧲磁鐵），存入 <b>5 格道具欄</b></li>
-            <li>使用 <b>💣 手雷・💥 地雷・🎯 誘餌</b> 對付敵人，穿越 <b>傳送門</b> 瞬間移動</li>
-            <li>天氣隨時變化（☀️晴天・🌫️大霧・⛈️雷雨），連續收寶藏觸發 <b>連擊加成</b></li>
-        </ul>
-        <div style="text-align:right">
-            <a href="/rules" class="rules-link">📖 完整規則 & 快捷鍵 →</a>
+        <div class="card">
+            <h2>🚀 開始遊戲</h2>
+            <form action="/start" method="POST" id="start-form">
+                <div class="form-row">
+                    <input type="text" name="player_name" placeholder="你的名字" required maxlength="20">
+                    <input type="text" name="city" placeholder="城市（Taipei、Tokyo、Paris...）" value="Taipei" required>
+                    <button type="submit" id="start-btn">開始尋寶！</button>
+                </div>
+                <div id="loading-hint">🌐 正在取得城市地點資料，請稍候…</div>
+            </form>
         </div>
-    </div>
 
-    {% if top10 %}
-    <div class="card">
-        <h2>🏆 全球排行榜</h2>
-        <table>
-            <thead>
-                <tr><th>名次</th><th>玩家</th><th>城市</th><th>分數</th><th>寶藏</th><th>時間</th></tr>
-            </thead>
-            <tbody>
-            {% for s in top10 %}
-            <tr>
-                <td>{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}{{ loop.index }}{% endif %}</td>
-                <td>{{ s.name }}</td>
-                <td><span class="badge">{{ s.city or '?' }}</span></td>
-                <td><b>{{ s.score }}</b></td>
-                <td>{{ s.treasures }} 個</td>
-                <td>{{ s.time }}s</td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+        <div class="card">
+            <h2>📖 遊戲說明</h2>
+            <ul>
+                <li>在 <b>真實城市地圖</b> 上尋找 10 個寶藏，所有地點都是真實存在的咖啡廳、博物館、公園等</li>
+                <li>AI 幫你規劃 <b>最短尋寶路線</b>，分數以寶藏距出生點的 <b>實際公尺數</b> 計算，越遠越值錢</li>
+                <li>限時 <b>10 分鐘</b>，對抗 3 種 AI 敵人：<b>👁️ 巡邏守衛・👾 追跡者・🦹 小偷</b></li>
+                <li>收集地圖上的道具（⚡加速・⭐無敵・🔍廣域・❄️冰凍・🧲磁鐵），存入 <b>5 格道具欄</b></li>
+                <li>使用 <b>💣 手雷・💥 地雷・🎯 誘餌</b> 對付敵人，穿越 <b>傳送門</b> 瞬間移動</li>
+                <li>天氣隨時變化（☀️晴天・🌫️大霧・⛈️雷雨），連續收寶藏觸發 <b>連擊加成</b></li>
+            </ul>
+            <div style="text-align:right">
+                <a href="/rules" class="rules-link">📖 完整規則 & 快捷鍵 →</a>
+            </div>
+        </div>
+
+        {% if top10 %}
+        <div class="card">
+            <h2>🏆 全球排行榜</h2>
+            <table>
+                <thead>
+                    <tr><th>名次</th><th>玩家</th><th>城市</th><th>分數</th><th>寶藏</th><th>時間</th></tr>
+                </thead>
+                <tbody>
+                {% for s in top10 %}
+                <tr>
+                    <td>{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}{{ loop.index }}{% endif %}</td>
+                    <td>{{ s.name }}</td>
+                    <td><span class="badge">{{ s.city or '?' }}</span></td>
+                    <td><b>{{ s.score }}</b></td>
+                    <td>{{ s.treasures }} 個</td>
+                    <td>{{ s.time }}s</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
 <script>

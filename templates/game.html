@@ -234,11 +234,11 @@
 
         /* ── Loading overlay ── */
         #loading-overlay { position: absolute; inset: 0;
-                           background: url('/static/bg.jpg') center 40% / cover no-repeat;
+                           background: url('/static/bg.jpg') 62% 68% / cover no-repeat;
                            display: flex; align-items: center; justify-content: center;
                            z-index: 8000; transition: opacity .35s; }
         #loading-overlay::before { content:''; position:absolute; inset:0;
-                           background:rgba(5,2,1,.72); pointer-events:none; }
+                           background:rgba(4,2,0,.58); pointer-events:none; }
         #loading-overlay.fade-out { opacity: 0; pointer-events: none; }
         .ld-card { position:relative; z-index:1;
                    background: rgba(8,4,1,.82); color: #f0e6d3; border-radius: 20px;

@@ -272,38 +272,46 @@ def start_game():
 <meta charset="UTF-8">
 <title>準備中 - {city}</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{background:#0d1117;display:flex;align-items:center;justify-content:center;
-     height:100vh;font-family:"Noto Sans TC",sans-serif;color:#fff}}
-.card{{text-align:center;padding:40px 50px;background:#1a2540;border-radius:18px;
-       box-shadow:0 16px 48px rgba(0,0,0,.65);max-width:340px;width:90%}}
-.spin{{width:52px;height:52px;border:4px solid rgba(255,255,255,.1);
-       border-top-color:#7ec8f8;border-radius:50%;
+body{{background:#080408;display:flex;align-items:center;justify-content:center;
+     height:100vh;font-family:"Noto Sans TC",sans-serif;color:#f5e0d0;
+     background-image:url('/static/bg.png');background-size:cover;background-position:55% 62%}}
+body::before{{content:'';position:fixed;inset:0;background:rgba(4,1,3,.62);pointer-events:none}}
+.card{{position:relative;z-index:1;text-align:center;padding:40px 50px;
+       background:rgba(16,5,11,.9);border-radius:20px;
+       border:1px solid rgba(194,24,91,.28);
+       box-shadow:0 16px 52px rgba(0,0,0,.75),inset 0 1px 0 rgba(244,160,32,.06);
+       max-width:340px;width:90%;backdrop-filter:blur(18px)}}
+.spin{{width:52px;height:52px;border:4px solid rgba(194,24,91,.18);
+       border-top-color:#C2185B;border-radius:50%;
        animation:spin .8s linear infinite;margin:0 auto 20px}}
 @keyframes spin{{to{{transform:rotate(360deg)}}}}
-.title{{font-size:17px;font-weight:bold;margin-bottom:18px;
-        background:linear-gradient(90deg,#7ec8f8,#34a853);
-        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}}
-.step{{font-size:14px;color:#90caf9;min-height:22px;margin-bottom:6px}}
-.sub{{font-size:12px;color:#546e7a;min-height:18px;margin-bottom:20px}}
+.title{{font-family:"Orbitron",monospace;font-size:16px;font-weight:900;margin-bottom:18px;
+        background:linear-gradient(90deg,#FFD54F,#F4A020,#C2185B);
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+        letter-spacing:1px}}
+.step{{font-size:14px;color:#F4A020;min-height:22px;margin-bottom:6px}}
+.sub{{font-size:12px;color:#9A7080;min-height:18px;margin-bottom:20px}}
 .err{{color:#ef5350;font-size:13px;display:none;margin-bottom:14px}}
 .btn{{padding:9px 24px;border:none;border-radius:20px;cursor:pointer;
-      font-size:13px;font-weight:bold;background:#e53935;color:#fff;display:none}}
+      font-size:13px;font-weight:bold;
+      background:linear-gradient(135deg,#C2185B,#880E4F);color:#FFE0EC;display:none}}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="title">🏙️ 準備 {city}</div>
   <div class="spin" id="sp"></div>
-  <div class="step" id="st">🔍 搜尋附近景點…</div>
-  <div class="sub"  id="sb">連線地圖資料庫中</div>
+  <div class="step" id="st">🔍 搜尋附近景點與寶藏…</div>
+  <div class="sub"  id="sb">連線地圖資料庫中…</div>
   <div class="err"  id="er"></div>
   <button class="btn" id="bt" onclick="location.href='/'">← 回首頁</button>
 </div>
 <script>
 const ID='{req_id}';
-const STEPS=['🔍 搜尋附近景點…','📍 計算最佳路線…','🗺️ 整理地圖資料…','⚙️ 即將完成…'];
+const STEPS=['🔍 搜尋附近景點與寶藏…','📍 規劃最佳尋寶路線…','🗺️ 描繪城市輪廓與邊界…','⚔️ 即將出發！'];
 let t=0;
 async function poll(){{
   t++;

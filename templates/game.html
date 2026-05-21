@@ -167,70 +167,70 @@
                         transition: width .1s linear, background .3s; }
         .sprint-fill.cooling  { background: linear-gradient(90deg,#e57373,#ef9a9a); }
         .sprint-fill.recharge { background: linear-gradient(90deg,#ffd54f,#fff176); }
-        .sprint-hint  { font-size: 10px; color: #546e7a; white-space: nowrap; }
+        .sprint-hint  { font-size: 10px; color: #5A2840; white-space: nowrap; }
 
         /* ── Layout ── */
         .wrap { flex: 1; display: flex; overflow: hidden; position: relative; }
         #map  { flex: 1; background: #e8edf4; }
 
         /* ── Sidebar ── */
-        .sb { width: 268px; background: #f8f9fa; border-left: 1px solid #ddd;
+        .sb { width: 268px; background: rgba(10,3,7,.97); border-left: 1px solid rgba(194,24,91,.18);
               display: flex; flex-direction: column; flex-shrink: 0; }
         .sb-body { flex: 1; overflow-y: auto; padding: 10px; }
-        .sb-foot { padding: 10px; border-top: 1px solid #ddd; }
+        .sb-foot { padding: 10px; border-top: 1px solid rgba(194,24,91,.12); }
 
         .kbd-box { background: rgba(10,3,5,.9); color: #c9b8bc; border-radius: 10px;
                    padding: 10px 12px; margin-bottom: 10px; font-size: 11.5px; line-height: 1.9;
                    border: 1px solid rgba(194,24,91,.15); }
         .kbd-box b { color: #F4A020; }
-        .key { display: inline-block; background: #1e293b; color: #94a3b8; padding: 1px 6px;
+        .key { display: inline-block; background: rgba(194,24,91,.12); color: #FF80AB; padding: 1px 6px;
                border-radius: 4px; font-family: monospace; font-size: 11px;
-               border: 1px solid #334155; border-bottom: 2px solid #475569; }
+               border: 1px solid rgba(194,24,91,.3); border-bottom: 2px solid rgba(194,24,91,.4); }
 
-        .compass-box { background: #fff; border-radius: 10px; padding: 10px;
+        .compass-box { background: rgba(20,6,12,.9); border-radius: 10px; padding: 10px;
                        margin-bottom: 10px; display: flex; align-items: center; gap: 10px;
-                       border: 1.5px solid #e0e0e0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+                       border: 1.5px solid rgba(194,24,91,.22); box-shadow: 0 2px 10px rgba(0,0,0,.4); }
         .compass-arrow-wrap { width: 44px; height: 44px; border-radius: 50%;
-                              background: #e3f2fd; display: flex; align-items: center;
+                              background: rgba(194,24,91,.12); display: flex; align-items: center;
                               justify-content: center; flex-shrink: 0; font-size: 22px; }
         .compass-info { flex: 1; min-width: 0; }
-        .compass-lbl  { font-size: 10px; color: #aaa; margin-bottom: 2px; }
-        .compass-name { font-size: 12px; font-weight: bold; color: #333;
+        .compass-lbl  { font-size: 10px; color: #5A2840; margin-bottom: 2px; }
+        .compass-name { font-size: 12px; font-weight: bold; color: #f5e0d0;
                         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .compass-dist { font-family: 'Orbitron', monospace; font-size: 13px; color: #1a73e8; font-weight: 700; margin-top: 2px; }
+        .compass-dist { font-family: 'Orbitron', monospace; font-size: 13px; color: #F4A020; font-weight: 700; margin-top: 2px; }
 
-        .order-hint { background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px;
-                      padding: 6px 10px; margin-bottom: 10px; font-size: 11px; color: #795548; }
-        .order-hint b { color: #f57f17; }
+        .order-hint { background: rgba(244,160,32,.08); border: 1px solid rgba(244,160,32,.22); border-radius: 6px;
+                      padding: 6px 10px; margin-bottom: 10px; font-size: 11px; color: #C0A060; }
+        .order-hint b { color: #F4A020; }
 
-        .prog-wrap { height: 5px; background: #e0e0e0; border-radius: 3px; margin-bottom: 10px; }
-        .prog-fill  { height: 100%; background: #34a853; border-radius: 3px; transition: width .4s; }
-        .sec-lbl { font-size: 11px; color: #888; font-weight: bold;
+        .prog-wrap { height: 5px; background: rgba(255,255,255,.08); border-radius: 3px; margin-bottom: 10px; }
+        .prog-fill  { height: 100%; background: linear-gradient(90deg,#F4A020,#C2185B); border-radius: 3px; transition: width .4s; }
+        .sec-lbl { font-size: 11px; color: #6A3040; font-weight: bold;
                    letter-spacing: .4px; margin-bottom: 8px; }
 
-        .tc { background: #fff; border-radius: 8px; padding: 9px 11px; margin-bottom: 7px;
-              border-left: 4px solid #1a73e8; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        .tc { background: rgba(20,6,12,.85); border-radius: 8px; padding: 9px 11px; margin-bottom: 7px;
+              border-left: 4px solid rgba(194,24,91,.4); box-shadow: 0 2px 8px rgba(0,0,0,.35);
               transition: all .25s; }
-        .tc.near   { border-left-color: #f9a825; background: #fffde7; }
-        .tc.found  { border-left-color: #34a853; opacity: .42; }
-        .tc.target { border-left-color: #e91e63; background: #fce4ec; }
-        .tc .sq  { font-size: 10.5px; color: #bbb; }
-        .tc .nm  { font-size: 13px; font-weight: bold; margin: 2px 0 3px; }
-        .tc .cat { font-size: 11px; color: #888; }
-        .tc .dst { font-family: 'Orbitron', monospace; font-size: 11px; margin-top: 4px; color: #aaa; }
-        .tc .dst.ok  { color: #2e7d32; font-weight: bold; }
-        .tc .dst.far { color: #c62828; }
+        .tc.near   { border-left-color: #F4A020; background: rgba(244,160,32,.09); }
+        .tc.found  { border-left-color: rgba(100,180,100,.5); opacity: .42; }
+        .tc.target { border-left-color: #C2185B; background: rgba(194,24,91,.12); }
+        .tc .sq  { font-size: 10.5px; color: #5A2840; }
+        .tc .nm  { font-size: 13px; font-weight: bold; margin: 2px 0 3px; color: #f5e0d0; }
+        .tc .cat { font-size: 11px; color: #7A4050; }
+        .tc .dst { font-family: 'Orbitron', monospace; font-size: 11px; margin-top: 4px; color: #6A3040; }
+        .tc .dst.ok  { color: #80C880; font-weight: bold; }
+        .tc .dst.far { color: #ef5350; }
         .cbtn { margin-top: 6px; width: 100%; padding: 6px; font-size: 12px; font-weight: bold;
                 border: none; border-radius: 5px; cursor: pointer; transition: background .2s;
-                background: #1a73e8; color: #fff; }
-        .cbtn:hover:not(:disabled) { background: #1558b0; }
-        .cbtn.near   { background: #f9a825; color: #333; }
-        .cbtn.target { background: #e91e63; }
-        .cbtn:disabled { background: #34a853; cursor: default; }
-        .endbtn { width: 100%; padding: 10px; background: #c62828; color: #fff;
+                background: rgba(194,24,91,.7); color: #FFE0EC; }
+        .cbtn:hover:not(:disabled) { background: #C2185B; }
+        .cbtn.near   { background: rgba(244,160,32,.75); color: #2a0a0a; }
+        .cbtn.target { background: #C2185B; }
+        .cbtn:disabled { background: rgba(80,140,80,.6); cursor: default; }
+        .endbtn { width: 100%; padding: 10px; background: linear-gradient(135deg,#C2185B,#880E4F); color: #FFE0EC;
                   border: none; border-radius: 6px; cursor: pointer;
-                  font-size: 14px; font-weight: bold; }
-        .endbtn:hover { background: #b71c1c; }
+                  font-size: 14px; font-weight: bold; box-shadow: 0 3px 12px rgba(194,24,91,.4); }
+        .endbtn:hover { background: linear-gradient(135deg,#d81b60,#C2185B); }
 
         /* ── Loading overlay ── */
         #loading-overlay { position: absolute; inset: 0;
@@ -304,23 +304,23 @@
         /* ── Mini-map ── */
         #mini-map { position: absolute; bottom: 64px; left: 10px;
                     width: 130px; height: 130px; border-radius: 12px;
-                    border: 2px solid rgba(126,200,248,.65);
-                    box-shadow: 0 4px 16px rgba(0,0,0,.5), 0 0 0 1px rgba(126,200,248,.12);
+                    border: 2px solid rgba(194,24,91,.55);
+                    box-shadow: 0 4px 16px rgba(0,0,0,.5), 0 0 0 1px rgba(194,24,91,.15);
                     z-index: 995; overflow: hidden; opacity: .9; cursor: pointer;
                     transition: opacity .2s, transform .2s; }
         #mini-map:hover { opacity: 1; transform: scale(1.05); }
 
         /* ── Recenter ── */
         #recenter-btn { display: none; position: absolute; bottom: 62px; right: 14px;
-                        z-index: 999; background: #1a73e8; color: #fff;
+                        z-index: 999; background: rgba(194,24,91,.85); color: #FFE0EC;
                         border: none; border-radius: 24px; padding: 8px 16px;
                         font-size: 13px; font-weight: bold; cursor: pointer;
-                        box-shadow: 0 3px 8px rgba(0,0,0,.3); }
-        #recenter-btn:hover { background: #1558b0; }
+                        box-shadow: 0 3px 12px rgba(194,24,91,.4); }
+        #recenter-btn:hover { background: #C2185B; }
 
         /* ── Toast ── */
         .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
-                 background: rgba(13,17,23,.9); color: #fff; padding: 9px 22px;
+                 background: rgba(14,4,10,.92); color: #f5e0d0; padding: 9px 22px;
                  border-radius: 24px; font-size: 13px; z-index: 9999;
                  opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap;
                  border: 1px solid rgba(194,24,91,.2); backdrop-filter: blur(8px);
@@ -493,12 +493,25 @@
             user-select:none;
         }
         .slot-box.selected { border-color:#ffd54f;background:rgba(255,213,79,.14);box-shadow:0 0 8px rgba(255,213,79,.45); }
-        .slot-box.filled   { border-color:rgba(100,180,255,.55);background:rgba(26,115,232,.14); }
+        .slot-box.filled   { border-color:rgba(194,24,91,.55);background:rgba(194,24,91,.1); }
         .slot-box.selected.filled { border-color:#ffd54f;box-shadow:0 0 10px rgba(255,213,79,.6); }
         .slot-num  { font-size:9px;color:rgba(255,255,255,.38);position:absolute;top:2px;left:4px;
                      font-family:'Orbitron',monospace;font-weight:700; }
         .slot-icon { font-size:20px;line-height:1;margin-top:4px; }
         .slot-key-hint { font-size:9px;color:rgba(255,255,255,.32);white-space:nowrap;margin-left:3px; }
+
+        /* ── Leaflet popup 暗色主題覆蓋 ── */
+        .leaflet-popup-content-wrapper {
+            background: rgba(18,5,12,.95) !important;
+            color: #f5e0d0 !important;
+            border: 1px solid rgba(194,24,91,.3) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,.7) !important;
+            border-radius: 12px !important;
+        }
+        .leaflet-popup-tip { background: rgba(18,5,12,.95) !important; }
+        .leaflet-popup-content { color: #f5e0d0; }
+        .leaflet-popup-content span[style*="color:#777"] { color: #7A4050 !important; }
+        .leaflet-close-button { color: #FF80AB !important; }
     </style>
 </head>
 <body>
@@ -1503,11 +1516,11 @@ function _updateAllStunLabels(){
 map.on('zoomend',_updateAllStunLabels);
 
 const pCircle = L.circle(START, {
-    radius: CLCT_R, color: '#1a73e8', weight: 1.5, fillColor: '#1a73e8', fillOpacity: .06
+    radius: CLCT_R, color: '#C2185B', weight: 1.5, fillColor: '#C2185B', fillOpacity: .06
 }).addTo(map);
 L.marker(START, {
     icon: L.divIcon({
-        html: '<div style="background:#1565c0;color:#fff;padding:3px 8px;border-radius:4px;font-size:11px;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🏠 起點</div>',
+        html: '<div style="background:#880E4F;color:#FFE0EC;padding:3px 8px;border-radius:4px;font-size:11px;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🏠 起點</div>',
         className: '', iconAnchor: [30,10]
     }), zIndexOffset: -100, interactive: false
 }).addTo(map);
@@ -1527,9 +1540,9 @@ TREASURES.forEach(t => {
         <div style="min-width:175px;font-family:Arial">
             <b style="font-size:14px">💎 ${t.name}</b><br>
             <span style="color:#777;font-size:12px">${t.category}・${t.points}分</span><br>
-            <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#aaa">計算中…</div>
+            <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#6A3040">計算中…</div>
             <button id="pp-btn-${t.id}" onclick="collect('${t.id}',${t.lat},${t.lon})"
-                style="margin-top:6px;width:100%;padding:7px;background:#1a73e8;color:#fff;
+                style="margin-top:6px;width:100%;padding:7px;background:#C2185B;color:#FFE0EC;
                        border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold">
                 ✅ 收集寶藏
             </button>
@@ -1563,7 +1576,7 @@ TREASURES.forEach(t => {
     miniTMarkers[t.id] = m;
 });
 const miniPlayer = L.circleMarker(START, {
-    radius:5, color:'#1565c0', fillColor:'#1a73e8', fillOpacity:1, weight:2
+    radius:5, color:'#880E4F', fillColor:'#C2185B', fillOpacity:1, weight:2
 }).addTo(miniMap);
 document.getElementById('mini-map').addEventListener('click', () => {
     map.setView([pLat,pLon], 17, {animate:true, duration:0.4});
@@ -1581,7 +1594,7 @@ function pushTrail(dt) {
     trailPts.push([pLat,pLon]);
     if(trailPts.length>60) trailPts.shift();
     if(trailPts.length>=2) {
-        if(!trailLine) trailLine=L.polyline(trailPts,{color:'#1a73e8',weight:2,opacity:.3,dashArray:'2 5'}).addTo(map);
+        if(!trailLine) trailLine=L.polyline(trailPts,{color:'#F4A020',weight:2,opacity:.25,dashArray:'2 5'}).addTo(map);
         else trailLine.setLatLngs(trailPts);
     }
 }
@@ -2318,9 +2331,9 @@ function relocateTreasure(tId) {
             <div style="min-width:175px;font-family:Arial">
                 <b style="font-size:14px">💎 ${t.name}</b><br>
                 <span style="color:#777;font-size:12px">${t.category}・${t.points}分</span><br>
-                <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#aaa">計算中…</div>
+                <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#6A3040">計算中…</div>
                 <button id="pp-btn-${t.id}" onclick="collect('${t.id}',${nLat},${nLon})"
-                    style="margin-top:6px;width:100%;padding:7px;background:#1a73e8;color:#fff;
+                    style="margin-top:6px;width:100%;padding:7px;background:#C2185B;color:#FFE0EC;
                            border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold">
                     ✅ 收集寶藏
                 </button>
@@ -3807,8 +3820,8 @@ async function fetchBuildingsCached(){
 async function loadBuildingsBackground(){
     // 立即畫出遊玩邊界框，讓玩家看到遊玩範圍
     L.rectangle([[BOUNDS.s,BOUNDS.w],[BOUNDS.n,BOUNDS.e]],{
-        color:'#1a73e8', weight:2.5, dashArray:'10 6',
-        fill:false, interactive:false, opacity:.8
+        color:'#C2185B', weight:2, dashArray:'10 6',
+        fill:false, interactive:false, opacity:.55
     }).addTo(map);
 
     try{

@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（v5.5 — 追跡者受傷動畫）**
+> **最後更新：2026-05-21（v5.6 — 守衛受傷動畫 + 追跡者攻擊動畫）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -25,6 +25,28 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 9. [技術架構筆記](#9-技術架構筆記)
+
+---
+
+### 2026-05-21（v5.6）守衛受傷動畫 + 追跡者攻擊動畫
+
+**守衛受傷**（`Hurt (1).png` 384×128 → `Ghurt1-3.png`，3 幀）
+- `.ghurt` / `.ghurt.active`：同 `.gf` 疊在 `.gsw` 內，預設隱藏
+- `_stunAI(patroller)`：隱藏 `.gf`，顯示 `.ghurt[0]`，不套灰色 filter
+- 守衛動畫循環：`combatStun>0` → 6fps 3 幀 hurt 循環；否則跑步動畫
+- `tickCombatStun` 結束：隱藏 `.ghurt`、還原 `.gf[0]`，套用冰凍 filter（若仍凍結）
+
+**追跡者攻擊**（`Attack_4.png` 640×128 → `Cattack1-5.png`，5 幀）
+- `.cattack` / `.cattack.active`：疊在 `.csw` 內，預設隱藏
+- `tickChaser`：攻擊成功時設 `ai._attackAnim=0.7`（0.7秒視覺時長）
+- 追跡者動畫優先序：hurt（`combatStun>0`）> attack（`_attackAnim>0`）> run
+- 攻擊幀以狀態機切換（`ai._animState`），避免每幀重複 DOM 操作
+- 攻擊動畫：5 幀播一次（10fps），結束後自動回到跑步
+
+**共用**
+- `_applyAIFilter`：守衛套 `.gf,.ghurt`；追跡者套 `.cf,.churt,.cattack`
+- `_updateGuardSizes` / `_updateChaserSizes`：同步縮放新幀
+- 冰凍結束時，守衛和追跡者均不重套灰色 filter（顯示 hurt/attack 幀者）
 
 ---
 
@@ -55,18 +77,20 @@
 ```
 static/sprites/
 ├── player/  (Arun1-6.png)
-├── guard/   (Grun1-8.png)
-└── chaser/  (Crun1-6.png, Churt1-2.png)
+├── guard/   (Grun1-8.png, Ghurt1-3.png)
+└── chaser/  (Crun1-6.png, Churt1-2.png, Cattack1-5.png)
 
 characters/
 ├── player/
 │   ├── 跑步/  (Arun1-6.png 原始幀)
 │   └── 普攻/  (Aattack1-6.png + Ablood.png)
 ├── guard/
-│   └── run_spritesheet.png
+│   ├── run_spritesheet.png
+│   └── Hurt (1).png  (3 幀原始受傷動作)
 └── chaser/
     ├── run_spritesheet.png
-    └── Hurt.png  (2 幀原始受傷動作)
+    ├── Hurt.png      (2 幀原始受傷動作)
+    └── Attack_4.png  (5 幀原始攻擊動作)
 ```
 
 所有 game.html 路徑同步更新（`/static/sprites/Xrun` → `/static/sprites/character/Xrun`）。

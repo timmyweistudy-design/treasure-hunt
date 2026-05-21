@@ -4,6 +4,7 @@ import math
 import time
 import uuid
 import random
+import logging
 import threading
 from flask import Flask, render_template, request, session, jsonify, redirect, url_for, make_response
 from game.models import Player, Scoreboard, Treasure
@@ -82,6 +83,9 @@ def _assign_tiers(raw_pois, origin_lat, origin_lon):
                 category=chosen_p["category"],
                 points=dist_m,  # 分數 = 距出生點公尺數
             ))
+        else:
+            logging.warning("_assign_tiers: tier %d (target %dm) skipped — no suitable POI found",
+                            tier_idx, tier["target_m"])
     return result
 
 # Pre-populated coords for common cities — skip Nominatim entirely for these
@@ -175,6 +179,9 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
         # Pad to treasure_count with random positions when Overpass returns fewer POIs
         target = GAME_CONFIG["treasure_count"]
         cos_lat_pad = math.cos(math.radians(lat))
+        _max_pad_m = 950  # slightly above max dist_m=900 to allow for clamping margin
+        _pad_dlat = _max_pad_m / 111320.0
+        _pad_dlon = _max_pad_m / (111320.0 * cos_lat_pad)
         idx = len(treasures)
         attempts = 0
         while len(treasures) < target and attempts < 300:
@@ -183,7 +190,10 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
             dist_m = random.uniform(200, 900)
             nlat = lat + math.cos(angle) * dist_m / 111320.0
             nlon = lon + math.sin(angle) * dist_m / (111320.0 * cos_lat_pad)
-            if all(haversine((nlat, nlon), (t.lat, t.lon)) >= 150 for t in treasures):
+            # clamp to a safe radius so padded treasures are always reachable
+            nlat = max(lat - _pad_dlat, min(lat + _pad_dlat, nlat))
+            nlon = max(lon - _pad_dlon, min(lon + _pad_dlon, nlon))
+            if all(haversine((nlat, nlon), (t.lat, t.lon)) >= _MIN_TREASURE_SPREAD for t in treasures):
                 treasures.append(Treasure(
                     id=f"t{idx}", name=f"神秘地點 {idx + 1}",
                     lat=nlat, lon=nlon, category="mystery", points=100

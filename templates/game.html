@@ -749,7 +749,7 @@ let decoyActive=false, decoyLat=0, decoyLon=0, decoyTimer=0, decoyCD=0, decoyMar
 let comboCount=0, comboTimer=0;
 const COMBO_WINDOW=22;
 let stunTimer=0, stunCD=0;
-let magnetTimer=0, magnetAutoT=0, magnetCircle=null;
+let magnetTimer=0, magnetCircle=null;
 const MAGNET_R = CLCT_R * 6;  // 300m magnet radius (vs 50m normal collect)
 const pullingItems = new Map(); // id → {type, marker, sLat, sLon, progress} for pull animation
 let goldenId=null, goldenTimer=0, goldenCycle=GOLDEN_INTERVAL, goldenRing=null;
@@ -1679,6 +1679,7 @@ function catchWantedThief() {
         if(ai.catchCircle) map.removeLayer(ai.catchCircle);
         if(ai.fovPoly) map.removeLayer(ai.fovPoly);
         if(ai.stunRing) map.removeLayer(ai.stunRing);
+        if(ai.stunLabel){ai.stunLabel.remove();ai.stunLabel=null;}
         aiList.splice(i,1);
         thiefCount=Math.max(0,thiefCount-1);
         wantedMaxTimer=0;
@@ -1792,7 +1793,7 @@ function _activateItem(type) {
     if(type==='speed'){speedBoostTimer=8;showToast('⚡ 加速！速度×2，持續8秒！',2200);playItem();}
     else if(type==='star'){invincTimer=10;showToast('⭐ 無敵星星！速度×1.5+穿牆，持續10秒！',2500);playItem();}
     else if(type==='range'){rangeBoostTimer=10;showToast('🔍 廣域！收集距離×3，持續10秒！',2200);playItem();}
-    else if(type==='magnet'){magnetTimer=8;magnetAutoT=0;showToast('🧲 磁鐵！自動收集範圍內寶藏！8秒！',2500);playMagnet();}
+    else if(type==='magnet'){magnetTimer=8;showToast('🧲 磁鐵！自動收集範圍內寶藏！8秒！',2500);playMagnet();}
     else{
         aiFrozenTimer=7; freezeVfxTimer=0;
         const mapEl=document.getElementById('map');
@@ -2029,7 +2030,7 @@ function tickChaser(ai,dt,s) {
         ai.path=[]; ai.pathTimer=1.5;
     } else {
         const chLat=decoyActive?decoyLat:pLat, chLon=decoyActive?decoyLon:pLon;
-        if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=1.5;const fl=ai.lat,fo=ai.lon,tl=chLat,to=chLon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
+        if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=1.5;const tl=chLat,to=chLon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(ai.lat,ai.lon,tl,to);ai._astarPending=false;});}
         while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
         const tLat=ai.path.length>0?ai.path[0][0]:chLat, tLon=ai.path.length>0?ai.path[0][1]:chLon;
         const dLa=tLat-ai.lat, dLo=tLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
@@ -2062,7 +2063,7 @@ function tickPatroller(ai,dt,s) {
         const wpId=OPTIMAL[ai.waypointIdx%OPTIMAL.length];
         const wp=TREASURES.find(t=>t.id===wpId);
         if(wp){
-            if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=2.0;const fl=ai.lat,fo=ai.lon,tl=wp.lat,to=wp.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
+            if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=2.0;const tl=wp.lat,to=wp.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(ai.lat,ai.lon,tl,to);ai._astarPending=false;});}
             while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
             const mLat=ai.path.length>0?ai.path[0][0]:wp.lat, mLon=ai.path.length>0?ai.path[0][1]:wp.lon;
             const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
@@ -2155,7 +2156,7 @@ function tickThief(ai,dt,s) {
     }
     const tgt=TREASURES.find(t=>t.id===ai.targetTId);
     if(!tgt){ai.targetTId=null; return 9999;}
-    if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=2.0;const fl=ai.lat,fo=ai.lon,tl=tgt.lat,to=tgt.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
+    if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=2.0;const tl=tgt.lat,to=tgt.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(ai.lat,ai.lon,tl,to);ai._astarPending=false;});}
     while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
     const mLat=ai.path.length>0?ai.path[0][0]:tgt.lat, mLon=ai.path.length>0?ai.path[0][1]:tgt.lon;
     const dLa=mLat-ai.lat, dLo=mLon-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
@@ -3052,13 +3053,14 @@ async function collect(id, tLat, tLon) {
     const tCurrent=TREASURES.find(t=>t.id===id);
     if(tCurrent){tLat=tCurrent.lat;tLon=tCurrent.lon;}
     if(collected.has(id)||inFlight.has(id)) return;
+    inFlight.add(id);  // 立即鎖定，防止同一幀雙重請求（距離判斷前就鎖）
     const d=distM(pLat,pLon,tLat,tLon);
     const eR=effectiveR();
     if(d>eR){
+        inFlight.delete(id);  // 距離不夠時解鎖
         showToast(`📍 還差 ${Math.round(d-eR)}m！先走過去`,2500);
         return;
     }
-    inFlight.add(id);
     const optIdx =OPTIMAL.indexOf(id);
     const isOrder=(optIdx===nextOptIdx);
     const bonus  =isOrder?ORDER_BONUS:0;

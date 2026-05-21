@@ -324,17 +324,17 @@
             display:flex; align-items:center; justify-content:center;
             animation:ppulse 2s ease-in-out infinite;
         }
-        .psprite {
+        /* 所有 6 幀疊在同一位置，用 display 切換（比 src 切換更不閃爍）*/
+        .psw { position:relative; width:64px; height:64px; }
+        .pf  {
+            position:absolute; top:0; left:0;
             width:64px; height:64px;
-            image-rendering:pixelated;
-            pointer-events:none;
+            image-rendering:pixelated; pointer-events:none;
+            display:none;
         }
-        .player-dot.sprint .psprite {
-            filter:drop-shadow(0 0 6px rgba(255,120,0,.95)) brightness(1.15);
-        }
-        .player-dot.invinc .psprite {
-            animation:invinc-spr .5s ease-in-out infinite;
-        }
+        .pf.active { display:block; }
+        .player-dot.sprint .psw { filter:drop-shadow(0 0 6px rgba(255,120,0,.95)) brightness(1.15); }
+        .player-dot.invinc .psw { animation:invinc-spr .5s ease-in-out infinite; }
         @keyframes invinc-spr {
             0%,100%{ filter:drop-shadow(0 0 6px gold) brightness(1.3) }
             50%    { filter:drop-shadow(0 0 16px rgba(255,215,0,.7)) brightness(1.55) }
@@ -746,7 +746,7 @@ let _ambientGain = null;     // 環境音音量節點
 let birdTimer    = 4 + Math.random()*4;    // 晴天小鳥叫下次觸發（秒）
 let thunderTimer = 2 + Math.random()*2;    // 雷雨打雷下次觸發（秒）
 // ── 主角 Sprite 動畫（由 game loop 驅動，速度連動）───────
-let _sprFrame=0, _sprFrameAcc=0, _sprMoving=false, _sprLeft=false, _sprSpeed=0;
+let _sprFrame=0, _sprFrameAcc=0, _sprMoving=false, _sprLeft=false, _sprSpeed=0, _sprSizeNow=52;
 const _sprSrcs=[1,2,3,4,5,6].map(n=>`/static/sprites/Arun${n}.png`);
 _sprSrcs.forEach(s=>{const i=new Image();i.src=s;});   // 預載所有幀
 
@@ -1336,7 +1336,14 @@ _mainTile.on('tileerror', function(){
 });
 
 const pIcon = L.divIcon({
-    html: '<div class="player-dot" id="pdot"><img id="player-sprite" class="psprite" src="/static/sprites/Arun1.png"></div>',
+    html: `<div class="player-dot" id="pdot"><div class="psw" id="psw">
+        <img class="pf active" src="/static/sprites/Arun1.png">
+        <img class="pf" src="/static/sprites/Arun2.png">
+        <img class="pf" src="/static/sprites/Arun3.png">
+        <img class="pf" src="/static/sprites/Arun4.png">
+        <img class="pf" src="/static/sprites/Arun5.png">
+        <img class="pf" src="/static/sprites/Arun6.png">
+    </div></div>`,
     className: '', iconSize: [64,64], iconAnchor: [32,60]
 });
 const pMarker = L.marker(START, {icon: pIcon, zIndexOffset: 1000}).addTo(map);
@@ -1360,11 +1367,17 @@ function _updateSpriteSize(){
     const zoom=map.getZoom();
     // zoom 17 = 基準 52px；每級 ×2，範圍 20~96px
     const size=Math.max(20,Math.min(96,Math.round(52*Math.pow(2,zoom-17))));
+    _sprSizeNow=size;
     const anchorY=Math.round(size*0.92);
     const dot=document.getElementById('pdot');
-    const img=document.getElementById('player-sprite');
+    const psw=document.getElementById('psw');
     if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}
-    if(img){img.style.width=size+'px';img.style.height=size+'px';}
+    if(psw){
+        psw.style.width=size+'px'; psw.style.height=size+'px';
+        document.querySelectorAll('#pdot .pf').forEach(img=>{
+            img.style.width=size+'px'; img.style.height=size+'px';
+        });
+    }
     const el=pMarker.getElement();
     if(el){el.style.marginLeft=(-size/2)+'px';el.style.marginTop=(-anchorY)+'px';}
 }
@@ -2983,19 +2996,31 @@ function loop(ts) {
                     pushTrail(dt);
                 }
             }
-            // ── Sprite 幀更新（速度連動，只在幀號改變時更新 DOM）──
-            {const sprImg=document.getElementById('player-sprite');
-            if(sprImg){
+            // ── Sprite 幀更新（速度連動，display 切換比 src 切換更流暢）──
+            {const pfs=document.querySelectorAll('#pdot .pf');
+            const psw=document.getElementById('psw');
+            if(pfs.length){
                 if(_sprMoving){
-                    const animFps=8*(_sprSpeed/WALK_SPD);  // 走路8fps，加速等比加快
+                    // 根據角色在螢幕上的實際像素速度計算 fps，縮放時自動補償
+                    const zoom=map.getZoom();
+                    const pxPerDeg=256*Math.pow(2,zoom)/360;
+                    const onScreenPx=_sprSpeed*pxPerDeg*Math.cos(pLat*Math.PI/180);
+                    const animFps=Math.max(6,Math.min(18,onScreenPx/_sprSizeNow*18));
                     _sprFrameAcc=(_sprFrameAcc+animFps*dt)%6;
                     const f=Math.floor(_sprFrameAcc);
-                    if(f!==_sprFrame){_sprFrame=f;sprImg.src=_sprSrcs[f];}
+                    if(f!==_sprFrame){
+                        pfs[_sprFrame].classList.remove('active');
+                        pfs[f].classList.add('active');
+                        _sprFrame=f;
+                    }
                 } else {
-                    if(_sprFrame!==0){_sprFrame=0;_sprFrameAcc=0;sprImg.src=_sprSrcs[0];}
+                    if(_sprFrame!==0){
+                        pfs[_sprFrame].classList.remove('active');
+                        pfs[0].classList.add('active');
+                        _sprFrame=0; _sprFrameAcc=0;
+                    }
                 }
-                const t=_sprLeft?'scaleX(-1)':'scaleX(1)';
-                if(sprImg.style.transform!==t) sprImg.style.transform=t;
+                if(psw){const t=_sprLeft?'scaleX(-1)':'scaleX(1)'; if(psw.style.transform!==t) psw.style.transform=t;}
             }}
             // 時間壓力：倒數 60s 以內顯示紅邊特效
             if(uiFrame){

@@ -343,24 +343,27 @@
             0%,100%{ filter:drop-shadow(0 2px 8px rgba(21,101,192,.75)) }
             50%    { filter:drop-shadow(0 2px 4px rgba(21,101,192,.2)) }
         }
-        .tbadge { width: 34px; height: 34px; border-radius: 50%; color: #fff;
-                  font-weight: 900; font-size: 14px;
-                  display: flex; align-items: center; justify-content: center;
-                  border: 2.5px solid rgba(255,255,255,.92);
-                  box-shadow: 0 3px 10px rgba(0,0,0,.5);
-                  text-shadow: 0 1px 3px rgba(0,0,0,.6); }
-        .tbadge.done    { background: #9e9e9e !important; opacity: .6; font-size: 15px; }
-        .tbadge.target  { box-shadow: 0 0 0 3px #e91e63, 0 2px 5px rgba(0,0,0,.35); }
-        .tbadge.inrange { animation: badge-pulse .55s ease-in-out infinite; }
+        .tbadge { width:40px; height:40px; position:relative;
+                  display:flex; align-items:center; justify-content:center;
+                  filter:drop-shadow(0 2px 6px rgba(0,0,0,.55)); }
+        .tb-chest { font-size:28px; line-height:1; display:block; }
+        .tb-num   { position:absolute; top:-3px; right:-6px;
+                    min-width:16px; height:16px; padding:0 3px; border-radius:8px;
+                    font-size:10px; font-weight:900; color:#fff; line-height:1;
+                    display:flex; align-items:center; justify-content:center;
+                    border:1.5px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.45); }
+        .tbadge.done   { filter:grayscale(1) drop-shadow(0 1px 3px rgba(0,0,0,.3)); opacity:.55; }
+        .tbadge.target { filter:drop-shadow(0 0 7px #e91e63) drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+        .tbadge.inrange { animation:badge-pulse .55s ease-in-out infinite; }
         @keyframes badge-pulse {
-            0%,100%{ transform:scale(1);   box-shadow:0 2px 5px rgba(0,0,0,.35); }
-            50%    { transform:scale(1.28); box-shadow:0 0 0 6px rgba(249,168,37,.45); }
+            0%,100%{ transform:scale(1);    filter:drop-shadow(0 2px 6px rgba(0,0,0,.45)); }
+            50%    { transform:scale(1.28); filter:drop-shadow(0 0 12px rgba(249,168,37,.7)) drop-shadow(0 2px 4px rgba(0,0,0,.35)); }
         }
-        .tbadge.golden { background:#FFD700!important; color:#000!important; font-size:15px;
-                         animation:golden-shine .8s ease-in-out infinite; }
+        .tbadge.golden { animation:golden-shine .8s ease-in-out infinite; }
         @keyframes golden-shine {
-            0%,100%{box-shadow:0 0 8px rgba(255,215,0,.9),0 2px 5px rgba(0,0,0,.35)}
-            50%    {box-shadow:0 0 22px rgba(255,215,0,1),0 0 36px rgba(255,200,0,.55)} }
+            0%,100%{ filter:drop-shadow(0 0 8px rgba(255,215,0,.95)) drop-shadow(0 2px 5px rgba(0,0,0,.4)); }
+            50%    { filter:drop-shadow(0 0 20px rgba(255,215,0,1)) drop-shadow(0 0 36px rgba(255,200,0,.65)); }
+        }
 
         /* ── 道具 ── */
         .item-badge { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
@@ -1507,8 +1510,8 @@ TREASURES.forEach(t => {
     const bg  = CC[t.category] || '#616161';
     const m = L.marker([t.lat, t.lon], {
         icon: L.divIcon({
-            html:`<div class="tbadge${ord===1?' target':''}" style="background:${bg}">${ord}</div>`,
-            className:'', iconSize:[34,34], iconAnchor:[17,17]
+            html:`<div class="tbadge${ord===1?' target':''}"><span class="tb-chest">🎁</span><span class="tb-num" style="background:${bg}">${ord}</span></div>`,
+            className:'', iconSize:[40,40], iconAnchor:[20,20]
         })
     }).addTo(map);
     m.bindPopup(`
@@ -1618,8 +1621,8 @@ function setGoldenTreasure(id) {
     }).addTo(map);
     if(tMarkers[id]&&!collected.has(id)){
         tMarkers[id].marker.setIcon(L.divIcon({
-            html:'<div class="tbadge golden">💎</div>',
-            className:'',iconSize:[34,34],iconAnchor:[17,17]
+            html:'<div class="tbadge golden"><span class="tb-chest">💰</span></div>',
+            className:'',iconSize:[40,40],iconAnchor:[20,20]
         }));
     }
     showToast(`✨ 黃金寶藏出現！${GOLDEN_MULT}×分數！${GOLDEN_DURATION}秒內收集！`,3000);
@@ -1634,8 +1637,8 @@ function clearGoldenTreasure(expired) {
         const ord=tMarkers[prevId].order;
         const bg=CC[t.category]||'#616161';
         tMarkers[prevId].marker.setIcon(L.divIcon({
-            html:`<div class="tbadge" style="background:${bg}">${ord}</div>`,
-            className:'',iconSize:[34,34],iconAnchor:[17,17]
+            html:`<div class="tbadge"><span class="tb-chest">🎁</span><span class="tb-num" style="background:${bg}">${ord}</span></div>`,
+            className:'',iconSize:[40,40],iconAnchor:[20,20]
         }));
     }
     if(expired) showToast('💎 黃金寶藏消失了…',2000);
@@ -3547,13 +3550,13 @@ function updateDistances() {
             const isGolden=t.id===goldenId&&goldenTimer>0;
             let html;
             if(isGolden){
-                html='<div class="tbadge golden">💎</div>';
+                html='<div class="tbadge golden"><span class="tb-chest">💰</span></div>';
             } else {
                 const ord=tMarkers[t.id].order, bg=CC[t.category]||'#616161';
                 const cls=`tbadge${inR?' inrange':isTarget?' target':''}`;
-                html=`<div class="${cls}" style="background:${bg}">${ord}</div>`;
+                html=`<div class="${cls}"><span class="tb-chest">🎁</span><span class="tb-num" style="background:${bg}">${ord}</span></div>`;
             }
-            tMarkers[t.id].marker.setIcon(L.divIcon({html,className:'',iconSize:[34,34],iconAnchor:[17,17]}));
+            tMarkers[t.id].marker.setIcon(L.divIcon({html,className:'',iconSize:[40,40],iconAnchor:[20,20]}));
         }
     });
 }
@@ -3628,8 +3631,8 @@ async function collect(id, tLat, tLon) {
         if(dEl){dEl.textContent='✅ 已收集';dEl.className='dst ok';}
 
         if(tMarkers[id]) tMarkers[id].marker.setIcon(L.divIcon({
-            html:'<div class="tbadge done">✅</div>',
-            className:'',iconSize:[34,34],iconAnchor:[17,17]
+            html:'<div class="tbadge done"><span class="tb-chest">✅</span></div>',
+            className:'',iconSize:[40,40],iconAnchor:[20,20]
         }));
         // 小地圖寶藏變灰
         if(miniTMarkers[id]) miniTMarkers[id].setStyle({

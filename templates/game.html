@@ -2013,6 +2013,16 @@ function relocateTreasure(tId) {
     setTimeout(rebuildOptimalRouteAstar, 50);
 }
 
+// ── 隨機可走點（用於守衛巡邏）────────────────────────────
+function _randWalkable(){
+    for(let i=0;i<30;i++){
+        const lat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
+        const lon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
+        if(!isInBuilding(lat,lon)) return nearestWalkable(lat,lon);
+    }
+    return [ORIGIN_LAT,ORIGIN_LON];
+}
+
 // ── AI 移動（含牆壁滑動，防止卡牆）────────────────────────
 function aiMove(ai, dLa, dLo, spd) {
     const len=Math.sqrt(dLa*dLa+dLo*dLo);
@@ -2070,24 +2080,29 @@ function tickPatroller(ai,dt,s) {
         ai.facingLat=pLat; ai.facingLon=pLon;
         if(ai.alertTimer===0){ai.path=[];ai.pathTimer=0;}
     } else {
-        // 沿 OPTIMAL 路標巡邏
-        const wpId=OPTIMAL[ai.waypointIdx%OPTIMAL.length];
-        const wp=TREASURES.find(t=>t.id===wpId);
-        if(wp){
-            if(ai.path.length===0&&!ai._astarPending) ai.pathTimer=0;
-            if(ai.pathTimer<=0&&!ai._astarPending){ai._astarPending=true;ai.pathTimer=1.5;const fl=ai.lat,fo=ai.lon,tl=wp.lat,to=wp.lon;(requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});}
-            while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
-            if(ai.path.length>0){
-                const dLa=ai.path[0][0]-ai.lat, dLo=ai.path[0][1]-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
-                if(len>1e-6){
-                    ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
-                    aiMove(ai,dLa,dLo,s);
-                }
+        // 隨機巡邏：到達目的地後換下一個隨機可走點
+        if(!ai.destLat){
+            const [dl,do_]=_randWalkable();
+            ai.destLat=dl; ai.destLon=do_;
+        }
+        if(ai.path.length===0&&!ai._astarPending) ai.pathTimer=0;
+        if(ai.pathTimer<=0&&!ai._astarPending){
+            ai._astarPending=true; ai.pathTimer=1.5;
+            const fl=ai.lat,fo=ai.lon,tl=ai.destLat,to=ai.destLon;
+            (requestIdleCallback||setTimeout)(()=>{ai.path=runAstar(fl,fo,tl,to);ai._astarPending=false;});
+        }
+        while(ai.path.length>0&&distM(ai.lat,ai.lon,ai.path[0][0],ai.path[0][1])<30) ai.path.shift();
+        if(ai.path.length>0){
+            const dLa=ai.path[0][0]-ai.lat, dLo=ai.path[0][1]-ai.lon, len=Math.sqrt(dLa*dLa+dLo*dLo);
+            if(len>1e-6){
+                ai.facingLat=ai.lat+dLa/len*0.001; ai.facingLon=ai.lon+dLo/len*0.001;
+                aiMove(ai,dLa,dLo,s);
             }
-            if(distM(ai.lat,ai.lon,wp.lat,wp.lon)<30){
-                ai.waypointIdx=(ai.waypointIdx+1)%OPTIMAL.length;
-                ai.path=[]; ai.pathTimer=0;
-            }
+        }
+        if(distM(ai.lat,ai.lon,ai.destLat,ai.destLon)<40){
+            const [dl,do_]=_randWalkable();
+            ai.destLat=dl; ai.destLon=do_;
+            ai.path=[]; ai.pathTimer=0;
         }
         // 視野偵測
         if(ai.alertCD===0&&invincTimer===0&&inPatrollerFOV(ai)){

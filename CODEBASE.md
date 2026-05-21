@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-21（7 項遊戲邏輯 & 程式碼品質修正）**
+> **最後更新：2026-05-21（v4.7 — 7 項 Bug 修正：競態/DOM洩漏/AI路徑/死程式碼）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -24,6 +24,30 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 8. [技術架構筆記](#8-技術架構筆記)
+
+---
+
+### 2026-05-21（v4.7）7 項 Bug 修正
+
+**競態條件修正 `collect()`**
+- `inFlight.add(id)` 移到距離判斷之前立即執行（距離不夠時再 delete）
+- 防止玩家在同一幀雙擊 Space 對同一寶藏送出兩個 POST
+
+**DOM 洩漏：小偷暈眩標籤未清除**
+- `catchWantedThief()` 新增 `if(ai.stunLabel){ai.stunLabel.remove();ai.stunLabel=null;}`
+- 暈眩中的小偷被抓後，旋轉 ⭐ 不再永遠留在畫面
+
+**AI A\* 路徑從當前位置出發**
+- 三種 AI（chaser/patroller/thief）的 `requestIdleCallback` 改用 `ai.lat,ai.lon`，不再使用舊的 closure 捕捉值
+- 防止回調延遲 100-200ms 後路徑從錯誤起點計算
+
+**移除死變數 `magnetAutoT`**
+- 宣告初始化後從未被讀取，從 let 宣告與 `_activateItem` 中一併移除
+
+**`app.py` 三項修正**
+- `_assign_tiers()` 跳過 tier 時加 `logging.warning(...)` 方便除錯
+- padding 間距檢查從硬寫 `150` 改為 `_MIN_TREASURE_SPREAD` 常數
+- padding 座標加 clamp，確保補位寶藏在 950m 安全半徑內
 
 ---
 

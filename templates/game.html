@@ -1123,52 +1123,27 @@ function _triggerLightning() {
 }
 function _thunderOut(ctx) { return ctx.destination; }  // 雷聲直通，不走 master limiter
 function playThunder() {
+    if(!_thunderBuffer){
+        // 第一次：靜默解碼，不閃電不出聲
+        if(_thunderArrayBuf){
+            snd(ctx=>{
+                ctx.decodeAudioData(_thunderArrayBuf.slice(0),buf=>{_thunderBuffer=buf;},()=>{});
+            });
+        }
+        return;
+    }
+    // 第二次起：閃電 + 真實音檔
     _triggerLightning();
     snd(ctx=>{
         const t=ctx.currentTime;
-        // ── 使用真實音檔（已解碼）──
-        if(_thunderBuffer){
-            const out=_thunderOut(ctx);
-            const src=ctx.createBufferSource();
-            src.buffer=_thunderBuffer;
-            const g=ctx.createGain();
-            g.gain.setValueAtTime(6.0,t);
-            g.gain.setValueAtTime(6.0,t+4.5);
-            g.gain.linearRampToValueAtTime(0,t+6);
-            src.connect(g); g.connect(out);
-            src.start(t); src.stop(t+6.1);
-            return;
-        }
-        // ── 音檔已下載但尚未解碼：背景解碼（下次用真實音檔）──
-        if(_thunderArrayBuf){
-            ctx.decodeAudioData(_thunderArrayBuf.slice(0),buf=>{_thunderBuffer=buf;},()=>{});
-        }
-        // ── 合成 fallback：低頻 boom + 滾動（不像炸彈）──
-        const out=_thunderOut(ctx);
-        // Boom：正弦波 70Hz→22Hz 下掃，模擬雷擊厚重感
-        const osc=ctx.createOscillator();
-        osc.type='sine';
-        osc.frequency.setValueAtTime(70,t);
-        osc.frequency.exponentialRampToValueAtTime(22,t+2.0);
-        const oscG=ctx.createGain();
-        oscG.gain.setValueAtTime(0,t);
-        oscG.gain.linearRampToValueAtTime(5.0,t+.07);
-        oscG.gain.setValueAtTime(5.0,t+.25);
-        oscG.gain.exponentialRampToValueAtTime(.001,t+2.5);
-        osc.connect(oscG); oscG.connect(out);
-        osc.start(t); osc.stop(t+2.6);
-        // Roll：低頻噪音（150Hz lowpass），長尾滾動
-        const nSrc=ctx.createBufferSource();
-        nSrc.buffer=_noiseBuffer(ctx,4.0);
-        const lp=ctx.createBiquadFilter();
-        lp.type='lowpass'; lp.frequency.setValueAtTime(220,t); lp.frequency.exponentialRampToValueAtTime(80,t+1.8);
-        const nG=ctx.createGain();
-        nG.gain.setValueAtTime(0,t);
-        nG.gain.linearRampToValueAtTime(3.5,t+.1);
-        nG.gain.setValueAtTime(3.5,t+.5);
-        nG.gain.exponentialRampToValueAtTime(.001,t+3.8);
-        nSrc.connect(lp); lp.connect(nG); nG.connect(out);
-        nSrc.start(t); nSrc.stop(t+4.0);
+        const src=ctx.createBufferSource();
+        src.buffer=_thunderBuffer;
+        const g=ctx.createGain();
+        g.gain.setValueAtTime(6.0,t);
+        g.gain.setValueAtTime(6.0,t+4.5);
+        g.gain.linearRampToValueAtTime(0,t+6);
+        src.connect(g); g.connect(_thunderOut(ctx));
+        src.start(t); src.stop(t+6.1);
     });
 }
 function playWeatherChange(type) {
@@ -1249,7 +1224,7 @@ function tickWeather(dt) {
         // 打雷計時
         if(weatherType==='storm'){
             thunderTimer=Math.max(0,thunderTimer-dt);
-            if(thunderTimer<=0){playThunder();thunderTimer=4+Math.random()*2;}  // 4~6s 一次
+            if(thunderTimer<=0){playThunder();thunderTimer=6+Math.random()*6;}  // 6~12s 一次
         }
         if(weatherTimer<=0) setWeather('sunny');
         return;

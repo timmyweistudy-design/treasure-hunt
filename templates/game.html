@@ -598,16 +598,19 @@
         body.day .tc .nm  { color: #1A0E00; }
         body.day .tc .cat { color: #5A3A10; }
         body.day .tc .dst { color: #6A4820; }
-        body.day .cbtn { background: rgba(190,120,0,.72); color: #fff; }
-        body.day .cbtn.near { background: rgba(220,160,0,.88); color: #1A0800; }
-        body.day .cbtn.target { background: #C07A00; }
+        body.day .cbtn { background: rgba(21,101,192,.75); color: #fff; }
+        body.day .cbtn:hover:not(:disabled) { background: #1565C0; }
+        body.day .cbtn.near { background: rgba(21,101,192,.88); color: #fff; }
+        body.day .cbtn.target { background: #1565C0; }
         body.day .kbd-toggle {
             background: rgba(255,240,180,.82); color: #9A5800; border-color: rgba(180,120,0,.22);
         }
         body.day .kbd-toggle:hover { background: rgba(200,140,0,.14); color: #6A3800; }
         body.day .endbtn {
-            background: linear-gradient(135deg, #C07A00, #E8A020); color: #fff;
+            background: linear-gradient(135deg, #C62828, #E53935); color: #fff;
+            box-shadow: 0 3px 12px rgba(198,40,40,.35);
         }
+        body.day .endbtn:hover { background: linear-gradient(135deg, #E53935, #EF5350); }
 
         body.day #bottom-hud { background: rgba(255,248,220,.95); border-top-color: rgba(180,120,0,.22); }
         body.day .bhud-chip { background: rgba(100,60,0,.08); border-color: rgba(100,60,0,.12); color: #2A1800; }

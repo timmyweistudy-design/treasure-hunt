@@ -516,9 +516,116 @@
         /* 消除 Leaflet marker 的瀏覽器 focus outline（點擊 AI 時的灰框） */
         .leaflet-marker-icon:focus,
         .leaflet-marker-icon:focus-visible { outline: none !important; box-shadow: none !important; }
+
+        /* ── 日夜系統 ── */
+        /* 平滑過渡（不影響動畫用的 transform/opacity） */
+        .hd, .sb, #bottom-hud, .kbd-box, .compass-box, .compass-arrow-wrap,
+        .tc, .order-hint, .slot-box, .bhud-chip, .eff-chip, .kbd-toggle,
+        #mute-btn, .sprint-track, .endbtn, .toast, #daynight-badge,
+        .prog-fill, .sec-lbl, .compass-lbl, .compass-name, .compass-dist,
+        .key, .kbd-box b, .order-hint b {
+            transition: background 2.2s ease, background-color 2.2s ease,
+                        border-color 2s ease, color 1.8s ease, filter 2.5s ease;
+        }
+        #map { transition: filter 2.5s ease; }
+
+        /* 日夜指示徽章 */
+        #daynight-badge {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 11.5px; font-weight: bold;
+            padding: 4px 10px; border-radius: 20px;
+            background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
+            color: #E6EDF3; white-space: nowrap; letter-spacing: .2px;
+        }
+        #dn-cd { font-family: 'Orbitron', monospace; font-size: 10px; color: inherit; opacity: .75; }
+
+        /* 日夜切換閃光覆蓋 */
+        #daynight-overlay {
+            position: fixed; inset: 0; z-index: 9980; pointer-events: none;
+            opacity: 0; transition: opacity .45s;
+        }
+
+        /* 夜晚：略暗地圖 */
+        body:not(.day) #map { filter: brightness(0.78) saturate(0.72); }
+        body.day        #map { filter: brightness(1) saturate(1); }
+
+        /* ── 白天覆寫 ── */
+        body.day .hd {
+            background: linear-gradient(90deg, #DDE8F8, #EAF2FF);
+            border-bottom-color: rgba(56,100,200,.2);
+            color: #1A2A40;
+        }
+        body.day .hd-title {
+            background: linear-gradient(90deg, #0D47A1, #1565C0, #1A5CB0);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        body.day #v-score { color: #9A6800; }
+        body.day #timer   { color: #1565C0; }
+        body.day #timer.danger { color: #c62828; }
+        body.day .stat .l { color: rgba(0,0,0,.5); }
+        body.day .sprint-lbl  { color: #1565C0; }
+        body.day .sprint-hint { color: #555; }
+        body.day .sprint-track { background: rgba(0,0,0,.12); border-color: rgba(0,0,0,.08); }
+        body.day .sprint-fill  { background: linear-gradient(90deg, #9A6800, #1565C0); }
+        body.day #mute-btn { background: rgba(0,0,0,.08); border-color: rgba(0,0,0,.14); color: #1A2A40; }
+        body.day .eff-chip { background: rgba(0,0,0,.09); border-color: rgba(0,0,0,.12); color: #1A2A40; }
+        body.day #daynight-badge { background: rgba(255,215,0,.22); color: #7A5800; border-color: rgba(180,140,0,.35); }
+
+        body.day .sb { background: rgba(228,238,255,.97); border-left-color: rgba(40,80,180,.18); }
+        body.day .sb-foot { border-top-color: rgba(40,80,180,.15); }
+        body.day .kbd-box {
+            background: rgba(205,222,255,.88); color: #253050; border-color: rgba(40,80,180,.15);
+        }
+        body.day .kbd-box b { color: #8A6000; }
+        body.day .key {
+            background: rgba(40,80,180,.1); color: #1565C0;
+            border-color: rgba(40,80,180,.28); border-bottom-color: rgba(40,80,180,.4);
+        }
+        body.day .compass-box { background: rgba(205,222,255,.88); border-color: rgba(40,80,180,.22); }
+        body.day .compass-arrow-wrap { background: rgba(40,80,180,.12); }
+        body.day .compass-lbl  { color: #555; }
+        body.day .compass-name { color: #0D1A2E; }
+        body.day .compass-dist { color: #8A6000; }
+        body.day .order-hint { background: rgba(160,130,0,.08); border-color: rgba(160,130,0,.2); color: #6A5000; }
+        body.day .order-hint b { color: #8A6000; }
+        body.day .prog-fill  { background: linear-gradient(90deg, #8A6000, #1565C0); }
+        body.day .sec-lbl { color: #2A3A55; }
+
+        body.day .tc { background: rgba(205,222,255,.88); border-left-color: rgba(40,80,180,.35); }
+        body.day .tc.near   { background: rgba(160,130,0,.1);  border-left-color: #8A6000; }
+        body.day .tc.target { background: rgba(40,80,180,.1);  border-left-color: #1565C0; }
+        body.day .tc .sq  { color: #555; }
+        body.day .tc .nm  { color: #0D1A2E; }
+        body.day .tc .cat { color: #405070; }
+        body.day .tc .dst { color: #4A5A70; }
+        body.day .cbtn { background: rgba(21,101,192,.72); color: #fff; }
+        body.day .cbtn.near { background: rgba(160,130,0,.85); color: #1A0A00; }
+        body.day .cbtn.target { background: #1565C0; }
+        body.day .kbd-toggle {
+            background: rgba(205,222,255,.88); color: #1565C0; border-color: rgba(40,80,180,.2);
+        }
+        body.day .kbd-toggle:hover { background: rgba(40,80,180,.1); color: #8A6000; }
+        body.day .endbtn {
+            background: linear-gradient(135deg, #1565C0, #388BFD); color: #fff;
+        }
+
+        body.day #bottom-hud { background: rgba(228,238,255,.95); border-top-color: rgba(40,80,180,.2); }
+        body.day .bhud-chip { background: rgba(0,0,0,.07); border-color: rgba(0,0,0,.1); color: #1A2A40; }
+        body.day .bhud-chip.danger { background: rgba(198,40,40,.5) !important; color: #fff !important; }
+        body.day .bhud-chip.bhud-alert { background: rgba(198,40,40,.55) !important; color: #fff !important; }
+        body.day .slot-box { border-color: rgba(0,0,0,.18); background: rgba(0,0,0,.04); }
+        body.day .slot-box.selected {
+            border-color: #8A6000; background: rgba(138,96,0,.1);
+            box-shadow: 0 0 8px rgba(138,96,0,.35);
+        }
+        body.day .slot-box.filled { border-color: rgba(21,101,192,.5); background: rgba(21,101,192,.08); }
+        body.day .slot-num  { color: rgba(0,0,0,.35); }
+        body.day .slot-key-hint { color: rgba(0,0,0,.28); }
+        body.day .toast { background: rgba(228,238,255,.96); color: #0D1A2E; border-color: rgba(40,80,180,.22); }
     </style>
 </head>
 <body>
+<div id="daynight-overlay"></div>
 
 <div class="hd">
     <div class="hd-row1">
@@ -529,6 +636,7 @@
                 <div class="stat"><div class="v"><span id="v-found">0</span>/{{ optimal_route|length }}</div><div class="l">寶藏</div></div>
                 <div class="stat"><div class="v" id="timer">{{ time_limit }}</div><div class="l">秒</div></div>
             </div>
+            <span id="daynight-badge"><span id="dn-icon">☀️</span> 白天 · <span id="dn-cd">150</span>s</span>
             <button id="mute-btn" onclick="toggleMute()" title="靜音切換">🔊</button>
         </div>
     </div>
@@ -782,6 +890,10 @@ let buildings   = [];
 const GRID_DEG  = 0.001;           // 空間格尺寸 ≈ 110m，加速碰撞查詢
 let buildingGrid = {};
 let gameReady   = false;
+
+// 日夜系統
+const DAY_CYCLE = 150;   // 每 150 秒切換一次
+let _isDaytime  = true;  // 從白天開始
 
 // 天氣
 let weatherType = 'sunny';   // 'sunny' | 'fog' | 'storm'
@@ -1275,6 +1387,33 @@ function setWeather(type) {
         thunderTimer=1.5+Math.random()*1.5;  // 雷雨一開始 1.5~3s 就打第一聲
     }
 }
+// ── 日夜系統 ──────────────────────────────────────────────
+function _checkDayNight() {
+    const elapsed = TIME_LIMIT - remaining;
+    const phase   = Math.floor(elapsed / DAY_CYCLE);
+    const isDay   = phase % 2 === 0;
+    const nextSw  = DAY_CYCLE - (elapsed % DAY_CYCLE);
+    const cdEl    = document.getElementById('dn-cd');
+    const iconEl  = document.getElementById('dn-icon');
+    if(cdEl)   cdEl.textContent   = nextSw;
+    if(iconEl) iconEl.textContent = isDay ? '☀️' : '🌙';
+    if(isDay !== _isDaytime){ _isDaytime = isDay; _applyDayNight(isDay); }
+}
+function _applyDayNight(isDay) {
+    const ov = document.getElementById('daynight-overlay');
+    if(isDay){
+        document.body.classList.add('day');
+        ov.style.background = 'rgba(255,230,120,.28)';
+        showToast('☀️ 晨光初現！視野明亮，衝刺吧！', 2800);
+    } else {
+        document.body.classList.remove('day');
+        ov.style.background = 'rgba(5,15,55,.45)';
+        showToast('🌙 夜幕降臨！小心暗中的敵人…', 2800);
+    }
+    ov.style.opacity = '1';
+    setTimeout(() => { ov.style.opacity = '0'; }, 700);
+}
+
 function tickWeather(dt) {
     if(weatherTimer>0){
         weatherTimer=Math.max(0,weatherTimer-dt);
@@ -3732,9 +3871,14 @@ async function startCountdown(){
     initPortals();
     gameReady=true;
 
+    // 初始白天狀態
+    document.body.classList.add('day');
+    _checkDayNight();
+
     ticker=setInterval(()=>{
         remaining--;
         timerEl.textContent=remaining;
+        _checkDayNight();
         if(remaining<=60){
             timerEl.classList.add('danger');
             vigEl.style.display='block';

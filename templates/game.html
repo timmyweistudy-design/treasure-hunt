@@ -863,7 +863,7 @@ const ITEM_IVTL      = 1;         // 道具重生間隔（秒）
 const ITEM_LIFE      = 40;        // 道具存在時間（秒）
 const ITEM_MAX       = 20;        // 地圖上最多幾個道具
 const ITEM_MIN_DIST  = 100;       // 道具最小間距（公尺）
-const NAV_CELL       = 0.0004;    // A* 導航格尺寸 ≈ 44m
+const NAV_CELL       = 0.00018;   // A* 導航格尺寸 ≈ 20m（縮小以減少密集住宅區穿牆）
 const STUN_DURATION  = 1.5;       // 定身持續秒數（玩家被定住）
 const STUN_CD        = 5;         // 定身冷卻秒數（所有 AI 共用）
 const STUN_R         = 30;        // AI 施放定身的距離（公尺）
@@ -1395,6 +1395,21 @@ const _dnOvEl       = document.getElementById('daynight-overlay');
 const _chipWeatherEl= document.getElementById('chip-weather');
 const _pdotEl       = document.getElementById('pdot');
 const _compassBoxEl = document.querySelector('.compass-box');
+// 羅盤元素快取
+const _compassArrowEl = document.getElementById('compass-arrow');
+const _compassNameEl  = document.getElementById('compass-name');
+const _compassDistEl  = document.getElementById('compass-dist');
+// 寶藏卡片元素快取（避免 updateDistances 每幀 getElementById × 10）
+const _tDomCache = {};
+TREASURES.forEach(t => {
+    _tDomCache[t.id] = {
+        dEl:  document.getElementById('dist-'+t.id),
+        btn:  document.getElementById('btn-'+t.id),
+        card: document.getElementById('card-'+t.id),
+        ppD:  document.getElementById('pp-dist-'+t.id),
+        ppBtn:document.getElementById('pp-btn-'+t.id),
+    };
+});
 
 function _checkDayNight() {
     const elapsed = TIME_LIMIT - remaining;
@@ -2188,9 +2203,13 @@ function spawnItem() {
     }
     if(!found) return;   // 這次跳過，下次再試
 
-    const nearTreasure=uncollected.length>0&&distM(lat,lon,
-        uncollected.reduce((b,t)=>distM(lat,lon,t.lat,t.lon)<distM(lat,lon,b.lat,b.lon)?t:b).lat,
-        uncollected.reduce((b,t)=>distM(lat,lon,t.lat,t.lon)<distM(lat,lon,b.lat,b.lon)?t:b).lon)<300;
+    // 單次 O(n) 找最近寶藏距離（原本跑兩次 reduce）
+    let nearTreasure=false;
+    if(uncollected.length>0){
+        let minD=distM(lat,lon,uncollected[0].lat,uncollected[0].lon);
+        for(let _i=1;_i<uncollected.length;_i++){const _d=distM(lat,lon,uncollected[_i].lat,uncollected[_i].lon);if(_d<minD)minD=_d;}
+        nearTreasure=minD<300;
+    }
     const r=Math.random();
     // 近寶物：range 稍微偏高(25%)但不再獨大；隨機生成五種均等
     type=nearTreasure?(r<.15?'speed':r<.225?'star':r<.50?'range':r<.73?'freeze':'magnet')
@@ -3675,37 +3694,32 @@ function effectiveR(){return rangeBoostTimer>0?CLCT_R*3:CLCT_R;}
 // ── 更新距離、羅盤、接近環 ────────────────────────────────
 function updateDistances() {
     const wantedThief=aiList.find(ai=>ai.type==='thief'&&ai.wanted);
-    const compassBox=_compassBoxEl;
-    const arrowEl=document.getElementById('compass-arrow');
-    const nameEl=document.getElementById('compass-name');
-    const distEl=document.getElementById('compass-dist');
-
     const nextId=OPTIMAL.find(id=>!collected.has(id));
     if(wantedThief){
         // 通緝中：羅盤改指向小偷
         const d=Math.round(distM(pLat,pLon,wantedThief.lat,wantedThief.lon));
         const deg=bearingDeg(pLat,pLon,wantedThief.lat,wantedThief.lon);
-        arrowEl.style.transform=`rotate(${deg}deg)`;
-        arrowEl.style.color='#ff6f00';
-        nameEl.textContent='🚨 抓小偷！Space！';
-        nameEl.style.color='#ff6f00';
-        distEl.textContent=d+'m';
-        distEl.style.color='#ff6f00';
-        if(compassBox) compassBox.classList.add('thief-alert');
+        _compassArrowEl.style.transform=`rotate(${deg}deg)`;
+        _compassArrowEl.style.color='#ff6f00';
+        _compassNameEl.textContent='🚨 抓小偷！Space！';
+        _compassNameEl.style.color='#ff6f00';
+        _compassDistEl.textContent=d+'m';
+        _compassDistEl.style.color='#ff6f00';
+        if(_compassBoxEl) _compassBoxEl.classList.add('thief-alert');
     } else {
         // 正常：指向下一個寶藏
-        arrowEl.style.color=''; nameEl.style.color=''; distEl.style.color='';
-        if(compassBox) compassBox.classList.remove('thief-alert');
-        const nextT =nextId?TREASURES.find(t=>t.id===nextId):null;
+        _compassArrowEl.style.color=''; _compassNameEl.style.color=''; _compassDistEl.style.color='';
+        if(_compassBoxEl) _compassBoxEl.classList.remove('thief-alert');
+        const nextT=nextId?TREASURES.find(t=>t.id===nextId):null;
         if(nextT){
             const d  =Math.round(distM(pLat,pLon,nextT.lat,nextT.lon));
             const deg=bearingDeg(pLat,pLon,nextT.lat,nextT.lon);
-            arrowEl.style.transform=`rotate(${deg}deg)`;
-            nameEl.textContent=nextT.name;
-            distEl.textContent=d+'m';
+            _compassArrowEl.style.transform=`rotate(${deg}deg)`;
+            _compassNameEl.textContent=nextT.name;
+            _compassDistEl.textContent=d+'m';
         } else {
-            nameEl.textContent='全部找到了！🎉';
-            distEl.textContent='';
+            _compassNameEl.textContent='全部找到了！🎉';
+            _compassDistEl.textContent='';
         }
     }
 
@@ -3726,10 +3740,7 @@ function updateDistances() {
         const inR=d<=eR;
         const isTarget=(t.id===nextId);
 
-        const dEl =document.getElementById('dist-'+t.id);
-        const btn =document.getElementById('btn-'+t.id);
-        const card=document.getElementById('card-'+t.id);
-        const ppD =document.getElementById('pp-dist-'+t.id);
+        const {dEl,btn,card,ppD}=_tDomCache[t.id]||{};
         if(dEl) {dEl.textContent=inR?`✅ 範圍內（${d}m）`:`📍 ${d}m（需${eR}m內）`;
                  dEl.className='dst '+(inR?'ok':'far');}
         if(btn&&!btn.disabled){
@@ -3777,8 +3788,7 @@ async function collect(id, tLat, tLon) {
     const comboBonus=tentativeCount>=2?(tentativeCount-1)*30:0;
     // 黃金寶藏加成
     const goldenBonus=id===goldenId&&goldenTimer>0?TREASURES.find(t=>t.id===id).points*(GOLDEN_MULT-1):0;
-    const btn  =document.getElementById('btn-'+id);
-    const ppBtn=document.getElementById('pp-btn-'+id);
+    const {btn,ppBtn}=_tDomCache[id]||{btn:null,ppBtn:null};
     if(btn){btn.disabled=true;btn.textContent='處理中…';}
 
     try {
@@ -3818,10 +3828,9 @@ async function collect(id, tLat, tLon) {
         document.getElementById('v-found').textContent=found;
         document.getElementById('progress').style.width=(found/TOTAL*100)+'%';
 
-        const card=document.getElementById('card-'+id);
+        const {card,dEl,ppBtn:_ppBtn2}=_tDomCache[id]||{};
         if(card) card.className='tc found';
         if(btn)  btn.textContent='✅ 已找到';
-        const dEl=document.getElementById('dist-'+id);
         if(dEl){dEl.textContent='✅ 已收集';dEl.className='dst ok';}
 
         if(tMarkers[id]) tMarkers[id].marker.setIcon(L.divIcon({

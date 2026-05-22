@@ -26,9 +26,36 @@ def solve_tsp_nearest_neighbor(start: Tuple, treasures: List) -> List:
     return route
 
 
+def _two_opt(start: Tuple, route: List) -> List:
+    """2-opt local search: swap pairs of edges until no improvement found."""
+    if len(route) < 3:
+        return route
+    best = list(route)
+    n = len(best)
+    improved = True
+    while improved:
+        improved = False
+        for i in range(n - 1):
+            pre = start if i == 0 else best[i - 1].coords
+            ci  = best[i].coords
+            for j in range(i + 2, n):
+                cj   = best[j].coords
+                post = best[j + 1].coords if j + 1 < n else None
+                d_before = haversine(pre, ci) + (haversine(cj, post) if post else 0)
+                d_after  = haversine(pre, cj) + (haversine(ci, post) if post else 0)
+                if d_after < d_before - 0.5:       # 0.5 m 容差避免浮點數死循環
+                    best[i:j + 1] = best[i:j + 1][::-1]
+                    improved = True
+                    break
+            if improved:
+                break
+    return best
+
+
 def solve_tsp_exact(start: Tuple, treasures: List) -> List:
     if len(treasures) > 8:
-        return solve_tsp_nearest_neighbor(start, treasures)
+        route = solve_tsp_nearest_neighbor(start, treasures)
+        return _two_opt(start, route)          # 2-opt 改善 greedy 結果
     if not treasures:
         return []
     best_route, best_dist = None, float("inf")

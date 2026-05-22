@@ -1369,21 +1369,17 @@ function setWeather(type) {
     _stopAmbient();
     document.getElementById('weather-fog').style.display   = type==='fog'   ? 'block':'none';
     document.getElementById('weather-storm').style.display = type==='storm' ? 'block':'none';
-    const chip = document.getElementById('chip-weather');
     if(type==='sunny'){
-        chip.textContent='☀️ 晴天';
-        chip.style.background='';
+        if(_chipWeatherEl) _chipWeatherEl.style.background='';
         playWeatherChange('sunny');
         birdTimer=8+Math.random()*10;
     } else if(type==='fog'){
-        chip.textContent='🌫️ 大霧';
-        chip.style.background='rgba(180,190,210,.55)';
+        if(_chipWeatherEl) _chipWeatherEl.style.background='rgba(180,190,210,.55)';
         showToast('🌫️ 大霧降臨！守衛視野大幅縮短！',3000);
         playWeatherChange('fog');
         _startAmbient(80, 2200, 0.18);
     } else {
-        chip.textContent='⛈️ 雷雨';
-        chip.style.background='rgba(20,50,120,.55)';
+        if(_chipWeatherEl) _chipWeatherEl.style.background='rgba(20,50,120,.55)';
         showToast('⛈️ 雷雨來了！AI 加速、玩家變慢！',3000);
         playWeatherChange('storm');
         _startAmbient(600, 6000, 0.42);
@@ -1392,10 +1388,13 @@ function setWeather(type) {
 }
 // ── 日夜系統 ──────────────────────────────────────────────
 // 快取 DOM 元素，避免每秒重複查詢
-const _dnCdEl    = document.getElementById('dn-cd');
-const _dnIconEl  = document.getElementById('dn-icon');
-const _dnPhaseEl = document.getElementById('dn-phase');
-const _dnOvEl    = document.getElementById('daynight-overlay');
+const _dnCdEl       = document.getElementById('dn-cd');
+const _dnIconEl     = document.getElementById('dn-icon');
+const _dnPhaseEl    = document.getElementById('dn-phase');
+const _dnOvEl       = document.getElementById('daynight-overlay');
+const _chipWeatherEl= document.getElementById('chip-weather');
+const _pdotEl       = document.getElementById('pdot');
+const _compassBoxEl = document.querySelector('.compass-box');
 
 function _checkDayNight() {
     const elapsed = TIME_LIMIT - remaining;
@@ -1437,10 +1436,11 @@ function tickWeather(dt) {
     }
     // 切換倒數：顯示在 chip 上
     weatherCD=Math.max(0,weatherCD-dt);
-    const chip=document.getElementById('chip-weather');
-    if(weatherType==='fog')   chip.textContent='🌫️ 大霧 '+Math.ceil(weatherCD)+'s';
-    else if(weatherType==='storm') chip.textContent='⛈️ 雷雨 '+Math.ceil(weatherCD)+'s';
-    else chip.textContent='☀️ 晴天 '+Math.ceil(weatherCD)+'s';
+    if(_chipWeatherEl){
+        if(weatherType==='fog')        _chipWeatherEl.textContent='🌫️ 大霧 '+Math.ceil(weatherCD)+'s';
+        else if(weatherType==='storm') _chipWeatherEl.textContent='⛈️ 雷雨 '+Math.ceil(weatherCD)+'s';
+        else                           _chipWeatherEl.textContent='☀️ 晴天 '+Math.ceil(weatherCD)+'s';
+    }
     if(weatherCD<=0){
         const opts=['sunny','fog','storm'].filter(t=>t!==weatherType);
         const next=opts[Math.floor(Math.random()*opts.length)];
@@ -2666,13 +2666,13 @@ function tickAI(dt) {
         showToast('👁️ 10 名巡邏守衛就位！走入視野 -80分！',4000);
     }
     // ── 守衛每 15s 追加一名（上限 20）────────────────────
-    const patrollerCount=aiList.filter(a=>a.type==='patroller').length;
-    if(patrollerCount<PATROLLER_MAX){
-        guardWaveTimer-=dt;
-        if(guardWaveTimer<=0){
+    guardWaveTimer=Math.max(0,guardWaveTimer-dt);
+    if(guardWaveTimer<=0){
+        guardWaveTimer=PATROLLER_WAVE_INTERVAL;
+        const pCount=aiList.filter(a=>a.type==='patroller').length;
+        if(pCount<PATROLLER_MAX){
             spawnAI('patroller');
-            guardWaveTimer=PATROLLER_WAVE_INTERVAL;
-            showToast(`👁️ 新守衛加入！（共 ${patrollerCount+1} 名）`,2000);
+            showToast(`👁️ 新守衛加入！（共 ${pCount+1} 名）`,2000);
         }
     }
     // ── 追跡者波次（60s → 120s → 180s）─────────────────
@@ -2889,9 +2889,8 @@ function tickAI(dt) {
     if(uiFrame){
         const cntEl=document.getElementById('ai-count-txt');
         if(cntEl){
-            const nC=aiList.filter(a=>a.type==='chaser').length;
-            const nP=aiList.filter(a=>a.type==='patroller').length;
-            const nT=aiList.filter(a=>a.type==='thief').length;
+            let nC=0,nP=0,nT=0;
+            for(const a of aiList){if(a.type==='chaser')nC++;else if(a.type==='patroller')nP++;else nT++;}
             let parts=[];
             if(nP) parts.push(`👁️×${nP}`);
             if(nC) parts.push(`👾×${nC}`);
@@ -2928,7 +2927,7 @@ function tickEffects(dt) {
     if(wasFreeze) aiFrozenTimer=Math.max(0,aiFrozenTimer-dt);
     if(wasFreeze&&aiFrozenTimer<=0){
         for(const ai of aiList){
-            _applyAIFilter(ai,(ai.combatStun>0&&ai.type!=='chaser'&&ai.type!=='patroller'&&ai.type!=='thief')?'saturate(0) brightness(1.5)':'');
+            _applyAIFilter(ai, ai.combatStun>0?'saturate(0) brightness(1.5)':'');
         }
     }
     // 持續飄雪特效
@@ -2963,7 +2962,7 @@ function tickEffects(dt) {
     // === UI DOM（15fps）===
     if(!uiFrame) return;
 
-    const dot=document.getElementById('pdot');
+    const dot=_pdotEl;
     document.getElementById('chip-speed').style.display=speedBoostTimer>0?'inline-block':'none';
     if(speedBoostTimer>0) document.getElementById('speed-t').textContent=Math.ceil(speedBoostTimer);
 
@@ -3672,7 +3671,7 @@ function effectiveR(){return rangeBoostTimer>0?CLCT_R*3:CLCT_R;}
 // ── 更新距離、羅盤、接近環 ────────────────────────────────
 function updateDistances() {
     const wantedThief=aiList.find(ai=>ai.type==='thief'&&ai.wanted);
-    const compassBox=document.querySelector('.compass-box');
+    const compassBox=_compassBoxEl;
     const arrowEl=document.getElementById('compass-arrow');
     const nameEl=document.getElementById('compass-name');
     const distEl=document.getElementById('compass-dist');

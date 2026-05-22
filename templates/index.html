@@ -8,123 +8,121 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #080408; color: #f5e0d0; }
+        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #0D1117; color: #E6EDF3; }
 
-        /* ── Hero：背景圖完整呈現，寶箱對焦 ── */
+        /* ── Hero ── */
         .hero {
             position: relative;
-            min-height: 58vh;
+            min-height: 52vh;
             background: url('/static/bg.png') 55% 62% / cover no-repeat;
             display: flex; align-items: flex-end; justify-content: center;
             overflow: hidden;
         }
-        /* 頂部幾乎透明，底部漸深銜接內容卡 */
         .hero::before {
             content: '';
             position: absolute; inset: 0;
             background: linear-gradient(
                 to bottom,
-                rgba(0,0,0,.12) 0%,
-                rgba(4,1,3,.22) 45%,
-                rgba(8,2,6,.80) 80%,
-                rgba(8,4,8,1)   100%
+                rgba(0,5,20,.35) 0%,
+                rgba(5,10,25,.55) 50%,
+                rgba(8,14,28,.88) 80%,
+                #0D1117 100%
             );
+            pointer-events: none;
         }
         .hero-inner {
             position: relative; z-index: 1;
             text-align: center;
-            padding: 32px 24px 48px;
+            padding: 60px 24px 52px;
             width: 100%;
         }
-        /* 標題：金色 → 深橘 → 玫紅，呼應寶箱與九重葛 */
         .hero h1 {
             font-family: 'Orbitron', monospace; font-weight: 900;
             font-size: clamp(1.8rem, 5.5vw, 3rem);
-            background: linear-gradient(90deg, #FFD54F 0%, #F4A020 45%, #C2185B 100%);
+            background: linear-gradient(90deg, #FFD700 0%, #F0C000 50%, #64B5F6 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            letter-spacing: 2px; margin-bottom: 10px;
-            filter: drop-shadow(0 2px 18px rgba(194,24,91,.5));
+            letter-spacing: 2px; margin-bottom: 12px;
+            filter: drop-shadow(0 2px 20px rgba(56,139,253,.4));
         }
-        .hero p { font-size: 1rem; color: #D4A0B0; text-shadow: 0 1px 10px rgba(0,0,0,.9); }
+        .hero p { font-size: 1rem; color: #8B949E; }
 
-        /* ── 內容區：深色底 ── */
-        .content { background: #080408; padding: 0 0 60px; }
+        /* ── 內容區 ── */
+        .content { background: #0D1117; padding: 0 0 60px; }
         .container { max-width: 720px; margin: 0 auto; padding: 0 20px; }
 
-        /* ── 卡片：暗色玻璃 + 玫紅邊框 ── */
+        /* ── 卡片 ── */
         .card {
-            background: rgba(16,6,12,.92);
-            border: 1px solid rgba(194,24,91,.22);
-            border-radius: 20px; padding: 28px 32px;
-            box-shadow: 0 6px 36px rgba(0,0,0,.65), inset 0 1px 0 rgba(244,160,32,.06);
-            margin-bottom: 22px;
+            background: #161B2E;
+            border: 1px solid rgba(56,139,253,.2);
+            border-radius: 16px; padding: 28px 32px;
+            box-shadow: 0 4px 24px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.04);
+            margin-bottom: 20px;
         }
-        .card h2 { margin-bottom: 20px; font-size: 1.05rem; color: #F4A020; letter-spacing: .5px; }
+        .card h2 { margin-bottom: 20px; font-size: 1.05rem; color: #F0C000; letter-spacing: .5px; }
 
         /* ── 表單 ── */
         .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
         input[type="text"] {
             flex: 1; min-width: 130px;
             padding: 13px 16px; font-size: 14px; font-family: inherit;
-            background: rgba(8,2,6,.75); border: 1.5px solid rgba(194,24,91,.2);
-            border-radius: 11px; outline: none; color: #f5e0d0;
+            background: #0D1117; border: 1.5px solid rgba(56,139,253,.25);
+            border-radius: 10px; outline: none; color: #E6EDF3;
             transition: border-color .2s, box-shadow .2s;
         }
-        input[type="text"]::placeholder { color: #5A2840; }
+        input[type="text"]::placeholder { color: #3D4F6B; }
         input[type="text"]:focus {
-            border-color: #C2185B;
-            box-shadow: 0 0 0 3px rgba(194,24,91,.2);
+            border-color: #388BFD;
+            box-shadow: 0 0 0 3px rgba(56,139,253,.18);
         }
-        /* 按鈕：玫紅 → 深緋，呼應九重葛 */
         button[type="submit"] {
             padding: 13px 28px; font-size: 14px; font-weight: bold; font-family: inherit;
-            background: linear-gradient(135deg, #C2185B 0%, #880E4F 100%);
-            color: #FFE0EC; border: none; border-radius: 11px; cursor: pointer;
-            box-shadow: 0 4px 18px rgba(194,24,91,.45);
+            background: linear-gradient(135deg, #1565C0 0%, #388BFD 100%);
+            color: #fff; border: none; border-radius: 10px; cursor: pointer;
+            box-shadow: 0 4px 16px rgba(56,139,253,.4);
             transition: transform .15s, box-shadow .15s;
             white-space: nowrap;
         }
-        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(194,24,91,.6); }
+        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(56,139,253,.55); }
         button[type="submit"]:active { transform: translateY(0); }
 
         /* ── 錯誤 ── */
         .error {
-            background: rgba(150,20,20,.18); color: #FF9090;
-            border: 1px solid rgba(150,20,20,.38); border-radius: 12px;
+            background: rgba(220,38,38,.12); color: #FCA5A5;
+            border: 1px solid rgba(220,38,38,.3); border-radius: 10px;
             padding: 12px 18px; margin-bottom: 20px;
         }
 
         /* ── 載入提示 ── */
-        #loading-hint { display:none; margin-top:14px; color:#C2185B; font-size:13px; text-align:center; }
+        #loading-hint { display:none; margin-top:14px; color:#64B5F6; font-size:13px; text-align:center; }
 
         /* ── 說明列表 ── */
-        ul { padding-left: 22px; line-height: 2.3; color: #C8B4BC; font-size: 14px; }
-        ul b { color: #F4A020; }
+        ul { padding-left: 22px; line-height: 2.3; color: #C9D1D9; font-size: 14px; }
+        ul b { color: #F0C000; }
         .rules-link {
             display: inline-block; margin-top: 16px;
-            font-size: 13px; color: #FF80AB; text-decoration: none;
-            border: 1px solid rgba(194,24,91,.35); padding: 7px 18px; border-radius: 9px;
-            background: rgba(194,24,91,.12); transition: background .2s, color .2s;
+            font-size: 13px; color: #64B5F6; text-decoration: none;
+            border: 1px solid rgba(56,139,253,.3); padding: 7px 18px; border-radius: 9px;
+            background: rgba(56,139,253,.08); transition: background .2s, color .2s;
         }
-        .rules-link:hover { background: rgba(194,24,91,.24); color: #FFB0CC; }
+        .rules-link:hover { background: rgba(56,139,253,.18); color: #90CAF9; }
 
         /* ── 排行榜 ── */
         table { width: 100%; border-collapse: collapse; }
-        thead tr { border-bottom: 1px solid rgba(194,24,91,.18); }
-        th { padding: 10px 12px; text-align: left; font-size: 11px; color: #A06878;
+        thead tr { border-bottom: 1px solid rgba(56,139,253,.2); }
+        th { padding: 10px 12px; text-align: left; font-size: 11px; color: #484F58;
              text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
-        td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 14px; color: #C8B0B8; }
-        tbody tr:hover { background: rgba(194,24,91,.06); }
-        tbody tr:nth-child(1) td { color: #FFD54F; }
-        tbody tr:nth-child(2) td { color: #D8C8C0; }
-        tbody tr:nth-child(3) td { color: #F4A020; }
+        td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px; color: #8B949E; }
+        tbody tr:hover { background: rgba(56,139,253,.05); }
+        tbody tr:nth-child(1) td { color: #FFD700; }
+        tbody tr:nth-child(2) td { color: #C9D1D9; }
+        tbody tr:nth-child(3) td { color: #F0C000; }
         td:first-child { font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 700; }
-        td b { font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: .5px; color: #F4A020; }
+        td b { font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: .5px; color: #F0C000; }
         .badge {
             display: inline-block;
-            background: rgba(194,24,91,.16); color: #FF80AB;
+            background: rgba(56,139,253,.14); color: #64B5F6;
             padding: 2px 9px; border-radius: 10px; font-size: 11px;
-            border: 1px solid rgba(194,24,91,.28);
+            border: 1px solid rgba(56,139,253,.28);
         }
     </style>
 </head>

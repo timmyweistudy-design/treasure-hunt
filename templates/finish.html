@@ -14,14 +14,20 @@
         .hero {
             position: relative;
             min-height: 46vh;
-            background: linear-gradient(180deg, #080E1C 0%, #0D1117 100%);
+            background: url('/static/bg.png') 55% 62% / cover no-repeat;
             display: flex; align-items: flex-end; justify-content: center;
             overflow: hidden;
         }
         .hero::before {
             content: '';
             position: absolute; inset: 0;
-            background: radial-gradient(ellipse at 50% -10%, rgba(56,139,253,.2) 0%, transparent 65%);
+            background: linear-gradient(
+                to bottom,
+                rgba(0,5,20,.35) 0%,
+                rgba(5,10,25,.55) 50%,
+                rgba(8,14,28,.88) 80%,
+                #0D1117 100%
+            );
             pointer-events: none;
         }
         .hero-inner {

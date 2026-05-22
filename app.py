@@ -275,11 +275,11 @@ def start_game():
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{background:#0D1117;display:flex;align-items:center;justify-content:center;
-     height:100vh;font-family:"Noto Sans TC",sans-serif;color:#E6EDF3;}}
+body{{background:#080E1C;display:flex;align-items:center;justify-content:center;
+     height:100vh;font-family:"Noto Sans TC",sans-serif;color:#E6EDF3;
+     background-image:url('/static/bg.png');background-size:cover;background-position:55% 62%}}
 body::before{{content:'';position:fixed;inset:0;
-     background:radial-gradient(ellipse at 50% 30%, rgba(56,139,253,.15) 0%, transparent 65%);
-     pointer-events:none}}
+     background:rgba(0,8,24,.62);pointer-events:none}}
 .card{{position:relative;z-index:1;text-align:center;padding:40px 50px;
        background:#161B2E;border-radius:20px;
        border:1px solid rgba(56,139,253,.25);

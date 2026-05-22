@@ -2496,6 +2496,7 @@ function relocateTreasure(tId) {
     }
     if(miniTMarkers[tId]) miniTMarkers[tId].setLatLng([nLat,nLon]);
     updateDistances();
+    setTimeout(rebuildOptimalRouteAstar, 50);
 }
 
 // ── 追跡者行為 ───────────────────────────────────────────
@@ -3221,26 +3222,22 @@ function smoothRoutePath(path,rg){
     return res;
 }
 
+let _routeLastLat=null, _routeLastLon=null;  // player pos at last A* rebuild
 function rebuildOptimalRouteAstar() {
     if(!navGrid||!routeGrid) return;
-    const rawWpts=[[pLat,pLon]];
-    for(const id of OPTIMAL){
-        if(collected.has(id)) continue;
-        const t=TREASURES.find(t=>t.id===id);
-        if(t) rawWpts.push([t.lat,t.lon]);
-    }
-    if(rawWpts.length<2){
+    const nextId=OPTIMAL.find(id=>!collected.has(id));
+    if(!nextId){
         if(routeLine){routeLine.remove();routeLine=null;}
         if(miniRouteLine){miniRouteLine.remove();miniRouteLine=null;}
         return;
     }
+    const nextT=TREASURES.find(t=>t.id===nextId);
+    if(!nextT) return;
+    _routeLastLat=pLat; _routeLastLon=pLon;
+    const rawWpts=[[pLat,pLon],[nextT.lat,nextT.lon]];
     const wpts=rawWpts.map(([la,lo])=>snapToUnblocked(routeGrid,la,lo));
-    let all=[];
-    for(let i=0;i<wpts.length-1;i++){
-        const seg=runRouteAstar(routeGrid,wpts[i][0],wpts[i][1],wpts[i+1][0],wpts[i+1][1]);
-        if(seg.length>0) all=all.concat(smoothRoutePath(seg,routeGrid));
-        else all.push(rawWpts[i],rawWpts[i+1]);
-    }
+    const seg=runRouteAstar(routeGrid,wpts[0][0],wpts[0][1],wpts[1][0],wpts[1][1]);
+    const all=seg.length>0?smoothRoutePath(seg,routeGrid):rawWpts;
     if(all.length<2) return;
     if(routeLine) routeLine.setLatLngs(all);
     else routeLine=L.polyline(all,{color:'#e53935',weight:2.5,dashArray:'7 4',opacity:.65}).addTo(map);
@@ -3613,7 +3610,10 @@ function loop(ts) {
             {const k=1-Math.exp(-40*dt);
             camLat+=(pLat-camLat)*k; camLon+=(pLon-camLon)*k;
             map.setView([camLat,camLon],map.getZoom(),{animate:false,noMoveStart:true});}
-            if(uiFrame){ updateMiniMap(); updateDistances(); if(grenadeAiming) _updateGrenadeAimVfx(); }
+            if(uiFrame){ updateMiniMap(); updateDistances(); if(grenadeAiming) _updateGrenadeAimVfx();
+                // Rebuild route when player moves >12m from last A* origin
+                if(routeGrid&&_routeLastLat!==null&&distM(pLat,pLon,_routeLastLat,_routeLastLon)>12) rebuildOptimalRouteAstar();
+            }
             if(aiFrame){ for(const ai of aiList){ ai.marker.setLatLng([ai.lat,ai.lon]); if(ai.miniMarker) ai.miniMarker.setLatLng([ai.lat,ai.lon]); if(ai.stunRing) ai.stunRing.setLatLng([ai.lat,ai.lon]); if(ai.stunLabel) _positionStunLabel(ai); } }
         } catch(e) {
             console.error('[loop]', e);  // 記錄錯誤但不中斷循環

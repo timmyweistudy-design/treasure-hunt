@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-22（v6.1 — 日夜系統、全站配色、bug 修正）**
+> **最後更新：2026-05-22（v6.2 — 路徑線改為動態玩家→下一個寶藏）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -879,7 +879,9 @@ characters/
 - `showScoreFloat(lat, lon, gained)` 使用 `map.latLngToContainerPoint` 定位
 
 **路線即時更新（game.html）**
-- 每次收集寶藏後呼叫 `rebuildOptimalRouteAstar()`，路線從玩家目前位置出發、略過已收集
+- 路線只顯示「玩家→下一個未收集寶藏」，不再畫全程多段路線
+- `_routeLastLat/_routeLastLon`：記錄上次 A* 重算時的玩家位置；每 uiFrame 偵測，若移動 >12m 就重算
+- 觸發 `rebuildOptimalRouteAstar()` 的時機：遊戲初始（建築載入後）、收集寶藏（50ms 延遲）、小偷搬走寶藏（50ms 延遲）、玩家移動 >12m
 - 全部收集完畢時自動移除路線圖層
 - `routeGrid` 改為全域快取（建築物載入後建一次），不再每次重建
 
@@ -1206,7 +1208,7 @@ AI扣分     = 被追跡者觸碰 -50 分（8秒冷卻）
 | `runRouteAstar(...)` | 細格 A* 路徑規劃，用於繪製地圖綠色路線 |
 | `snapToUnblocked(rg, lat, lon)` | BFS 找最近未被建築阻擋的格子（路線端點吸附用） |
 | `smoothRoutePath(path)` | 視線判斷去除 A* 鋸齒中間點，讓路線更自然 |
-| `rebuildOptimalRouteAstar()` | 重算 TSP 最佳路線並更新地圖綠色連線 |
+| `rebuildOptimalRouteAstar()` | A* 重算玩家→下一個寶藏的路線；移動 >12m、收集寶藏、小偷搬走寶藏時觸發 |
 
 #### 精靈動畫 & 視覺
 | 函式 | 說明 |

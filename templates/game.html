@@ -3120,11 +3120,10 @@ function buildRouteGrid(){
     const rows=Math.ceil((BOUNDS.n-BOUNDS.s)/ROUTE_CELL)+1;
     const cols=Math.ceil((BOUNDS.e-BOUNDS.w)/ROUTE_CELL)+1;
     const bl=new Uint8Array(rows*cols);
-    const h=ROUTE_CELL*0.45; // probe at cell center + 4 half-cell edge midpoints
+    // 只探中心點：避免密集住宅區的細巷（3-5m）被相鄰建築的邊緣探測封死
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
         const la=BOUNDS.s+r*ROUTE_CELL, lo=BOUNDS.w+c*ROUTE_CELL;
-        if(isInBuilding(la,lo)||isInBuilding(la+h,lo)||isInBuilding(la-h,lo)||
-           isInBuilding(la,lo+h)||isInBuilding(la,lo-h)) bl[r*cols+c]=1;
+        if(isInBuilding(la,lo)) bl[r*cols+c]=1;
     }
     return {rows,cols,blocked:bl};
 }
@@ -3145,7 +3144,7 @@ function runRouteAstar(rg,fLat,fLon,tLat,tLon){
     const sk=kf(r0,c0);g.set(sk,0);open.push([h(r0,c0),r0,c0]);
     const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
     let vis=0;
-    while(open.size&&vis<32000){
+    while(open.size&&vis<100000){
         const [,r,c]=open.pop();
         const k=kf(r,c);if(closed.has(k))continue;closed.add(k);vis++;
         if(r===rG&&c===cG){
@@ -3248,7 +3247,12 @@ function rebuildOptimalRouteAstar() {
     _routeLastLat=pLat; _routeLastLon=pLon;
     const rawWpts=[[pLat,pLon],[nextT.lat,nextT.lon]];
     const wpts=rawWpts.map(([la,lo])=>snapToUnblocked(routeGrid,la,lo));
-    const seg=runRouteAstar(routeGrid,wpts[0][0],wpts[0][1],wpts[1][0],wpts[1][1]);
+    let seg=runRouteAstar(routeGrid,wpts[0][0],wpts[0][1],wpts[1][0],wpts[1][1]);
+    // A* 失敗（極度密集區域）→ 用空白格（不避建築）再找一次，至少給出大方向
+    if(seg.length===0){
+        const emptyRg={rows:routeGrid.rows,cols:routeGrid.cols,blocked:new Uint8Array(routeGrid.rows*routeGrid.cols)};
+        seg=runRouteAstar(emptyRg,wpts[0][0],wpts[0][1],wpts[1][0],wpts[1][1]);
+    }
     const all=seg.length>0?smoothRoutePath(seg,routeGrid):rawWpts;
     if(all.length<2) return;
     if(routeLine) routeLine.setLatLngs(all);

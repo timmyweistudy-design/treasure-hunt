@@ -719,7 +719,7 @@
                     <span class="key">= / -</span> 地圖縮放<br>
                     <span class="key">F</span> 💥地雷（2個・20m觸發暈眩5s・充能25s）<br>
                     <b>道具</b>：⚡速×2(8s) ⭐無敵+速×1.5(10s) 🔍廣域×3(10s) ❄️凍AI(7s) 🧲磁鐵(8s)<br>
-                    <b>扣分</b>：👾追跡 <b>-50</b>・👁️巡邏 <b>-30</b>・🦹小偷 <b>-20</b><br>
+                    <b>扣分</b>：👾追跡 <b>-100</b>・👁️巡邏 <b>-80</b>・🦹小偷 <b>-50</b><br>
                     🔥 22秒速收2+寶藏＝連擊獎勵<br>
                     💎 黃金寶藏出現=3倍分 15秒限時<br>
                     走到 <b>{{ collect_radius }}m 內</b>可收集
@@ -2352,7 +2352,7 @@ function spawnAI(forceType, silent=false) {
         </div></div>`;
         miniColor='#c62828';
         const n=chaserCount+1;
-        toastMsg=n===1?'👾 追跡者出現了！被抓到 -50分！':`👾 第 ${n} 隻追跡者！速度更快，小心！`;
+        toastMsg=n===1?'👾 追跡者出現了！被抓到 -100分！':`👾 第 ${n} 隻追跡者！速度更快，小心！`;
     } else if(type==='patroller'){
         iconHtml=`<div class="guard-dot"><div class="gsw">
             <img class="gf active" src="/static/sprites/guard/Grun1.png">
@@ -2368,7 +2368,7 @@ function spawnAI(forceType, silent=false) {
             <img class="ghurt" src="/static/sprites/guard/Ghurt3.png">
         </div></div>`;
         miniColor='#6a1b9a';
-        toastMsg='👁️ 巡邏守衛出現！走入視野範圍 -30分！';
+        toastMsg='👁️ 巡邏守衛出現！走入視野範圍 -80分！';
     } else {
         iconHtml=`<div class="thief-dot"><div class="tsw">
             <img class="tf active" src="/static/sprites/thief/Trun1.png">
@@ -2385,7 +2385,7 @@ function spawnAI(forceType, silent=false) {
         </div></div>`;
         miniColor='#424242';
         const tn=thiefCount+1;
-        toastMsg=`🦹 第 ${tn} 隻小偷現身！（獲得寶藏觸發，場上最多${THIEF_MAX}隻）偷竊 -20分！`;
+        toastMsg=`🦹 第 ${tn} 隻小偷現身！（獲得寶藏觸發，場上最多${THIEF_MAX}隻）偷竊 -50分！`;
     }
 
     const _iSize=[52,52];
@@ -2530,7 +2530,7 @@ function tickChaser(ai,dt,s) {
     if(dToP<AI_ATTACK_R&&ai.attackCD<=0&&invincTimer<=0){
         ai.attackCD=AI_ATTACK_CD;
         ai._attackAnim=0.7;  // play attack animation for 0.7s
-        applyScorePenalty(50,'😱 被追跡者抓到！-50分！');
+        applyScorePenalty(100,'😱 被追跡者抓到！-100分！');
         playAIAttack();
     }
     return dToP;
@@ -2565,7 +2565,7 @@ function tickPatroller(ai,dt,s) {
         // 視野偵測
         if(ai.alertCD<=0&&invincTimer<=0&&inPatrollerFOV(ai)){
             ai.alertTimer=3; ai.alertCD=10;
-            applyScorePenalty(30,'👁️ 巡邏守衛發現你了！-30分！');
+            applyScorePenalty(80,'👁️ 巡邏守衛發現你了！-80分！');
             playPatrollerAlert();
             const dot=ai.marker.getElement()?.querySelector('.guard-dot');
             if(dot) dot.classList.add('alert');
@@ -2652,7 +2652,7 @@ function tickThief(ai,dt,s) {
     if(ai.stealCD<=0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);
-        applyScorePenalty(20,`🦹 小偷把「${name}」搬走了！-20分！🚨 ${THIEF_WANTED_DUR}秒內按Space反制！`);
+        applyScorePenalty(50,`🦹 小偷把「${name}」搬走了！-50分！🚨 ${THIEF_WANTED_DUR}秒內按Space反制！`);
         playThiefSteal();
         ai.wanted=true; ai.wantedTimer=THIEF_WANTED_DUR; ai.stolenAmt=20;
         ai.marker.getElement()?.querySelectorAll('.tf,.thurt').forEach(img=>img.classList.add('wanted-spr'));
@@ -2668,7 +2668,7 @@ function tickAI(dt) {
         initialSpawnDone=true;
         for(let i=0;i<10;i++) spawnAI('patroller',true);
         document.getElementById('chip-ai').style.display='inline-block';
-        showToast('👁️ 10 名巡邏守衛就位！走入視野 -30分！',4000);
+        showToast('👁️ 10 名巡邏守衛就位！走入視野 -80分！',4000);
     }
     // ── 守衛每 15s 追加一名（上限 20）────────────────────
     const patrollerCount=aiList.filter(a=>a.type==='patroller').length;

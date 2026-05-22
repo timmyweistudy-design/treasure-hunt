@@ -3131,10 +3131,10 @@ function runAstar(fLat,fLon,tLat,tLon){
 }
 
 // ── 建築物載入後重算最佳路徑（細格 A*）────────────────────
-// 格子 ≈4.4m：台北透天厝/舊公寓通常 3-5m 寬，9m 格子偵測率只有 44%；
-// 縮到 4.4m 後偵測率升至 91%，大幅減少路線穿牆。
-// 格子數上限：bbox/360 確保大城市不超過 360×360 = 130k 格。
-const ROUTE_CELL = Math.max(0.00004, Math.max((BOUNDS.n-BOUNDS.s)/360,(BOUNDS.e-BOUNDS.w)/360));
+// 格子 ≈2.8m：覆蓋 3m+ 薄建築（台北透天厝/舊公寓）100% 偵測率。
+// 格子數 ~36萬，buildRouteGrid 一次性 ~120ms，之後不再重建。
+// bbox/360 確保大城市自動放大格子不超過 360×360。
+const ROUTE_CELL = Math.max(0.000025, Math.max((BOUNDS.n-BOUNDS.s)/360,(BOUNDS.e-BOUNDS.w)/360));
 let routeGrid = null;  // built once after buildings load, reused for all route updates
 
 function buildRouteGrid(){

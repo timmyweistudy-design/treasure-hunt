@@ -275,29 +275,30 @@ def start_game():
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{background:#080408;display:flex;align-items:center;justify-content:center;
-     height:100vh;font-family:"Noto Sans TC",sans-serif;color:#f5e0d0;
-     background-image:url('/static/bg.png');background-size:cover;background-position:55% 62%}}
-body::before{{content:'';position:fixed;inset:0;background:rgba(4,1,3,.62);pointer-events:none}}
+body{{background:#0D1117;display:flex;align-items:center;justify-content:center;
+     height:100vh;font-family:"Noto Sans TC",sans-serif;color:#E6EDF3;}}
+body::before{{content:'';position:fixed;inset:0;
+     background:radial-gradient(ellipse at 50% 30%, rgba(56,139,253,.15) 0%, transparent 65%);
+     pointer-events:none}}
 .card{{position:relative;z-index:1;text-align:center;padding:40px 50px;
-       background:rgba(16,5,11,.9);border-radius:20px;
-       border:1px solid rgba(194,24,91,.28);
-       box-shadow:0 16px 52px rgba(0,0,0,.75),inset 0 1px 0 rgba(244,160,32,.06);
+       background:#161B2E;border-radius:20px;
+       border:1px solid rgba(56,139,253,.25);
+       box-shadow:0 16px 52px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04);
        max-width:340px;width:90%;backdrop-filter:blur(18px)}}
-.spin{{width:52px;height:52px;border:4px solid rgba(194,24,91,.18);
-       border-top-color:#C2185B;border-radius:50%;
+.spin{{width:52px;height:52px;border:4px solid rgba(56,139,253,.18);
+       border-top-color:#388BFD;border-radius:50%;
        animation:spin .8s linear infinite;margin:0 auto 20px}}
 @keyframes spin{{to{{transform:rotate(360deg)}}}}
 .title{{font-family:"Orbitron",monospace;font-size:16px;font-weight:900;margin-bottom:18px;
-        background:linear-gradient(90deg,#FFD54F,#F4A020,#C2185B);
+        background:linear-gradient(90deg,#FFD700,#F0C000,#64B5F6);
         -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
         letter-spacing:1px}}
-.step{{font-size:14px;color:#F4A020;min-height:22px;margin-bottom:6px}}
-.sub{{font-size:12px;color:#9A7080;min-height:18px;margin-bottom:20px}}
+.step{{font-size:14px;color:#F0C000;min-height:22px;margin-bottom:6px}}
+.sub{{font-size:12px;color:#8B949E;min-height:18px;margin-bottom:20px}}
 .err{{color:#ef5350;font-size:13px;display:none;margin-bottom:14px}}
 .btn{{padding:9px 24px;border:none;border-radius:20px;cursor:pointer;
       font-size:13px;font-weight:bold;
-      background:linear-gradient(135deg,#C2185B,#880E4F);color:#FFE0EC;display:none}}
+      background:linear-gradient(135deg,#1565C0,#388BFD);color:#fff;display:none}}
 </style>
 </head>
 <body>

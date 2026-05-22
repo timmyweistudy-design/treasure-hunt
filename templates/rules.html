@@ -8,24 +8,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #080408; min-height: 100vh; color: #f5e0d0; }
+        body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #0D1117; min-height: 100vh; color: #E6EDF3; }
 
         /* ── Hero ── */
         .hero {
             position: relative;
             min-height: 32vh;
-            background: url('/static/bg.png') 55% 62% / cover no-repeat;
+            background: linear-gradient(180deg, #080E1C 0%, #0D1117 100%);
             display: flex; align-items: flex-end; justify-content: center;
             overflow: hidden;
         }
         .hero::before {
             content: '';
             position: absolute; inset: 0;
-            background: linear-gradient(to bottom,
-                rgba(0,0,0,.15) 0%,
-                rgba(4,1,3,.28) 50%,
-                rgba(8,2,6,.85) 80%,
-                rgba(8,4,8,1)   100%);
+            background: radial-gradient(ellipse at 50% -10%, rgba(56,139,253,.2) 0%, transparent 65%);
+            pointer-events: none;
         }
         .hero-inner {
             position: relative; z-index: 1;
@@ -34,36 +31,36 @@
         .hero h1 {
             font-family: 'Orbitron', monospace; font-weight: 900;
             font-size: clamp(1.4rem, 4vw, 2rem); letter-spacing: 2px;
-            background: linear-gradient(90deg, #FFD54F 0%, #F4A020 45%, #C2185B 100%);
+            background: linear-gradient(90deg, #FFD700 0%, #F0C000 50%, #64B5F6 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
             margin-bottom: 8px;
-            filter: drop-shadow(0 2px 14px rgba(194,24,91,.45));
+            filter: drop-shadow(0 2px 14px rgba(56,139,253,.4));
         }
-        .hero p { font-size: .95rem; color: #D8C0CC; text-shadow: 0 1px 8px rgba(0,0,0,.9); }
+        .hero p { font-size: .95rem; color: #8B949E; }
         .back-btn {
             display: inline-block; margin-top: 16px;
             padding: 8px 22px; font-size: 13px; font-family: inherit;
-            background: rgba(194,24,91,.15); color: #FF80AB;
-            border: 1px solid rgba(194,24,91,.3); border-radius: 8px;
+            background: rgba(56,139,253,.12); color: #64B5F6;
+            border: 1px solid rgba(56,139,253,.3); border-radius: 8px;
             text-decoration: none; transition: background .2s;
         }
-        .back-btn:hover { background: rgba(194,24,91,.28); }
+        .back-btn:hover { background: rgba(56,139,253,.24); color: #90CAF9; }
 
         /* ── Layout ── */
         .container { max-width: 820px; margin: 0 auto 60px; padding: 0 20px; }
 
         /* ── Section cards ── */
         .section {
-            background: rgba(16,6,12,.92);
-            border: 1px solid rgba(194,24,91,.2);
+            background: #161B2E;
+            border: 1px solid rgba(56,139,253,.2);
             border-radius: 18px; padding: 26px 30px;
-            box-shadow: 0 6px 32px rgba(0,0,0,.6);
+            box-shadow: 0 6px 32px rgba(0,0,0,.4);
             margin-bottom: 20px;
         }
         .section h2 {
-            font-size: 1rem; color: #F4A020; letter-spacing: .5px;
+            font-size: 1rem; color: #F0C000; letter-spacing: .5px;
             margin-bottom: 16px; padding-bottom: 10px;
-            border-bottom: 1px solid rgba(194,24,91,.15);
+            border-bottom: 1px solid rgba(56,139,253,.15);
         }
 
         /* ── Keyboard table ── */
@@ -74,24 +71,24 @@
         .kbd-table td:first-child { width: 170px; }
         kbd {
             display: inline-block;
-            background: rgba(194,24,91,.12); border: 1px solid rgba(194,24,91,.28);
-            border-bottom: 3px solid rgba(194,24,91,.4);
+            background: rgba(56,139,253,.12); border: 1px solid rgba(56,139,253,.3);
+            border-bottom: 3px solid rgba(56,139,253,.45);
             border-radius: 6px; padding: 3px 10px;
-            font-family: 'Orbitron', monospace; font-size: 11px; color: #FF80AB;
+            font-family: 'Orbitron', monospace; font-size: 11px; color: #64B5F6;
             letter-spacing: .5px; white-space: nowrap;
         }
-        .desc { color: #D8C8D0; font-size: 13.5px; line-height: 1.65; }
-        .num  { color: #F4A020; font-weight: 700; }
+        .desc { color: #C9D1D9; font-size: 13.5px; line-height: 1.65; }
+        .num  { color: #F0C000; font-weight: 700; }
 
         /* ── Item grid ── */
         .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
         .item-card {
-            background: rgba(194,24,91,.06); border: 1px solid rgba(194,24,91,.14);
+            background: rgba(56,139,253,.06); border: 1px solid rgba(56,139,253,.16);
             border-radius: 12px; padding: 14px 16px;
         }
         .item-card .icon { font-size: 1.6rem; margin-bottom: 6px; }
-        .item-card .name { font-size: .88rem; font-weight: 700; color: #F4A020; margin-bottom: 4px; }
-        .item-card .item-desc { font-size: 12.5px; color: #C8B0BC; line-height: 1.55; }
+        .item-card .name { font-size: .88rem; font-weight: 700; color: #F0C000; margin-bottom: 4px; }
+        .item-card .item-desc { font-size: 12.5px; color: #8B949E; line-height: 1.55; }
         .item-card .item-desc .num { font-size: 12.5px; }
 
         /* ── Row list ── */
@@ -99,26 +96,26 @@
         .row-list li {
             display: flex; align-items: flex-start; gap: 12px;
             padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.04);
-            font-size: 13.5px; line-height: 1.55; color: #D8C8D0;
+            font-size: 13.5px; line-height: 1.55; color: #C9D1D9;
         }
         .row-list li:last-child { border-bottom: none; }
         .row-list .tag {
             flex-shrink: 0; min-width: 80px; text-align: center;
-            background: rgba(244,160,32,.14); color: #F4A020;
-            border: 1px solid rgba(244,160,32,.28); border-radius: 8px;
+            background: rgba(56,139,253,.12); color: #64B5F6;
+            border: 1px solid rgba(56,139,253,.28); border-radius: 8px;
             padding: 3px 10px; font-size: 12px; font-weight: 700;
         }
-        .row-list .tag.danger { background: rgba(194,24,91,.16); color: #FF80AB; border-color: rgba(194,24,91,.3); }
-        .row-list .tag.gold   { background: rgba(244,160,32,.14); color: #FFD54F; border-color: rgba(244,160,32,.28); }
+        .row-list .tag.danger { background: rgba(239,83,80,.12); color: #EF9090; border-color: rgba(239,83,80,.28); }
+        .row-list .tag.gold   { background: rgba(240,192,0,.12); color: #F0C000; border-color: rgba(240,192,0,.28); }
         .row-list .tag.green  { background: rgba(100,180,100,.12); color: #A0D8A0; border-color: rgba(100,180,100,.25); }
 
         /* ── Tip box ── */
         .tip {
-            background: rgba(194,24,91,.07); border: 1px solid rgba(194,24,91,.18);
+            background: rgba(56,139,253,.07); border: 1px solid rgba(56,139,253,.2);
             border-radius: 10px; padding: 12px 16px; margin-top: 14px;
-            font-size: 13px; color: #C0A8B8; line-height: 1.65;
+            font-size: 13px; color: #8B949E; line-height: 1.65;
         }
-        .tip b { color: #F4A020; }
+        .tip b { color: #F0C000; }
     </style>
 </head>
 <body>

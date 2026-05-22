@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-22（v6.2 — 路徑線改為動態玩家→下一個寶藏）**
+> **最後更新：2026-05-22（v6.3 — 守衛每15s+1隻上限20；定身冷卻5s持續1.5s）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。

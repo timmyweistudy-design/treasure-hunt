@@ -897,6 +897,7 @@ let gameReady   = false;
 // 日夜系統
 const DAY_CYCLE = 150;   // 每 150 秒切換一次
 let _isDaytime  = true;  // 從白天開始
+let _dnTimeout  = null;  // 儲存 overlay 淡出 setTimeout，避免重複疊加
 
 // 天氣
 let weatherType = 'sunny';   // 'sunny' | 'fog' | 'storm'
@@ -1391,32 +1392,37 @@ function setWeather(type) {
     }
 }
 // ── 日夜系統 ──────────────────────────────────────────────
+// 快取 DOM 元素，避免每秒重複查詢
+const _dnCdEl    = document.getElementById('dn-cd');
+const _dnIconEl  = document.getElementById('dn-icon');
+const _dnPhaseEl = document.getElementById('dn-phase');
+const _dnOvEl    = document.getElementById('daynight-overlay');
+
 function _checkDayNight() {
-    const elapsed   = TIME_LIMIT - remaining;
-    const phase     = Math.floor(elapsed / DAY_CYCLE);
-    const isDay     = phase % 2 === 0;
-    const nextSw    = DAY_CYCLE - (elapsed % DAY_CYCLE);
-    const cdEl      = document.getElementById('dn-cd');
-    const iconEl    = document.getElementById('dn-icon');
-    const phaseEl   = document.getElementById('dn-phase');
-    if(cdEl)    cdEl.textContent   = nextSw;
-    if(iconEl)  iconEl.textContent = isDay ? '☀️' : '🌙';
-    if(phaseEl) phaseEl.textContent = isDay ? '白天' : '夜晚';
+    const elapsed = TIME_LIMIT - remaining;
+    const phase   = Math.floor(elapsed / DAY_CYCLE);
+    const isDay   = phase % 2 === 0;
+    const nextSw  = DAY_CYCLE - (elapsed % DAY_CYCLE);
+    // 只在值有變化時才寫入 DOM
+    if(_dnCdEl && _dnCdEl.textContent !== String(nextSw)) _dnCdEl.textContent = nextSw;
+    if(_dnIconEl){  const ic=isDay?'☀️':'🌙';   if(_dnIconEl.textContent!==ic)  _dnIconEl.textContent=ic;  }
+    if(_dnPhaseEl){ const ph=isDay?'白天':'夜晚'; if(_dnPhaseEl.textContent!==ph) _dnPhaseEl.textContent=ph; }
     if(isDay !== _isDaytime){ _isDaytime = isDay; _applyDayNight(isDay); }
 }
 function _applyDayNight(isDay) {
-    const ov = document.getElementById('daynight-overlay');
     if(isDay){
         document.body.classList.add('day');
-        ov.style.background = 'rgba(255,230,120,.28)';
+        _dnOvEl.style.background = 'rgba(255,230,120,.28)';
         showToast('☀️ 晨光初現！視野明亮，衝刺吧！', 2800);
     } else {
         document.body.classList.remove('day');
-        ov.style.background = 'rgba(5,15,55,.45)';
+        _dnOvEl.style.background = 'rgba(5,15,55,.45)';
         showToast('🌙 夜幕降臨！小心暗中的敵人…', 2800);
     }
-    ov.style.opacity = '1';
-    setTimeout(() => { ov.style.opacity = '0'; }, 700);
+    _dnOvEl.style.opacity = '1';
+    // 取消前一個尚未執行的淡出，避免多個 timeout 疊加
+    if(_dnTimeout) clearTimeout(_dnTimeout);
+    _dnTimeout = setTimeout(() => { _dnOvEl.style.opacity = '0'; _dnTimeout = null; }, 700);
 }
 
 function tickWeather(dt) {
@@ -1668,7 +1674,7 @@ const pCircle = L.circle(START, {
 }).addTo(map);
 L.marker(START, {
     icon: L.divIcon({
-        html: '<div style="background:#880E4F;color:#FFE0EC;padding:3px 8px;border-radius:4px;font-size:11px;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🏠 起點</div>',
+        html: '<div style="background:#1565C0;color:#fff;padding:3px 8px;border-radius:4px;font-size:11px;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🏠 起點</div>',
         className: '', iconAnchor: [30,10]
     }), zIndexOffset: -100, interactive: false
 }).addTo(map);
@@ -1690,7 +1696,7 @@ TREASURES.forEach(t => {
             <span style="color:#C0A0B0;font-size:12px">${t.category}・${t.points}分</span><br>
             <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#A07880">計算中…</div>
             <button id="pp-btn-${t.id}" onclick="collect('${t.id}',${t.lat},${t.lon})"
-                style="margin-top:6px;width:100%;padding:7px;background:#C2185B;color:#FFE0EC;
+                style="margin-top:6px;width:100%;padding:7px;background:#1565C0;color:#fff;
                        border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold">
                 ✅ 收集寶藏
             </button>
@@ -1724,7 +1730,7 @@ TREASURES.forEach(t => {
     miniTMarkers[t.id] = m;
 });
 const miniPlayer = L.circleMarker(START, {
-    radius:5, color:'#880E4F', fillColor:'#C2185B', fillOpacity:1, weight:2
+    radius:5, color:'#1565C0', fillColor:'#388BFD', fillOpacity:1, weight:2
 }).addTo(miniMap);
 document.getElementById('mini-map').addEventListener('click', () => {
     map.setView([pLat,pLon], 17, {animate:true, duration:0.4});
@@ -1931,9 +1937,10 @@ function _updateGrenadeAimVfx() {
         grenadeAimLine.setStyle({color:col});
     }
 }
+const _mapEl = document.getElementById('map');
 function cancelGrenadeAim() {
     grenadeAiming=false;
-    document.getElementById('map').style.cursor='';
+    _mapEl.style.cursor='';
     if(grenadeAimCircle){map.removeLayer(grenadeAimCircle);grenadeAimCircle=null;}
     if(grenadeAimLine){map.removeLayer(grenadeAimLine);grenadeAimLine=null;}
 }
@@ -1942,7 +1949,7 @@ function toggleGrenadeAim() {
     if(grenadeAiming){ cancelGrenadeAim(); return; }
     if(grenadeCharges<=0){ showToast('💣 手雷充能中…',1200); return; }
     grenadeAiming=true;
-    document.getElementById('map').style.cursor='crosshair';
+    _mapEl.style.cursor='crosshair';
     // 預設瞄準方向（上次移動方向 200m）
     const normLen=Math.hypot(lastDx,lastDy)||1;
     const deg200=200/111111;
@@ -2478,10 +2485,10 @@ function relocateTreasure(tId) {
         tMarkers[tId].marker.bindPopup(`
             <div style="min-width:175px;font-family:Arial">
                 <b style="font-size:14px">💎 ${t.name}</b><br>
-                <span style="color:#C0A0B0;font-size:12px">${t.category}・${t.points}分</span><br>
-                <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#A07880">計算中…</div>
+                <span style="color:#8B949E;font-size:12px">${t.category}・${t.points}分</span><br>
+                <div id="pp-dist-${t.id}" style="font-size:11px;margin:4px 0;color:#8B949E">計算中…</div>
                 <button id="pp-btn-${t.id}" onclick="collect('${t.id}',${nLat},${nLon})"
-                    style="margin-top:6px;width:100%;padding:7px;background:#C2185B;color:#FFE0EC;
+                    style="margin-top:6px;width:100%;padding:7px;background:#1565C0;color:#fff;
                            border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold">
                     ✅ 收集寶藏
                 </button>
@@ -3600,7 +3607,7 @@ function loop(ts) {
             // 時間壓力：倒數 60s 以內顯示紅邊特效
             if(uiFrame){
                 const vig=document.getElementById('time-vignette');
-                if(vig) vig.style.display=remaining<=60&&remaining>0?'block':'none';
+                if(vig) vig.style.display=remaining<=60?'block':'none';
             }
             // 相機 lerp k=40：每幀微移（<0.2px）比大跳更滑；noMoveStart 省事件鏈
             {const k=1-Math.exp(-40*dt);
@@ -3876,9 +3883,7 @@ async function startCountdown(){
     initPortals();
     gameReady=true;
 
-    // 初始白天狀態
-    document.body.classList.add('day');
-    _checkDayNight();
+    _checkDayNight();  // 初始化日夜徽章（body 已在 HTML 帶 class="day"）
 
     ticker=setInterval(()=>{
         remaining--;

@@ -1,6 +1,6 @@
 # 地圖尋寶大冒險 — 完整程式碼文件
 
-> **最後更新：2026-05-22（v6.0 — 全站重新設計：黑黃白藍色調，移除緋紅）**
+> **最後更新：2026-05-22（v6.1 — 日夜系統、全站配色、bug 修正）**
 > **公開網址（永久）：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署）
 > 每次修改任何檔案後請同步更新此文件。
@@ -25,6 +25,26 @@
    - [templates/game.html](#templatesgamehtml)
    - [templates/finish.html](#templatesfinishhtml)
 9. [技術架構筆記](#9-技術架構筆記)
+
+---
+
+### 2026-05-22（v6.1）bug 修正 + 效能優化
+
+**修正：**
+- 殘留緋紅色 4 處（起點標籤、寶藏彈窗按鈕 ×2、小地圖玩家圓點）→ 改藍色系
+- `_applyDayNight` setTimeout 未取消，快速切換時疊加 → 加 `_dnTimeout` clearTimeout
+- 日夜徽章 DOM 元素每秒重複查詢 3 次 → 快取至 `_dnCdEl` / `_dnIconEl` / `_dnPhaseEl`
+- 徽章只在值有變動時才寫入 textContent，避免無謂 DOM rewrite
+- `document.getElementById('map')` 在手雷模式每次觸發重新查詢 → 快取至 `_mapEl`
+- `initGame` 中冗餘的 `classList.add('day')`（HTML 已有） → 移除
+- game loop vignette 條件 `&&remaining>0` 為死碼（gameReady=false 時不執行）→ 移除
+
+**日夜系統（v6.0 補記）：**
+- 前 150s 白天（暖黃色調），後 150s 夜晚（深藍色調），循環交替
+- `<body class="day">` 初始狀態，避免進入遊戲時出現夜→白天過渡動畫
+- Header 徽章即時顯示 ☀️白天 / 🌙夜晚 及下次切換倒數秒數
+- 夜晚地圖加 `filter: brightness(0.78) saturate(0.72)` 增加氛圍感
+- 所有 UI 元素切換時 CSS transition 2.2s，不影響動畫用的 transform/opacity
 
 ---
 

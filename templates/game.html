@@ -227,10 +227,10 @@
         .cbtn.near   { background: rgba(240,192,0,.8); color: #0D1117; }
         .cbtn.target { background: #388BFD; }
         .cbtn:disabled { background: rgba(80,140,80,.6); cursor: default; }
-        .endbtn { width: 100%; padding: 10px; background: linear-gradient(135deg,#1565C0,#388BFD); color: #fff;
+        .endbtn { width: 100%; padding: 10px; background: linear-gradient(135deg,#C62828,#E53935); color: #fff;
                   border: none; border-radius: 6px; cursor: pointer;
-                  font-size: 14px; font-weight: bold; box-shadow: 0 3px 12px rgba(56,139,253,.4); }
-        .endbtn:hover { background: linear-gradient(135deg,#388BFD,#64B5F6); }
+                  font-size: 14px; font-weight: bold; box-shadow: 0 3px 12px rgba(198,40,40,.4); }
+        .endbtn:hover { background: linear-gradient(135deg,#E53935,#EF5350); }
 
         /* ── Loading overlay ── */
         #loading-overlay { position: absolute; inset: 0;
@@ -560,15 +560,15 @@
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
         body.day #v-score { color: #B8700A; }
-        body.day #timer   { color: #9A5000; }
+        body.day #timer   { color: #1A1A1A; }
         body.day #timer.danger { color: #c62828; }
-        body.day .stat .l { color: rgba(60,30,0,.5); }
-        body.day .sprint-lbl  { color: #9A5800; }
-        body.day .sprint-hint { color: #7A5030; }
-        body.day .sprint-track { background: rgba(100,60,0,.12); border-color: rgba(100,60,0,.08); }
+        body.day .stat .l { color: rgba(0,0,0,.45); }
+        body.day .sprint-lbl  { color: #444; }
+        body.day .sprint-hint { color: #666; }
+        body.day .sprint-track { background: rgba(0,0,0,.12); border-color: rgba(0,0,0,.08); }
         body.day .sprint-fill  { background: linear-gradient(90deg, #D4920A, #F0B020); }
-        body.day #mute-btn { background: rgba(100,60,0,.1); border-color: rgba(100,60,0,.18); color: #2A1800; }
-        body.day .eff-chip { background: rgba(200,150,0,.14); border-color: rgba(180,120,0,.2); color: #2A1800; }
+        body.day #mute-btn { background: rgba(0,0,0,.08); border-color: rgba(0,0,0,.15); color: #333; }
+        body.day .eff-chip { background: rgba(0,0,0,.08); border-color: rgba(0,0,0,.12); color: #333; }
         body.day #daynight-badge { background: rgba(255,200,30,.28); color: #6A4400; border-color: rgba(200,140,0,.4); }
 
         body.day .sb { background: rgba(255,248,220,.97); border-left-color: rgba(180,120,0,.2); }
@@ -583,21 +583,21 @@
         }
         body.day .compass-box { background: rgba(255,240,180,.82); border-color: rgba(180,120,0,.25); }
         body.day .compass-arrow-wrap { background: rgba(200,140,0,.14); }
-        body.day .compass-lbl  { color: #7A5030; }
-        body.day .compass-name { color: #1A0E00; }
-        body.day .compass-dist { color: #9A5800; }
-        body.day .order-hint { background: rgba(200,150,0,.1); border-color: rgba(200,140,0,.25); color: #6A4800; }
+        body.day .compass-lbl  { color: #666; }
+        body.day .compass-name { color: #111; }
+        body.day .compass-dist { color: #C07A00; }
+        body.day .order-hint { background: rgba(200,150,0,.1); border-color: rgba(200,140,0,.25); color: #555; }
         body.day .order-hint b { color: #9A5800; }
         body.day .prog-fill  { background: linear-gradient(90deg, #D4920A, #F0B020); }
-        body.day .sec-lbl { color: #5A3A10; }
+        body.day .sec-lbl { color: #444; }
 
         body.day .tc { background: rgba(255,240,180,.82); border-left-color: rgba(180,120,0,.38); }
         body.day .tc.near   { background: rgba(220,160,20,.12); border-left-color: #C07A00; }
         body.day .tc.target { background: rgba(200,130,0,.12); border-left-color: #D4920A; }
-        body.day .tc .sq  { color: #7A5030; }
-        body.day .tc .nm  { color: #1A0E00; }
-        body.day .tc .cat { color: #5A3A10; }
-        body.day .tc .dst { color: #6A4820; }
+        body.day .tc .sq  { color: #666; }
+        body.day .tc .nm  { color: #111; }
+        body.day .tc .cat { color: #555; }
+        body.day .tc .dst { color: #444; }
         body.day .cbtn { background: rgba(21,101,192,.75); color: #fff; }
         body.day .cbtn:hover:not(:disabled) { background: #1565C0; }
         body.day .cbtn.near { background: rgba(21,101,192,.88); color: #fff; }
@@ -613,7 +613,7 @@
         body.day .endbtn:hover { background: linear-gradient(135deg, #E53935, #EF5350); }
 
         body.day #bottom-hud { background: rgba(255,248,220,.95); border-top-color: rgba(180,120,0,.22); }
-        body.day .bhud-chip { background: rgba(100,60,0,.08); border-color: rgba(100,60,0,.12); color: #2A1800; }
+        body.day .bhud-chip { background: rgba(0,0,0,.07); border-color: rgba(0,0,0,.12); color: #222; }
         body.day .bhud-chip.danger { background: rgba(198,40,40,.5) !important; color: #fff !important; }
         body.day .bhud-chip.bhud-alert { background: rgba(198,40,40,.55) !important; color: #fff !important; }
         body.day .slot-box { border-color: rgba(100,60,0,.2); background: rgba(100,60,0,.04); }
@@ -622,9 +622,9 @@
             box-shadow: 0 0 8px rgba(192,122,0,.4);
         }
         body.day .slot-box.filled { border-color: rgba(190,120,0,.55); background: rgba(190,120,0,.1); }
-        body.day .slot-num  { color: rgba(60,30,0,.38); }
-        body.day .slot-key-hint { color: rgba(60,30,0,.3); }
-        body.day .toast { background: rgba(255,248,220,.96); color: #1A0E00; border-color: rgba(180,120,0,.25); }
+        body.day .slot-num  { color: rgba(0,0,0,.35); }
+        body.day .slot-key-hint { color: rgba(0,0,0,.28); }
+        body.day .toast { background: rgba(255,248,220,.96); color: #111; border-color: rgba(180,120,0,.25); }
     </style>
 </head>
 <body>

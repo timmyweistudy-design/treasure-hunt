@@ -246,15 +246,15 @@
         <ul class="row-list">
             <li>
                 <span class="tag danger">👁️ 巡邏</span>
-                <span>在地圖上隨機遊走。你進入視野扇形範圍，被偵測到扣 <span class="num">-30 分</span>，並將你短暫定身。</span>
+                <span>在地圖上隨機遊走。你進入視野扇形範圍，被偵測到扣 <span class="num">-80 分</span>，並將你定身 <span class="num">1.5 秒</span>（冷卻 <span class="num">5 秒</span>）。遊戲開始時有少量守衛，每 <span class="num">15 秒</span>增加一隻，上限 <span class="num">20 隻</span>。</span>
             </li>
             <li>
                 <span class="tag danger">👾 追跡</span>
-                <span>發現你後用 A* 演算法追蹤，繞過建築物逼近。接觸到你扣 <span class="num">-50 分</span>，攻擊冷卻 <span class="num">8 秒</span>。遊戲開始 <span class="num">60 秒</span>後第一隻出現，每 <span class="num">60 秒</span>增加一隻，上限 <span class="num">3 隻</span>。</span>
+                <span>發現你後用 A* 演算法追蹤，繞過建築物逼近。接觸到你扣 <span class="num">-100 分</span>，攻擊冷卻 <span class="num">8 秒</span>。遊戲開始 <span class="num">30 秒</span>後第一隻出現，每 <span class="num">60 秒</span>增加一隻，上限 <span class="num">3 隻</span>。</span>
             </li>
             <li>
                 <span class="tag danger">🦹 小偷</span>
-                <span>碰到你會偷走最近一個寶藏並移動到新位置，扣 <span class="num">-20 分</span>。偷竊後 <span class="num">12 秒</span>內按 <kbd>Space</kbd> 可追回（出現 🚨 通緝提示）。上限 <span class="num">3 隻</span>，有隱身能力（每 <span class="num">8 秒</span>隱身 <span class="num">5 秒</span>）。</span>
+                <span>碰到你會偷走最近一個寶藏並移動到新位置，扣 <span class="num">-50 分</span>。偷竊後 <span class="num">12 秒</span>內按 <kbd>Space</kbd> 可追回（出現 🚨 通緝提示）。上限 <span class="num">3 隻</span>，有隱身能力（每 <span class="num">8 秒</span>隱身 <span class="num">5 秒</span>）。</span>
             </li>
         </ul>
         <div class="tip">
@@ -271,7 +271,7 @@
             </li>
             <li>
                 <span class="tag gold">順序獎勵</span>
-                <span>按照 AI 建議的最佳路線依序收集，每個額外 <span class="num">+50 分</span>。</span>
+                <span>按照 AI 建議的最佳路線依序收集，每個額外 <span class="num">+50 分</span>，全程按順序最多額外 <span class="num">+500 分</span>。</span>
             </li>
             <li>
                 <span class="tag gold">連擊加成</span>
@@ -283,7 +283,7 @@
             </li>
             <li>
                 <span class="tag danger">AI 扣分</span>
-                <span>巡邏守衛 <span class="num">-30</span>・追跡者 <span class="num">-50</span>・小偷 <span class="num">-20</span>。分數最低為 0。</span>
+                <span>巡邏守衛 <span class="num">-80</span>・追跡者 <span class="num">-100</span>・小偷 <span class="num">-50</span>。分數最低為 0。</span>
             </li>
         </ul>
     </div>
@@ -297,7 +297,7 @@
             </li>
             <li>
                 <span class="tag green">天氣系統</span>
-                <span>每 <span class="num">60 秒</span>隨機切換天氣，持續 <span class="num">30 秒</span>後恢復晴天：☀️ 晴天（正常）・🌫️ 大霧（視野受限，AI 視野縮減）・⛈️ 雷雨（玩家速度 ×0.85，AI 速度 ×1.15）。</span>
+                <span>天氣隨機循環，不連續重複：☀️ 晴天持續 <span class="num">55～65 秒</span>（正常）・🌫️ 大霧持續 <span class="num">25～45 秒</span>（AI 視野縮減）・⛈️ 雷雨持續 <span class="num">25～45 秒</span>（玩家速度 ×0.85，AI 速度 ×1.15）。</span>
             </li>
             <li>
                 <span class="tag green">🚨 通緝</span>

@@ -3449,8 +3449,6 @@ document.addEventListener('keydown', e=>{
     if(k==='r'){e.preventDefault();dropDecoy();return;}
     if(k==='e'){e.preventDefault();toggleGrenadeAim();return;}
     if(k==='f'){e.preventDefault();placeMine();return;}
-    if(k==='='||k==='+'){e.preventDefault();map.zoomIn();return;}
-    if(k==='-'){e.preventDefault();map.zoomOut();return;}
     if(k==='Escape'){if(grenadeAiming){cancelGrenadeAim();return;}}
     keys[k]=true;
 });

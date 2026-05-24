@@ -4063,7 +4063,7 @@ doLoad();
 window.dbg = (function(){
 
     let _unlocked = false;
-    const _PWD = (s=>s.split('').map((c,i)=>String.fromCharCode(c.charCodeAt(0)^[3,7,1,5,9,2][i%6])).join(''))('\x35\x36\x32\x54\x5c\x51');
+    const _PWD = (s=>s.split('').map((c,i)=>String.fromCharCode(c.charCodeAt(0)^[3,7,1,5,9,2][i%6])).join(''))('\x3A\x31\x31\x30\x39\x30');
 
     function _assertReady(){
         if(!_unlocked) throw new Error('🔒 請先執行 dbg.unlock("密碼") 解鎖');

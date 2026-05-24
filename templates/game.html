@@ -4062,9 +4062,20 @@ doLoad();
 // ══════════════════════════════════════════════════════════════════════
 window.dbg = (function(){
 
-    function _assertReady(){ if(!gameReady) throw new Error('遊戲尚未開始，請等候讀取完成'); }
+    let _unlocked = false;
+    const _PWD = (s=>s.split('').map((c,i)=>String.fromCharCode(c.charCodeAt(0)^[3,7,1,5,9,2][i%6])).join(''))('\x35\x36\x32\x54\x5c\x51');
+
+    function _assertReady(){
+        if(!_unlocked) throw new Error('🔒 請先執行 dbg.unlock("密碼") 解鎖');
+        if(!gameReady) throw new Error('遊戲尚未開始，請等候讀取完成');
+    }
 
     const D = {
+        /** 解鎖 debug 指令  dbg.unlock("密碼") */
+        unlock: (pwd)=>{
+            if(String(pwd)===_PWD){ _unlocked=true; console.log('%c🔓 Debug 解鎖成功！輸入 dbg.help() 查看所有指令','color:#FFD700;font-weight:bold'); }
+            else { console.warn('🔒 密碼錯誤'); }
+        },
         // ── 天氣 ──────────────────────────────────────────
         sunny:  ()=>{ _assertReady(); setWeather('sunny'); },
         fog:    ()=>{ _assertReady(); setWeather('fog'); },
@@ -4189,6 +4200,7 @@ window.dbg = (function(){
 
         // ── 幫助 ──────────────────────────────────────────
         help: ()=>{
+            if(!_unlocked){ console.log('%c🔒 先執行 dbg.unlock("密碼") 解鎖，才能使用 debug 指令','color:#FCA5A5'); return; }
             console.log(`%c🛠 拓樸拾遺錄 DEBUG 指令表`, 'font-size:14px;font-weight:bold;color:#F0C000');
             console.log(`%c天氣 / 日夜
   dbg.sunny()           切換晴天
@@ -4237,7 +4249,7 @@ AI
     };
     return D;
 })();
-console.log('%c🛠 DEBUG 模式可用：輸入 dbg.help() 查看所有指令', 'color:#64B5F6;font-weight:bold');
+// debug ready
 </script>
 </body>
 </html>

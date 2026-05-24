@@ -6,6 +6,7 @@ import uuid
 import random
 import logging
 import threading
+import folium
 from flask import Flask, render_template, request, session, jsonify, redirect, url_for, make_response
 from game.models import Player, Scoreboard, Treasure
 from game.map_api import MapAPI
@@ -879,6 +880,86 @@ def score_add():
     return jsonify({"status": "ok", "score": player_data["score"]})
 
 
+def _build_finish_map(player_data: dict, treasures_data: list, optimal_order: list) -> str:
+    """用 Folium 生成結算地圖 HTML：實際路線（金）+ 最佳路線（藍虛線）+ 寶藏標記。"""
+    lat = player_data.get("lat", 0)
+    lon = player_data.get("lon", 0)
+    found_ids = player_data.get("found_treasures", [])   # 實際收集順序
+
+    m = folium.Map(
+        location=[lat, lon], zoom_start=15,
+        tiles="CartoDB positron",
+        zoom_control=True, scrollWheelZoom=True,
+    )
+
+    # ── 出發點 ────────────────────────────────────────────────
+    folium.Marker(
+        [lat, lon],
+        popup=folium.Popup("<b>📍 出發點</b>", max_width=120),
+        icon=folium.Icon(color="blue", icon="home", prefix="fa"),
+        tooltip="出發點",
+    ).add_to(m)
+
+    t_map = {t["id"]: t for t in treasures_data}
+
+    # ── 最佳建議路線（藍虛線）────────────────────────────────
+    if optimal_order:
+        opt_pts = [[lat, lon]] + [
+            [t_map[tid]["lat"], t_map[tid]["lon"]]
+            for tid in optimal_order if tid in t_map
+        ]
+        folium.PolyLine(
+            opt_pts, color="#388BFD", weight=2.5, opacity=0.55,
+            dash_array="10 6", tooltip="🔵 建議最佳路線",
+        ).add_to(m)
+
+    # ── 實際收集路線（金色實線）──────────────────────────────
+    if found_ids:
+        actual_pts = [[lat, lon]] + [
+            [t_map[tid]["lat"], t_map[tid]["lon"]]
+            for tid in found_ids if tid in t_map
+        ]
+        folium.PolyLine(
+            actual_pts, color="#FFD700", weight=3.5, opacity=0.85,
+            tooltip="🟡 實際收集路線",
+        ).add_to(m)
+
+    # ── 寶藏標記（收集=金色數字，未收集=灰色）───────────────
+    collect_order = {tid: i + 1 for i, tid in enumerate(found_ids)}
+    for t in treasures_data:
+        order_num = collect_order.get(t["id"])
+        if order_num:
+            icon_html = (
+                f'<div style="background:#F4A020;color:#000;width:26px;height:26px;'
+                f'border-radius:50%;border:2px solid #fff;display:flex;'
+                f'align-items:center;justify-content:center;'
+                f'font-weight:bold;font-size:12px;'
+                f'box-shadow:0 2px 6px rgba(0,0,0,.45)">{order_num}</div>'
+            )
+            icon = folium.DivIcon(html=icon_html, icon_size=(26, 26), icon_anchor=(13, 13))
+            popup_txt = f"<b>{t['name']}</b><br>✅ 第 {order_num} 個收集<br>💰 {t['points']} 分"
+        else:
+            icon_html = (
+                '<div style="background:#555;color:#999;width:22px;height:22px;'
+                'border-radius:50%;border:2px solid #777;display:flex;'
+                'align-items:center;justify-content:center;font-size:13px;'
+                'box-shadow:0 2px 4px rgba(0,0,0,.3)">✕</div>'
+            )
+            icon = folium.DivIcon(html=icon_html, icon_size=(22, 22), icon_anchor=(11, 11))
+            popup_txt = f"<b>{t['name']}</b><br>❌ 未收集<br>💰 {t['points']} 分"
+        folium.Marker(
+            [t["lat"], t["lon"]],
+            popup=folium.Popup(popup_txt, max_width=180),
+            icon=icon,
+            tooltip=t["name"],
+        ).add_to(m)
+
+    # 自動縮放到所有點
+    all_pts = [[lat, lon]] + [[t["lat"], t["lon"]] for t in treasures_data]
+    m.fit_bounds(all_pts, padding=(30, 30))
+    return m.get_root().render()
+
+
 @app.route("/finish")
 def finish_game():
     player_data = session.get("player", {})
@@ -899,10 +980,17 @@ def finish_game():
     player.score += time_bonus
     scoreboard.save_score(player, city)
     found = [t for t in treasures_data if t["found"]]
+    optimal_order = session.get("optimal_order", [])
+    try:
+        folium_html = _build_finish_map(player_data, treasures_data, optimal_order)
+    except Exception as e:
+        logging.warning("Folium map generation failed: %s", e)
+        folium_html = None
     return render_template("finish.html",
                            player=player, city=city,
                            found_count=len(found), total=len(treasures_data),
-                           time_bonus=time_bonus, top10=scoreboard.get_top10(city))
+                           time_bonus=time_bonus, top10=scoreboard.get_top10(city),
+                           folium_html=folium_html)
 
 
 @app.route("/health")

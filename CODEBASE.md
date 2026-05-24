@@ -491,6 +491,16 @@ Scoreboard.save_score()
 - 定身補充具體時間：1.5秒，冷卻5秒
 - 順序獎勵補充全程上限 +500 分
 
+**結算頁 Folium 地圖（finish.html + app.py）**
+- 新增依賴：`folium==0.20.0`、`branca==0.8.2`（requirements.txt）
+- 新增 `_build_finish_map(player_data, treasures_data, optimal_order)` → Folium 地圖 HTML
+  - CartoDB Positron 底圖、自動 fit_bounds
+  - 🟡 金色實線：玩家實際收集順序路線
+  - 🔵 藍色虛線：TSP 建議最佳路線
+  - 金色數字標記（已收集）+ 灰色 ✕ 標記（未收集），點擊顯示 popup（名稱、分數）
+- `finish_game()` 生成 Folium HTML，失敗時 fallback `None`（不影響結算頁其他內容）
+- `finish.html` 以 `iframe srcdoc`（透過 `tojson` 注入）嵌入地圖，隔離 CSS/JS 衝突
+
 **OSRM 步行距離計分（app.py + map_api.py）**
 - 新增 `MapAPI.get_walking_distances(origin, destinations)` — 呼叫 OSRM `/table/v1/walking/` 一次取得全部距離，fallback Haversine
 - `_bg_prepare` 在 padding 完成後呼叫，更新每顆寶藏 `t.points = OSRM步行公尺數`

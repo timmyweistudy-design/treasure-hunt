@@ -1406,8 +1406,8 @@ TREASURES.forEach(t => {
         dEl:  document.getElementById('dist-'+t.id),
         btn:  document.getElementById('btn-'+t.id),
         card: document.getElementById('card-'+t.id),
-        ppD:  document.getElementById('pp-dist-'+t.id),
-        ppBtn:document.getElementById('pp-btn-'+t.id),
+        // ppD / ppBtn 不在此快取：Leaflet popup DOM 在彈窗首次開啟時才建立
+        // 需要時用 document.getElementById('pp-dist-'+id) live 查詢
     };
 });
 
@@ -2497,6 +2497,11 @@ function relocateTreasure(tId) {
     }
     const [nLat,nLon]=nearestWalkable(nLat0,nLon0);
     t.lat=nLat; t.lon=nLon; t.wasMoved=true;
+    // 同步更新所有以此寶藏為目標的小偷 🦹 標示位置
+    for(const ai of aiList){
+        if(ai.type==='thief'&&ai.targetTId===tId&&ai.targetMarker)
+            ai.targetMarker.setLatLng([nLat,nLon]);
+    }
     if(tMarkers[tId]){
         tMarkers[tId].marker.setLatLng([nLat,nLon]);
         tMarkers[tId].marker.unbindPopup();
@@ -3742,7 +3747,7 @@ function updateDistances() {
         const inR=d<=eR;
         const isTarget=(t.id===nextId);
 
-        const {dEl,btn,card,ppD}=_tDomCache[t.id]||{};
+        const {dEl,btn,card}=_tDomCache[t.id]||{};
         if(dEl) {dEl.textContent=inR?`✅ 範圍內（${d}m）`:`📍 ${d}m（需${eR}m內）`;
                  dEl.className='dst '+(inR?'ok':'far');}
         if(btn&&!btn.disabled){
@@ -3750,8 +3755,10 @@ function updateDistances() {
             btn.textContent=inR?'✅ 立刻收集！':'✅ 收集寶藏';
         }
         if(card) card.className='tc'+(inR?' near':isTarget&&!inR?' target':'');
-        if(ppD) {ppD.textContent=inR?`✅ 範圍內（${d}m）`:`距你 ${d}m（需${eR}m內）`;
-                 ppD.style.color=inR?'#2e7d32':'#c62828';}
+        // popup 元素在彈窗開啟時才存在 DOM，live 查詢（開啟中才有值，否則 null 直接跳過）
+        const ppD=document.getElementById('pp-dist-'+t.id);
+        if(ppD){ppD.textContent=inR?`✅ 範圍內（${d}m）`:`距你 ${d}m（需${eR}m內）`;
+                ppD.style.color=inR?'#2e7d32':'#c62828';}
         if(tMarkers[t.id]){
             const isGolden=t.id===goldenId&&goldenTimer>0;
             let html;
@@ -3790,7 +3797,7 @@ async function collect(id, tLat, tLon) {
     const comboBonus=tentativeCount>=2?(tentativeCount-1)*30:0;
     // 黃金寶藏加成
     const goldenBonus=id===goldenId&&goldenTimer>0?TREASURES.find(t=>t.id===id).points*(GOLDEN_MULT-1):0;
-    const {btn,ppBtn}=_tDomCache[id]||{btn:null,ppBtn:null};
+    const {btn}=_tDomCache[id]||{btn:null};
     if(btn){btn.disabled=true;btn.textContent='處理中…';}
 
     try {
@@ -3834,7 +3841,7 @@ async function collect(id, tLat, tLon) {
         document.getElementById('v-found').textContent=found;
         document.getElementById('progress').style.width=(found/TOTAL*100)+'%';
 
-        const {card,dEl,ppBtn:_ppBtn2}=_tDomCache[id]||{};
+        const {card,dEl}=_tDomCache[id]||{};
         if(card) card.className='tc found';
         if(btn)  btn.textContent='✅ 已找到';
         if(dEl){dEl.textContent='✅ 已收集';dEl.className='dst ok';}
@@ -3847,6 +3854,8 @@ async function collect(id, tLat, tLon) {
         if(miniTMarkers[id]) miniTMarkers[id].setStyle({
             color:'#9e9e9e',fillColor:'#9e9e9e',fillOpacity:.3
         });
+        // 若彈窗正開著，live 查詢按鈕並更新狀態
+        const ppBtn=document.getElementById('pp-btn-'+id);
         if(ppBtn){ppBtn.disabled=true;ppBtn.textContent='✅ 已收集';ppBtn.style.background='#34a853';}
 
         // 音效 + 粒子

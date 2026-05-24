@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-24（v6.9）**
+> **最後更新：2026-05-24（v7.0）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -454,6 +454,17 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-24（v7.0）Bug 修正：Popup DOM 快取 + 小偷標示位置
+
+**Bug 1：`_tDomCache` 的 ppD/ppBtn 永遠是 null（已修）**
+- Leaflet popup DOM 在首次開啟時才建立，game init 時 `getElementById('pp-dist-/pp-btn-xxx')` 回傳 null
+- 影響：彈窗中的距離顯示永遠不更新、收集後彈窗按鈕不變成「✅ 已收集」
+- 修法：`_tDomCache` 移除 ppD/ppBtn 欄位；`updateDistances()` 改 live `getElementById`；`collect()` 改 live getElementById（popup 未開時自然回 null 跳過）
+
+**Bug 2：小偷偷走寶藏後 🦹 地圖標示停在原位（已修）**
+- `_updateThiefMarker()` 只在 `targetTId` 改變時才更新位置，同一目標被移位後標示凍結
+- 修法：`relocateTreasure()` 中更新 `t.lat/lon` 後，立即對所有以此 ID 為目標的小偷呼叫 `ai.targetMarker.setLatLng([nLat,nLon])`
 
 ### 2026-05-24（v6.9）Debug Console + 小偷移位同步 + 全面改名
 

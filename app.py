@@ -841,11 +841,23 @@ def collect_treasure(treasure_id):
     if not player_data:
         return jsonify({"status": "error", "msg": "session 過期"}), 400
     order_bonus = 0
+    req_lat = req_lon = None
+    was_moved = False
     if request.is_json:
-        order_bonus = int(request.get_json(silent=True).get("order_bonus", 0))
+        body = request.get_json(silent=True) or {}
+        order_bonus = int(body.get("order_bonus", 0))
+        req_lat = body.get("lat")
+        req_lon = body.get("lon")
+        was_moved = bool(body.get("was_moved", False))
     for t in treasures_data:
         if t["id"] == treasure_id and not t["found"]:
             t["found"] = True
+            # 小偷移位後的實際座標：同步更新 session，確保 Folium 結算地圖正確
+            if req_lat is not None and req_lon is not None:
+                t["lat"] = req_lat
+                t["lon"] = req_lon
+            if was_moved:
+                t["was_moved"] = True
             player_data["score"] = player_data.get("score", 0) + t["points"] + order_bonus
             player_data.setdefault("found_treasures", []).append(treasure_id)
             break
@@ -928,17 +940,22 @@ def _build_finish_map(player_data: dict, treasures_data: list, optimal_order: li
     collect_order = {tid: i + 1 for i, tid in enumerate(found_ids)}
     for t in treasures_data:
         order_num = collect_order.get(t["id"])
+        was_moved = t.get("was_moved", False)
         if order_num:
+            # 被小偷移位過：外框改橙紅色，popup 加標註
+            border_color = "#FF6B35" if was_moved else "#fff"
             icon_html = (
                 f'<div style="background:#F4A020;color:#000;width:26px;height:26px;'
-                f'border-radius:50%;border:2px solid #fff;display:flex;'
+                f'border-radius:50%;border:2px solid {border_color};display:flex;'
                 f'align-items:center;justify-content:center;'
                 f'font-weight:bold;font-size:12px;'
                 f'box-shadow:0 2px 6px rgba(0,0,0,.45)">{order_num}</div>'
             )
             icon = folium.DivIcon(html=icon_html, icon_size=(26, 26), icon_anchor=(13, 13))
-            popup_txt = f"<b>{t['name']}</b><br>✅ 第 {order_num} 個收集<br>💰 {t['points']} 分"
+            stolen_note = "<br><span style='color:#FF6B35;font-size:11px'>🦹 曾被小偷移位</span>" if was_moved else ""
+            popup_txt = f"<b>{t['name']}</b><br>✅ 第 {order_num} 個收集<br>💰 {t['points']} 分{stolen_note}"
         else:
+            stolen_note = "<br><span style='color:#FF6B35;font-size:11px'>🦹 曾被小偷移位</span>" if was_moved else ""
             icon_html = (
                 '<div style="background:#555;color:#999;width:22px;height:22px;'
                 'border-radius:50%;border:2px solid #777;display:flex;'
@@ -946,7 +963,7 @@ def _build_finish_map(player_data: dict, treasures_data: list, optimal_order: li
                 'box-shadow:0 2px 4px rgba(0,0,0,.3)">✕</div>'
             )
             icon = folium.DivIcon(html=icon_html, icon_size=(22, 22), icon_anchor=(11, 11))
-            popup_txt = f"<b>{t['name']}</b><br>❌ 未收集<br>💰 {t['points']} 分"
+            popup_txt = f"<b>{t['name']}</b><br>❌ 未收集<br>💰 {t['points']} 分{stolen_note}"
         folium.Marker(
             [t["lat"], t["lon"]],
             popup=folium.Popup(popup_txt, max_width=180),

@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-22（v6.7）**
+> **最後更新：2026-05-24（v6.8）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -454,6 +454,17 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-24（v6.8）小偷移位同步 + Folium 標註 + 全面改名
+
+**小偷移位座標同步（`relocateTreasure` → session）**
+- 問題：`relocateTreasure()` 在 JS 端更新 `t.lat/t.lon`，但 `/collect` POST 只送 `order_bonus`，server session 座標從未更新 → Folium 結算地圖標在原始位置
+- `game.html`：`relocateTreasure()` 設 `t.wasMoved = true`；`collect()` POST 多帶 `lat`, `lon`, `was_moved`
+- `app.py` `/collect/<id>`：讀取 `lat/lon/was_moved` 並寫入 `session["treasures"]` 對應項目
+- `_build_finish_map()`：`was_moved` 寶藏的 Folium Marker 邊框改橙紅（`#FF6B35`），popup 加「🦹 曾被小偷移位」標註
+
+**遊戲更名**
+- 全專案 "地圖尋寶大冒險" → **"拓樸拾遺錄"**（templates + CODEBASE.md）
 
 ### 2026-05-22（v6.7）路線+效能+TSP 全面優化
 

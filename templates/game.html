@@ -2496,7 +2496,7 @@ function relocateTreasure(tId) {
         if(!isInBuilding(nLat0,nLon0)) break;
     }
     const [nLat,nLon]=nearestWalkable(nLat0,nLon0);
-    t.lat=nLat; t.lon=nLon;
+    t.lat=nLat; t.lon=nLon; t.wasMoved=true;
     if(tMarkers[tId]){
         tMarkers[tId].marker.setLatLng([nLat,nLon]);
         tMarkers[tId].marker.unbindPopup();
@@ -3796,7 +3796,11 @@ async function collect(id, tLat, tLon) {
     try {
         const res=await fetch('/collect/'+id,{
             method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({order_bonus:bonus+comboBonus+goldenBonus})
+            body:JSON.stringify({
+                order_bonus:bonus+comboBonus+goldenBonus,
+                lat:tLat, lon:tLon,
+                was_moved:!!(tCurrent&&tCurrent.wasMoved)
+            })
         });
         if(!res.ok) throw new Error('HTTP '+res.status);
         const data=await res.json();

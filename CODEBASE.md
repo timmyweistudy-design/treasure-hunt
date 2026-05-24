@@ -458,7 +458,8 @@ Scoreboard.save_score()
 ### 2026-05-24（v6.9）Debug Console + 小偷移位同步 + 全面改名
 
 **Debug Console `window.dbg`（game.html 底部）**
-- 瀏覽器 F12 → Console 輸入 `dbg.help()` 列出全部指令
+- 密碼保護：`dbg.unlock(密碼)` 才能使用其他指令；密碼以 XOR 混淆儲存，不以明文出現在原始碼
+- 瀏覽器 F12 → Console 解鎖後輸入 `dbg.help()` 列出全部指令
 - 天氣：`dbg.sunny/fog/storm()`；日夜：`dbg.day()/night()`
 - 傳送：`dbg.tp(lat,lon)` / `dbg.goto(N)`（第N個寶藏）
 - 時間：`dbg.setTime(秒)` / `dbg.addTime(秒)`

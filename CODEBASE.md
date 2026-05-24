@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-24（v6.8）**
+> **最後更新：2026-05-24（v6.9）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -454,6 +454,19 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-24（v6.9）Debug Console + 小偷移位同步 + 全面改名
+
+**Debug Console `window.dbg`（game.html 底部）**
+- 瀏覽器 F12 → Console 輸入 `dbg.help()` 列出全部指令
+- 天氣：`dbg.sunny/fog/storm()`；日夜：`dbg.day()/night()`
+- 傳送：`dbg.tp(lat,lon)` / `dbg.goto(N)`（第N個寶藏）
+- 時間：`dbg.setTime(秒)` / `dbg.addTime(秒)`
+- AI：`dbg.spawnChaser/Guard/Thief()` / `dbg.stunAll(秒)` / `dbg.killAll()`
+- 道具啟用：`dbg.speed/star/range/magnet/freeze()`
+- 武器：`dbg.refillGrenade/Mine/Decoy/Sprint/All()`
+- 寶藏：`dbg.golden()` / `dbg.collectAll()` / `dbg.listTreasures()`
+- 查詢：`dbg.status()`
 
 ### 2026-05-24（v6.8）小偷移位同步 + Folium 標註 + 全面改名
 

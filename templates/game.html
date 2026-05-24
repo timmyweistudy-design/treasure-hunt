@@ -4056,6 +4056,188 @@ function doLoad(){
     }
 }
 doLoad();
+
+// ══════════════════════════════════════════════════════════════════════
+//  DEBUG CONSOLE  —  在瀏覽器 F12 Console 輸入 dbg.help() 查看所有指令
+// ══════════════════════════════════════════════════════════════════════
+window.dbg = (function(){
+
+    function _assertReady(){ if(!gameReady) throw new Error('遊戲尚未開始，請等候讀取完成'); }
+
+    const D = {
+        // ── 天氣 ──────────────────────────────────────────
+        sunny:  ()=>{ _assertReady(); setWeather('sunny'); },
+        fog:    ()=>{ _assertReady(); setWeather('fog'); },
+        storm:  ()=>{ _assertReady(); setWeather('storm'); },
+
+        // ── 日夜（強制切換，不等 150 秒計時）──────────────
+        day:    ()=>{ _assertReady(); _isDaytime=false; _applyDayNight(true); },
+        night:  ()=>{ _assertReady(); _isDaytime=true;  _applyDayNight(false); },
+
+        // ── 傳送 ──────────────────────────────────────────
+        /** 傳送到指定座標  dbg.tp(25.04, 121.56) */
+        tp: (lat, lon)=>{
+            _assertReady();
+            pLat=lat; pLon=lon; camLat=lat; camLon=lon;
+            console.log(`📍 傳送到 ${lat}, ${lon}`);
+        },
+        /** 傳送到第 N 個寶藏（0-based）  dbg.goto(0) */
+        goto: (idx)=>{
+            _assertReady();
+            const t=TREASURES[idx];
+            if(!t){ console.warn('寶藏索引超出範圍，共 '+TREASURES.length+' 個'); return; }
+            pLat=t.lat; pLon=t.lon; camLat=t.lat; camLon=t.lon;
+            console.log(`📍 傳送到寶藏 ${idx}: ${t.name}`);
+        },
+
+        // ── 時間 ──────────────────────────────────────────
+        /** 設定剩餘秒數  dbg.setTime(120) */
+        setTime: (sec)=>{ _assertReady(); remaining=Math.max(0,sec); },
+        /** 增加秒數  dbg.addTime(30) */
+        addTime: (sec)=>{ _assertReady(); remaining=Math.min(TIME_LIMIT, remaining+sec); },
+
+        // ── 分數 ──────────────────────────────────────────
+        /** 增加分數（不更新 server）  dbg.addScore(500) */
+        addScore: (n)=>{
+            _assertReady();
+            score+=n;
+            console.log('💰 分數 → '+score);
+        },
+        /** 設定分數  dbg.setScore(9999) */
+        setScore: (n)=>{ _assertReady(); score=n; },
+
+        // ── AI 生成 / 控制 ────────────────────────────────
+        spawnChaser:    ()=>{ _assertReady(); spawnAI('chaser',false); },
+        spawnGuard:     ()=>{ _assertReady(); spawnAI('patroller',false); },
+        spawnThief:     ()=>{ _assertReady(); spawnAI('thief',false); },
+        /** 暈眩所有 AI N 秒（預設10）  dbg.stunAll(5) */
+        stunAll: (dur=10)=>{
+            _assertReady();
+            for(const ai of aiList) _stunAI(ai,dur);
+            console.log(`⚡ 暈眩全部 ${aiList.length} 隻 AI ${dur}s`);
+        },
+        /** 清除所有 AI */
+        killAll: ()=>{
+            _assertReady();
+            for(let i=aiList.length-1;i>=0;i--){
+                const ai=aiList[i];
+                if(ai.marker) map.removeLayer(ai.marker);
+                if(ai.miniMarker) map.removeLayer(ai.miniMarker);
+                if(ai.stunRing) map.removeLayer(ai.stunRing);
+                if(ai.fovPoly) map.removeLayer(ai.fovPoly);
+                if(ai.targetMarker) map.removeLayer(ai.targetMarker);
+            }
+            aiList.length=0; thiefCount=0;
+            console.log('🗑️ 清除所有 AI');
+        },
+
+        // ── 道具直接啟用 ──────────────────────────────────
+        speed:  ()=>{ _assertReady(); _activateItem('speed'); },
+        star:   ()=>{ _assertReady(); _activateItem('star'); },
+        range:  ()=>{ _assertReady(); _activateItem('range'); },
+        magnet: ()=>{ _assertReady(); _activateItem('magnet'); },
+        freeze: ()=>{ _assertReady(); _activateItem('freeze'); },
+
+        // ── 武器補充 ──────────────────────────────────────
+        /** 補充手雷到最大  dbg.refillGrenade() */
+        refillGrenade: ()=>{ _assertReady(); grenadeCharges=GRENADE_CHARGES; grenadeRechargeQueue=0; grenadeRechargeCooldown=0; console.log('💣 手雷補滿'); },
+        /** 補充地雷到最大  dbg.refillMine() */
+        refillMine:    ()=>{ _assertReady(); mineCharges=MINE_CHARGES;      mineRechargeQueue=0;    mineRechargeCooldown=0;    console.log('💥 地雷補滿'); },
+        /** 誘餌冷卻重置 */
+        refillDecoy:   ()=>{ _assertReady(); decoyCD=0; console.log('🎯 誘餌冷卻重置'); },
+        /** 衝刺槽補滿 */
+        refillSprint:  ()=>{ _assertReady(); sprintBar=SPRINT_MAX; sprintCD=0; console.log('💨 衝刺補滿'); },
+        /** 補滿所有武器+衝刺 */
+        refillAll:     ()=>{ D.refillGrenade(); D.refillMine(); D.refillDecoy(); D.refillSprint(); },
+
+        // ── 寶藏 ──────────────────────────────────────────
+        /** 啟動黃金寶藏（第一個未收集）  dbg.golden() */
+        golden: ()=>{
+            _assertReady();
+            const c=TREASURES.filter(t=>!collected.has(t.id));
+            if(!c.length){ console.warn('沒有未收集的寶藏'); return; }
+            setGoldenTreasure(c[0].id);
+        },
+        /** 收集所有寶藏（模擬點擊，會發送 /collect 請求）  dbg.collectAll() */
+        collectAll: ()=>{
+            _assertReady();
+            TREASURES.filter(t=>!collected.has(t.id)).forEach(t=>collect(t.id,t.lat,t.lon));
+        },
+        /** 列出所有寶藏狀態 */
+        listTreasures: ()=>{
+            console.table(TREASURES.map((t,i)=>({
+                idx:i, id:t.id, name:t.name, points:t.points,
+                collected:collected.has(t.id), lat:t.lat.toFixed(5), lon:t.lon.toFixed(5)
+            })));
+        },
+
+        // ── 狀態查詢 ──────────────────────────────────────
+        /** 印出當前遊戲狀態快照 */
+        status: ()=>{
+            const s={
+                score, found, remaining: Math.round(remaining),
+                weather: weatherType, isDay: _isDaytime,
+                aiCount: aiList.length,
+                pos: [pLat.toFixed(5), pLon.toFixed(5)],
+                speedBoost: speedBoostTimer>0, invinc: invincTimer>0,
+                rangeBoost: rangeBoostTimer>0, frozen: aiFrozenTimer>0,
+                magnet: magnetTimer>0, grenades: grenadeCharges, mines: mineCharges,
+            };
+            console.table(s);
+            return s;
+        },
+
+        // ── 幫助 ──────────────────────────────────────────
+        help: ()=>{
+            console.log(`%c🛠 拓樸拾遺錄 DEBUG 指令表`, 'font-size:14px;font-weight:bold;color:#F0C000');
+            console.log(`%c天氣 / 日夜
+  dbg.sunny()           切換晴天
+  dbg.fog()             切換迷霧
+  dbg.storm()           切換雷雨
+  dbg.day()             強制切換白天
+  dbg.night()           強制切換夜晚
+
+傳送
+  dbg.tp(lat, lon)      傳送到指定座標
+  dbg.goto(N)           傳送到第 N 個寶藏（0-based）
+
+時間
+  dbg.setTime(秒)       設定剩餘秒數
+  dbg.addTime(秒)       增加秒數
+
+分數
+  dbg.addScore(N)       增加 N 分（僅前端）
+  dbg.setScore(N)       設定分數
+
+AI
+  dbg.spawnChaser()     生成追跡者
+  dbg.spawnGuard()      生成巡邏守衛
+  dbg.spawnThief()      生成小偷
+  dbg.stunAll(秒)       暈眩所有 AI（預設10秒）
+  dbg.killAll()         清除所有 AI
+
+道具（直接啟用效果）
+  dbg.speed()  dbg.star()  dbg.range()  dbg.magnet()  dbg.freeze()
+
+武器補充
+  dbg.refillGrenade()   手雷補滿
+  dbg.refillMine()      地雷補滿
+  dbg.refillDecoy()     誘餌冷卻重置
+  dbg.refillSprint()    衝刺補滿
+  dbg.refillAll()       全部補滿
+
+寶藏
+  dbg.golden()          啟動黃金寶藏
+  dbg.collectAll()      收集全部寶藏
+  dbg.listTreasures()   列出所有寶藏狀態
+
+查詢
+  dbg.status()          顯示遊戲狀態快照`, 'color:#8B949E;font-family:monospace');
+        },
+    };
+    return D;
+})();
+console.log('%c🛠 DEBUG 模式可用：輸入 dbg.help() 查看所有指令', 'color:#64B5F6;font-weight:bold');
 </script>
 </body>
 </html>

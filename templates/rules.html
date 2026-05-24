@@ -250,7 +250,7 @@
             </li>
             <li>
                 <span class="tag danger">🦹 小偷</span>
-                <span>碰到你會偷走最近一個寶藏並移動到新位置，扣 <span class="num">-50 分</span>。偷竊後 <span class="num">12 秒</span>內按 <kbd>Space</kbd> 可追回（出現 🚨 通緝提示）。上限 <span class="num">3 隻</span>，有隱身能力（每 <span class="num">8 秒</span>隱身 <span class="num">5 秒</span>）。</span>
+                <span>碰到你會偷走最近一個寶藏並移動到新位置，扣 <span class="num">-50 分</span>。偷竊後 <span class="num">12 秒</span>內按 <kbd>Space</kbd> 可追回（出現 🚨 通緝提示）。上限 <span class="num">3 隻</span>，有隱身能力（隱身 <span class="num">5 秒</span>，冷卻 <span class="num">15 秒</span>）。</span>
             </li>
         </ul>
         <div class="tip">
@@ -263,7 +263,7 @@
         <ul class="row-list">
             <li>
                 <span class="tag gold">基礎分</span>
-                <span>收集寶藏時，獲得該寶藏距出生點的 <b>公尺數</b> 作為分數。越遠的寶藏分數越高。</span>
+                <span>收集寶藏時，獲得該寶藏距出生點的 <b>真實步行距離（公尺）</b> 作為分數（經 OSRM API 計算）。越遠的寶藏分數越高。</span>
             </li>
             <li>
                 <span class="tag gold">順序獎勵</span>
@@ -276,6 +276,10 @@
             <li>
                 <span class="tag gold">黃金寶藏 ✨</span>
                 <span>每 <span class="num">45 秒</span>隨機出現一個金色寶藏，限時 <span class="num">15 秒</span>內收集，分數 ×<span class="num">3</span>。</span>
+            </li>
+            <li>
+                <span class="tag gold">時間獎勵</span>
+                <span>遊戲結算時，剩餘秒數 × <span class="num">1 分</span>，最高 <span class="num">+600 分</span>。越快完成冒險獎勵越高。</span>
             </li>
             <li>
                 <span class="tag danger">AI 扣分</span>
@@ -302,6 +306,10 @@
             <li>
                 <span class="tag green">建築碰撞</span>
                 <span>玩家與 AI 均無法穿越建築物（灰色區域）。可利用建築甩掉追跡者。</span>
+            </li>
+            <li>
+                <span class="tag green">日夜循環</span>
+                <span>每 <span class="num">150 秒</span>在白天與夜晚之間切換，改變地圖亮度與視覺風格。夜晚時 AI 視野隨天氣進一步縮減。</span>
             </li>
             <li>
                 <span class="tag green">時間壓力</span>

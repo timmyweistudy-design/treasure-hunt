@@ -598,6 +598,14 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
                 ))
                 idx += 1
 
+        # 用 OSRM /table 取得真實步行距離作為分數（一次 API 呼叫）
+        # fallback 到 Haversine 直線距離（OSRM 失敗時）
+        walking_dists = MapAPI.get_walking_distances(
+            (lat, lon), [(t.lat, t.lon) for t in treasures]
+        )
+        for t, wd in zip(treasures, walking_dists):
+            t.points = max(1, int(round(wd)))
+
         player_coords = (lat, lon)
         optimal_route = solve_tsp_exact(player_coords, treasures)
         total_dist = calculate_total_distance(player_coords, optimal_route)

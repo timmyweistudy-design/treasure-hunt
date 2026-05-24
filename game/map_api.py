@@ -386,3 +386,30 @@ class MapAPI:
             return resp.json()["routes"][0]["geometry"]["coordinates"]
         except Exception:
             return []
+
+    @staticmethod
+    def get_walking_distances(origin: tuple, destinations: list) -> list:
+        """
+        從 origin(lat,lon) 到每個 destination(lat,lon) 的 OSRM 步行距離（公尺）。
+        使用 /table/v1/walking 一次 API 呼叫取得全部距離。
+        任何錯誤自動 fallback 到 Haversine 直線距離。
+        """
+        if not destinations:
+            return []
+        fallback = [_haversine_m(origin, d) for d in destinations]
+        try:
+            # OSRM 座標格式：lon,lat（注意順序）
+            pts = [f"{origin[1]},{origin[0]}"] + [f"{d[1]},{d[0]}" for d in destinations]
+            url = f"{OSRM_URL}/table/v1/walking/{';'.join(pts)}"
+            params = {"sources": "0", "annotations": "distance"}
+            resp = requests.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("code") != "Ok":
+                return fallback
+            # distances[0] = 從 origin 到所有點的距離，[0] 是自身=0，跳過
+            row = data["distances"][0][1:]
+            return [float(d) if d is not None else fallback[i]
+                    for i, d in enumerate(row)]
+        except Exception:
+            return fallback

@@ -491,6 +491,12 @@ Scoreboard.save_score()
 - 定身補充具體時間：1.5秒，冷卻5秒
 - 順序獎勵補充全程上限 +500 分
 
+**OSRM 步行距離計分（app.py + map_api.py）**
+- 新增 `MapAPI.get_walking_distances(origin, destinations)` — 呼叫 OSRM `/table/v1/walking/` 一次取得全部距離，fallback Haversine
+- `_bg_prepare` 在 padding 完成後呼叫，更新每顆寶藏 `t.points = OSRM步行公尺數`
+- 神秘地點（padding）也一併更新，不再固定 100 分
+- 比直線距離高約 20–40%，河流/高架區域差異更大
+
 **地圖縮放快捷鍵修正（game.html）**
 - 移除 `=`/`+`/`-` 縮放快捷鍵（丟手雷時誤觸連發造成地圖瞬間放到最大 zoom 19）
 - 改用 `]` 放大、`[` 縮小，遠離 WASD/數字/武器鍵區，不會誤觸

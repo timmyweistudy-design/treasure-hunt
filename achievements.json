@@ -20,7 +20,8 @@
     "lightning_start": true,
     "mine_ambush": true,
     "sprint_legend": true,
-    "swift_catch": true
+    "swift_catch": true,
+    "bomb_expert": true
   },
   "timmy": {
     "game_start": true

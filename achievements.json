@@ -26,7 +26,10 @@
     "perfect_concert": true
   },
   "timmy": {
-    "game_start": true
+    "game_start": true,
+    "first_treasure": true,
+    "sprint_first": true,
+    "lightning_start": true
   },
   "t": {
     "game_start": true

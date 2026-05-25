@@ -54,7 +54,7 @@ ACHIEVEMENT_DEFS = {
     "swift_catch":    {"name": "神速逮捕",   "emoji": "🏃", "desc": "通緝令發出 3 秒內逮捕小偷",          "tier": 3, "branch": "red"},
     "stun_master":    {"name": "暈眩製造者", "emoji": "😵", "desc": "一局讓敵人暈眩累計 20 次",           "tier": 3, "branch": "red"},
     "portal_warrior": {"name": "傳送奇兵",   "emoji": "🌀", "desc": "傳送後 5 秒內收集寶藏",              "tier": 3, "branch": "teal"},
-    "magnet_master":  {"name": "磁吸大師",   "emoji": "🧲", "desc": "磁鐵一次吸收 3 個以上道具",          "tier": 3, "branch": "teal"},
+    "magnet_master":  {"name": "磁吸大師",   "emoji": "🧲", "desc": "磁鐵一次吸收 5 個以上道具",          "tier": 3, "branch": "teal"},
     "legend_score":   {"name": "黃金神話",   "emoji": "👑", "desc": "完美通關且總分 ≥ 20,000",             "tier": 4, "branch": "amber"},
     "lightning_god":  {"name": "極速傳說",   "emoji": "⚡", "desc": "完美通關且用時 ≤ 120 秒",             "tier": 4, "branch": "amber"},
     "combo_god":      {"name": "連擊狂神",   "emoji": "🔥", "desc": "一局達成 10 連擊",                    "tier": 4, "branch": "amber"},
@@ -217,7 +217,7 @@ def compute_new_achievements(existing: dict, game_stats: dict,
         unlock("stun_master")
     if game_stats.get("portal_quick_collect"):
         unlock("portal_warrior")
-    if (game_stats.get("magnet_max_pickup") or 0) >= 3:
+    if (game_stats.get("magnet_max_pickup") or 0) >= 5:
         unlock("magnet_master")
 
     return new_ids

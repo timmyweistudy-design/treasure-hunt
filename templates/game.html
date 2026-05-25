@@ -1062,7 +1062,7 @@ let itemIdCtr = 0, itemSpawnTimer = 1;   // 1 秒後出現第一個道具
 // 效果計時
 let speedBoostTimer = 0, invincTimer = 0;
 // AI（陣列，支援多隻）
-let aiList=[], initialSpawnDone=false, thiefCount=0;
+let aiList=[], initialSpawnDone=false, thiefCount=0, patrollerCount=0;
 let chaserSpawnTimer=CHASER_SPAWN_DELAY, chaserWaveTimer=0, chaserCount=0, chaserWarned=false;
 let guardWaveTimer=PATROLLER_WAVE_INTERVAL;  // 每15秒追加一名守衛
 let navGrid=null;
@@ -1581,6 +1581,42 @@ TREASURES.forEach(t => {
         // 需要時用 document.getElementById('pp-dist-'+id) live 查詢
     };
 });
+// ── HUD 元素快取（避免 tickEffects / tickSprint / tickAI 每幀 getElementById）──
+const _chipSpeedEl  = document.getElementById('chip-speed');
+const _speedTEl     = document.getElementById('speed-t');
+const _chipStarEl   = document.getElementById('chip-star');
+const _invincTEl    = document.getElementById('invinc-t');
+const _invincGlowEl = document.getElementById('invinc-glow');
+const _chipRangeEl  = document.getElementById('chip-range');
+const _rangeTEl     = document.getElementById('range-t');
+const _chipFreezeEl = document.getElementById('chip-freeze');
+const _freezeTEl    = document.getElementById('freeze-t');
+const _chipStunEl   = document.getElementById('chip-stun');
+const _stunTEl      = document.getElementById('stun-t');
+const _stunGlowEl   = document.getElementById('stun-glow');
+const _chipMagnetEl = document.getElementById('chip-magnet');
+const _magnetTEl    = document.getElementById('magnet-t');
+const _decoyLabelEl = document.getElementById('decoy-label');
+const _decoyTEl     = document.getElementById('decoy-t');
+const _chipDecoyEl  = document.getElementById('chip-decoy');
+const _chipComboEl  = document.getElementById('chip-combo');
+const _comboCountEl = document.getElementById('combo-count');
+const _comboTEl     = document.getElementById('combo-t');
+const _grChrEl      = document.getElementById('grenade-chr');
+const _grCdTxtEl    = document.getElementById('grenade-cd-txt');
+const _mineChrEl    = document.getElementById('mine-chr');
+const _mineCdTxtEl  = document.getElementById('mine-cd-txt');
+const _chipWantedEl = document.getElementById('chip-wanted');
+const _wantedTEl    = document.getElementById('wanted-t');
+const _effRowEl     = document.getElementById('eff-row');
+const _sprintFillEl = document.getElementById('sprint-fill');
+const _sprintLblEl  = document.getElementById('sprint-lbl');
+const _sprintGlowEl = document.getElementById('sprint-glow');
+const _timeVigEl    = document.getElementById('time-vignette');
+const _aiCountTxtEl = document.getElementById('ai-count-txt');
+const _aiDistEl     = document.getElementById('ai-dist');
+const _chipAiEl     = document.getElementById('chip-ai');
+const _vScoreEl     = document.getElementById('v-score');
 
 function _checkDayNight() {
     const elapsed = TIME_LIMIT - remaining;
@@ -1740,9 +1776,14 @@ pMarker.update = function(){
     return this;
 };
 // 讓瀏覽器提前為 marker 建立獨立 GPU compositing layer，減少每幀合成開銷
+let _pfsCache=null, _pswCache=null;
 pMarker.on('add',()=>{
     const el=pMarker.getElement();
-    if(el) el.style.willChange='transform';
+    if(el){
+        el.style.willChange='transform';
+        _pfsCache=el.querySelectorAll('.pf');
+        _pswCache=el.querySelector('.psw');
+    }
 });
 // ── 角色大小跟隨地圖縮放等比例變動 ──────────────────────
 function _updateSpriteSize(){
@@ -1751,14 +1792,13 @@ function _updateSpriteSize(){
     const size=Math.max(16,Math.min(80,Math.round(52*Math.pow(2,zoom-17))));
     _sprSizeNow=size;
     const anchorY=Math.round(size*0.90);  // 腳底：碰撞點對齊腳，不再停在肚臍
-    const dot=document.getElementById('pdot');
-    const psw=document.getElementById('psw');
+    const dot=_pdotEl||document.getElementById('pdot');
+    const psw=_pswCache||document.getElementById('psw');
     if(dot){dot.style.width=size+'px';dot.style.height=size+'px';}
     if(psw){
         psw.style.width=size+'px'; psw.style.height=size+'px';
-        document.querySelectorAll('#pdot .pf').forEach(img=>{
-            img.style.width=size+'px'; img.style.height=size+'px';
-        });
+        const pfs=_pfsCache||document.querySelectorAll('#pdot .pf');
+        if(pfs) pfs.forEach(img=>{img.style.width=size+'px'; img.style.height=size+'px';});
     }
     const el=pMarker.getElement();
     if(el){el.style.marginLeft=(-size/2)+'px';el.style.marginTop=(-anchorY)+'px';}
@@ -2268,7 +2308,7 @@ function catchWantedThief() {
         if(distM(pLat,pLon,ai.lat,ai.lon)>CATCH_R) continue;
         const bonus=ai.stolenAmt+50;
         score=Math.max(0,score+bonus);
-        document.getElementById('v-score').textContent=score;
+        if(_vScoreEl) _vScoreEl.textContent=score;
         fetch('/score_add',{method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({bonus})}).catch(()=>{});
         showToast(`🎉 小偷被抓！找回 ${ai.stolenAmt} 分＋獎勵 50 分！`,3500);
@@ -2500,9 +2540,7 @@ function applyScorePenalty(amount, msg, isCombat=true) {
     score=Math.max(0,score-amount);
     _achAIEncounter=true;
     if(isCombat) _achDmgTaken=true;
-    const el=document.getElementById('v-score');
-    el.textContent=score;
-    el.classList.remove('score-pop'); void el.offsetWidth; el.classList.add('score-pop');
+    if(_vScoreEl){ _vScoreEl.textContent=score; _vScoreEl.classList.remove('score-pop'); void _vScoreEl.offsetWidth; _vScoreEl.classList.add('score-pop'); }
     showToast(msg,2500);
     showPenaltyFloat(amount);
     fetch('/penalty',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -2513,7 +2551,7 @@ function applyScorePenalty(amount, msg, isCombat=true) {
 function spawnAI(forceType, silent=false) {
     if(aiList.length >= AI_MAX) return;
     const type=forceType||'patroller';
-    if(type==='patroller'&&aiList.filter(a=>a.type==='patroller').length>=PATROLLER_MAX) return;
+    if(type==='patroller'&&patrollerCount>=PATROLLER_MAX) return;
 
     // 各型別生成位置：巡邏守衛均勻分佈全圖；追跡者 & 小偷出現在玩家附近
     let sLat, sLon;
@@ -2524,8 +2562,8 @@ function spawnAI(forceType, silent=false) {
             const cLat=BOUNDS.s+Math.random()*(BOUNDS.n-BOUNDS.s);
             const cLon=BOUNDS.w+Math.random()*(BOUNDS.e-BOUNDS.w);
             const dStart=distM(cLat,cLon,START[0],START[1]);
-            const dOthers=aiList.filter(a=>a.type==='patroller')
-                .reduce((mn,a)=>Math.min(mn,distM(cLat,cLon,a.lat,a.lon)),9999);
+            let dOthers=9999;
+            for(const _pa of aiList){if(_pa.type==='patroller'){const _d=distM(cLat,cLon,_pa.lat,_pa.lon);if(_d<dOthers)dOthers=_d;}}
             const score=Math.min(dStart,300)+Math.min(dOthers,250);
             if(score>bestScore){bestScore=score;best=[cLat,cLon];}
         }
@@ -2616,10 +2654,10 @@ function spawnAI(forceType, silent=false) {
         chaserCount++;
     } else if(type==='patroller'){
         // 均勻分散各巡邏守衛的起始路標，避免全部重疊
-        const pIdx=aiList.filter(a=>a.type==='patroller').length;
-        ai.waypointIdx=Math.floor(pIdx*OPTIMAL.length/10)%OPTIMAL.length;
+        ai.waypointIdx=Math.floor(patrollerCount*OPTIMAL.length/10)%OPTIMAL.length;
         ai.alertTimer=0; ai.alertCD=0; ai.fovPoly=null; ai.fovDrawTimer=Math.random()*0.1;
         ai.facingLat=iLat+0.001; ai.facingLon=iLon;
+        patrollerCount++;
     } else {
         ai.targetTId=null; ai.stealCD=0; ai._prevTargetTId=null; ai.targetMarker=null;
         ai.invis=false; ai.invisTimer=0; ai.invisCD=0;
@@ -2627,6 +2665,13 @@ function spawnAI(forceType, silent=false) {
     }
 
     aiList.push(ai);
+    // 快取 sprite DOM NodeLists，避免 tickAI 每幀 querySelectorAll
+    {const _se=marker.getElement();
+    if(_se){
+        if(type==='patroller') ai._spr={gf:_se.querySelectorAll('.gf'),ghurt:_se.querySelectorAll('.ghurt'),gsw:_se.querySelector('.gsw')};
+        else if(type==='chaser') ai._spr={cf:_se.querySelectorAll('.cf'),churt:_se.querySelectorAll('.churt'),cattack:_se.querySelectorAll('.cattack'),csw:_se.querySelector('.csw')};
+        else ai._spr={tf:_se.querySelectorAll('.tf'),thurt:_se.querySelectorAll('.thurt'),tsw:_se.querySelector('.tsw')};
+    }}
     if(type==='patroller') _updateGuardSizes();
     if(type==='chaser')    _updateChaserSizes();
     if(type==='thief')     _updateThiefSizes();
@@ -2709,7 +2754,7 @@ function relocateTreasure(tId) {
     }
     if(miniTMarkers[tId]) miniTMarkers[tId].setLatLng([nLat,nLon]);
     updateDistances();
-    setTimeout(rebuildOptimalRouteAstar, 50);
+    _scheduleRouteRebuild();
 }
 
 // ── 追跡者行為 ───────────────────────────────────────────
@@ -2879,14 +2924,14 @@ function tickAI(dt) {
     if(!initialSpawnDone){
         initialSpawnDone=true;
         for(let i=0;i<10;i++) spawnAI('patroller',true);
-        document.getElementById('chip-ai').style.display='inline-block';
+        if(_chipAiEl) _chipAiEl.style.display='inline-block';
         showToast('👁️ 10 名巡邏守衛就位！走入視野 -80分！',4000);
     }
     // ── 守衛每 15s 追加一名（上限 20）────────────────────
     guardWaveTimer=Math.max(0,guardWaveTimer-dt);
     if(guardWaveTimer<=0){
         guardWaveTimer=PATROLLER_WAVE_INTERVAL;
-        const pCount=aiList.filter(a=>a.type==='patroller').length;
+        const pCount=patrollerCount;
         if(pCount<PATROLLER_MAX){
             spawnAI('patroller');
             showToast(`👁️ 新守衛加入！（共 ${pCount+1} 名）`,2000);
@@ -2923,11 +2968,10 @@ function tickAI(dt) {
     // ── 守衛 Sprite 幀更新 ────────────────────────────────
     for(const ai of aiList){
         if(ai.type!=='patroller') continue;
-        const _gel=ai.marker.getElement();
-        if(!_gel) continue;
-        const gfs=_gel.querySelectorAll('.gf');
-        const ghurts=_gel.querySelectorAll('.ghurt');
-        const gsw=_gel.querySelector('.gsw');
+        if(!ai._spr) continue;
+        const gfs=ai._spr.gf;
+        const ghurts=ai._spr.ghurt;
+        const gsw=ai._spr.gsw;
         if(!gfs?.length) continue;
         if(!ai._gFrame) ai._gFrame=0;
         if(!ai._gFrameAcc) ai._gFrameAcc=0;
@@ -2973,12 +3017,11 @@ function tickAI(dt) {
     // ── 追跡者 Sprite 幀更新 ──────────────────────────────
     for(const ai of aiList){
         if(ai.type!=='chaser') continue;
-        const _cel=ai.marker.getElement();
-        if(!_cel) continue;
-        const cfs=_cel.querySelectorAll('.cf');
-        const churts=_cel.querySelectorAll('.churt');
-        const cattacks=_cel.querySelectorAll('.cattack');
-        const csw=_cel.querySelector('.csw');
+        if(!ai._spr) continue;
+        const cfs=ai._spr.cf;
+        const churts=ai._spr.churt;
+        const cattacks=ai._spr.cattack;
+        const csw=ai._spr.csw;
         if(!cfs?.length) continue;
         if(!ai._cFrame) ai._cFrame=0;
         if(!ai._cFrameAcc) ai._cFrameAcc=0;
@@ -3048,11 +3091,10 @@ function tickAI(dt) {
     // ── 小偷 Sprite 幀更新 ────────────────────────────────
     for(const ai of aiList){
         if(ai.type!=='thief') continue;
-        const _tel=ai.marker.getElement();
-        if(!_tel) continue;
-        const tfs=_tel.querySelectorAll('.tf');
-        const thurts=_tel.querySelectorAll('.thurt');
-        const tsw=_tel.querySelector('.tsw');
+        if(!ai._spr) continue;
+        const tfs=ai._spr.tf;
+        const thurts=ai._spr.thurt;
+        const tsw=ai._spr.tsw;
         if(!tfs?.length) continue;
         if(!ai._tFrame) ai._tFrame=0;
         if(!ai._tFrameAcc) ai._tFrameAcc=0;
@@ -3104,8 +3146,7 @@ function tickAI(dt) {
     }
     // ── 動態 chip 標籤（15fps 足夠）──────────────────────
     if(uiFrame){
-        const cntEl=document.getElementById('ai-count-txt');
-        if(cntEl){
+        if(_aiCountTxtEl){
             let nC=0,nP=0,nT=0;
             for(const a of aiList){if(a.type==='chaser')nC++;else if(a.type==='patroller')nP++;else nT++;}
             let parts=[];
@@ -3117,10 +3158,10 @@ function tickAI(dt) {
                 txt+=` +👾${Math.ceil(chaserCount===0?chaserSpawnTimer:chaserWaveTimer)}s`;
             if(thiefCount<THIEF_MAX)
                 txt+=` 🦹最多${THIEF_MAX}隻`;
-            cntEl.textContent=txt;
+            _aiCountTxtEl.textContent=txt;
         }
-        document.getElementById('ai-dist').textContent=nearestDist<Infinity?Math.round(nearestDist):'—';
-        document.getElementById('chip-ai').style.background=nearestDist<80?'rgba(198,40,40,.55)':'rgba(255,255,255,.2)';
+        if(_aiDistEl) _aiDistEl.textContent=nearestDist<Infinity?Math.round(nearestDist):'—';
+        if(_chipAiEl) _chipAiEl.style.background=nearestDist<80?'rgba(198,40,40,.55)':'rgba(255,255,255,.2)';
     }
 }
 
@@ -3180,77 +3221,70 @@ function tickEffects(dt) {
     if(!uiFrame) return;
 
     const dot=_pdotEl;
-    document.getElementById('chip-speed').style.display=speedBoostTimer>0?'inline-block':'none';
-    if(speedBoostTimer>0) document.getElementById('speed-t').textContent=Math.ceil(speedBoostTimer);
+    _chipSpeedEl.style.display=speedBoostTimer>0?'inline-block':'none';
+    if(speedBoostTimer>0) _speedTEl.textContent=Math.ceil(speedBoostTimer);
 
-    document.getElementById('chip-star').style.display=invincTimer>0?'inline-block':'none';
-    if(invincTimer>0) document.getElementById('invinc-t').textContent=Math.ceil(invincTimer);
-    document.getElementById('invinc-glow').style.display=invincTimer>0?'block':'none';
+    _chipStarEl.style.display=invincTimer>0?'inline-block':'none';
+    if(invincTimer>0) _invincTEl.textContent=Math.ceil(invincTimer);
+    _invincGlowEl.style.display=invincTimer>0?'block':'none';
     if(dot) dot.classList.toggle('invinc', invincTimer>0);
 
-    document.getElementById('chip-range').style.display=rangeBoostTimer>0?'inline-block':'none';
-    if(rangeBoostTimer>0) document.getElementById('range-t').textContent=Math.ceil(rangeBoostTimer);
+    _chipRangeEl.style.display=rangeBoostTimer>0?'inline-block':'none';
+    if(rangeBoostTimer>0) _rangeTEl.textContent=Math.ceil(rangeBoostTimer);
     pCircle.setRadius(effectiveR());
 
-    document.getElementById('chip-freeze').style.display=aiFrozenTimer>0?'inline-block':'none';
-    if(aiFrozenTimer>0) document.getElementById('freeze-t').textContent=Math.ceil(aiFrozenTimer);
+    _chipFreezeEl.style.display=aiFrozenTimer>0?'inline-block':'none';
+    if(aiFrozenTimer>0) _freezeTEl.textContent=Math.ceil(aiFrozenTimer);
 
-    const sChip=document.getElementById('chip-stun');
-    sChip.style.display=stunTimer>0?'inline-block':'none';
-    sChip.style.background=stunTimer>0?'rgba(255,130,0,.7)':'';
-    if(stunTimer>0) document.getElementById('stun-t').textContent=Math.ceil(stunTimer);
-    document.getElementById('stun-glow').style.display=stunTimer>0?'block':'none';
+    _chipStunEl.style.display=stunTimer>0?'inline-block':'none';
+    _chipStunEl.style.background=stunTimer>0?'rgba(255,130,0,.7)':'';
+    if(stunTimer>0) _stunTEl.textContent=Math.ceil(stunTimer);
+    _stunGlowEl.style.display=stunTimer>0?'block':'none';
     if(dot) dot.classList.toggle('stunned', stunTimer>0);
 
-    document.getElementById('chip-magnet').style.display=magnetTimer>0?'inline-block':'none';
-    if(magnetTimer>0) document.getElementById('magnet-t').textContent=Math.ceil(magnetTimer);
+    _chipMagnetEl.style.display=magnetTimer>0?'inline-block':'none';
+    if(magnetTimer>0) _magnetTEl.textContent=Math.ceil(magnetTimer);
 
     if(decoyActive){
-        document.getElementById('decoy-label').textContent='活躍';
-        document.getElementById('decoy-t').textContent=' '+Math.ceil(decoyTimer)+'s';
-        document.getElementById('chip-decoy').style.background='rgba(255,193,7,.35)';
+        _decoyLabelEl.textContent='活躍';
+        _decoyTEl.textContent=' '+Math.ceil(decoyTimer)+'s';
+        _chipDecoyEl.style.background='rgba(255,193,7,.35)';
     } else if(decoyCD>0){
-        document.getElementById('decoy-label').textContent='CD';
-        document.getElementById('decoy-t').textContent=' '+Math.ceil(decoyCD)+'s';
-        document.getElementById('chip-decoy').style.background='';
+        _decoyLabelEl.textContent='CD';
+        _decoyTEl.textContent=' '+Math.ceil(decoyCD)+'s';
+        _chipDecoyEl.style.background='';
     } else {
-        document.getElementById('decoy-label').textContent='就緒';
-        document.getElementById('decoy-t').textContent='';
-        document.getElementById('chip-decoy').style.background='';
+        _decoyLabelEl.textContent='就緒';
+        _decoyTEl.textContent='';
+        _chipDecoyEl.style.background='';
     }
 
-    const cChip=document.getElementById('chip-combo');
     if(comboCount>=1&&comboTimer>0){
-        cChip.style.display='inline-block';
-        document.getElementById('combo-count').textContent=comboCount;
-        document.getElementById('combo-t').textContent=Math.ceil(comboTimer);
+        _chipComboEl.style.display='inline-block';
+        _comboCountEl.textContent=comboCount;
+        _comboTEl.textContent=Math.ceil(comboTimer);
         const pct=Math.round(comboTimer/COMBO_WINDOW*100);
-        cChip.style.backgroundImage=`linear-gradient(to right,rgba(255,213,79,.35) ${pct}%,rgba(255,255,255,.07) ${pct}%)`;
+        _chipComboEl.style.backgroundImage=`linear-gradient(to right,rgba(255,213,79,.35) ${pct}%,rgba(255,255,255,.07) ${pct}%)`;
     } else {
-        cChip.style.display='none';
-        cChip.style.backgroundImage='';
+        _chipComboEl.style.display='none';
+        _chipComboEl.style.backgroundImage='';
     }
 
     // 手雷 chip（常駐）
-    const gChr=document.getElementById('grenade-chr');
-    const gCdTxt=document.getElementById('grenade-cd-txt');
     function _pips(n,max){return Array.from({length:max},(_,i)=>`<span class="c-pip${i<n?' on':''}"></span>`).join('');}
-    if(gChr) gChr.innerHTML=_pips(grenadeCharges,GRENADE_CHARGES);
-    if(gCdTxt) gCdTxt.textContent=grenadeRechargeCooldown>0?`(${Math.ceil(grenadeRechargeCooldown)}s)`:'';
+    if(_grChrEl) _grChrEl.innerHTML=_pips(grenadeCharges,GRENADE_CHARGES);
+    if(_grCdTxtEl) _grCdTxtEl.textContent=grenadeRechargeCooldown>0?`(${Math.ceil(grenadeRechargeCooldown)}s)`:'';
     // 地雷 chip（常駐）
-    const mChr=document.getElementById('mine-chr');
-    const mCdTxt=document.getElementById('mine-cd-txt');
-    if(mChr) mChr.innerHTML=_pips(mineCharges,MINE_CHARGES);
-    if(mCdTxt) mCdTxt.textContent=mineRechargeCooldown>0?`(${Math.ceil(mineRechargeCooldown)}s)`:'';
+    if(_mineChrEl) _mineChrEl.innerHTML=_pips(mineCharges,MINE_CHARGES);
+    if(_mineCdTxtEl) _mineCdTxtEl.textContent=mineRechargeCooldown>0?`(${Math.ceil(mineRechargeCooldown)}s)`:'';
     // 通緝 chip
-    const wChip=document.getElementById('chip-wanted');
-    if(wChip){
-        wChip.style.display=wantedMaxTimer>0?'inline-block':'none';
-        if(wantedMaxTimer>0) document.getElementById('wanted-t').textContent=Math.ceil(wantedMaxTimer);
+    if(_chipWantedEl){
+        _chipWantedEl.style.display=wantedMaxTimer>0?'inline-block':'none';
+        if(wantedMaxTimer>0&&_wantedTEl) _wantedTEl.textContent=Math.ceil(wantedMaxTimer);
     }
 
     const _anyEff=speedBoostTimer>0||invincTimer>0||rangeBoostTimer>0||aiFrozenTimer>0||stunTimer>0||magnetTimer>0;
-    document.getElementById('eff-row').style.display=_anyEff?'flex':'none';
+    if(_effRowEl) _effRowEl.style.display=_anyEff?'flex':'none';
 }
 
 // ── A* 路徑規劃（供 AI 追跡者使用）──────────────────────
@@ -3454,6 +3488,11 @@ function smoothRoutePath(path,rg){
 }
 
 let _routeLastLat=null, _routeLastLon=null;  // player pos at last A* rebuild
+let _routeRebuildTimer=0;
+function _scheduleRouteRebuild(delay=50){
+    clearTimeout(_routeRebuildTimer);
+    _routeRebuildTimer=setTimeout(rebuildOptimalRouteAstar,delay);
+}
 function rebuildOptimalRouteAstar() {
     if(!navGrid||!routeGrid) return;
     const nextId=OPTIMAL.find(id=>!collected.has(id));
@@ -3571,19 +3610,16 @@ function tickSprint(dt) {
 
     const isRecharging=!isSprinting&&sprintCD<=0&&sprintBar<SPRINT_MAX;
     const pct=sprintCD>0?0:(sprintBar/SPRINT_MAX*100);
-    const fill=document.getElementById('sprint-fill');
-    const lbl =document.getElementById('sprint-lbl');
-    fill.style.width=pct+'%';
-    fill.classList.toggle('cooling', sprintCD>0);
-    fill.classList.toggle('recharge',isRecharging);
-    lbl.textContent=
+    _sprintFillEl.style.width=pct+'%';
+    _sprintFillEl.classList.toggle('cooling', sprintCD>0);
+    _sprintFillEl.classList.toggle('recharge',isRecharging);
+    _sprintLblEl.textContent=
         sprintCD>0    ?`🔄 冷卻 ${sprintCD.toFixed(1)}s`:
         isSprinting   ?`⚡ 衝刺中！`:
         isRecharging  ?`↑ 回充 ${sprintBar.toFixed(1)}s`:
                        `⚡ 衝刺就緒`;
-    const dot=document.getElementById('pdot');
-    if(dot) dot.className='player-dot'+(isSprinting?' sprint':'');
-    document.getElementById('sprint-glow').style.display=isSprinting?'block':'none';
+    if(_pdotEl) _pdotEl.className='player-dot'+(isSprinting?' sprint':'');
+    _sprintGlowEl.style.display=isSprinting?'block':'none';
 }
 
 // ── 移動 + 滑牆 ───────────────────────────────────────────
@@ -3818,9 +3854,9 @@ function loop(ts) {
                 }
             }
             // ── Sprite 幀更新（速度連動，display 切換比 src 切換更流暢）──
-            {const pfs=document.querySelectorAll('#pdot .pf');
-            const psw=document.getElementById('psw');
-            if(pfs.length){
+            {const pfs=_pfsCache||document.querySelectorAll('#pdot .pf');
+            const psw=_pswCache||document.getElementById('psw');
+            if(pfs&&pfs.length){
                 if(_sprMoving){
                     // 根據角色在螢幕上的實際像素速度計算 fps，縮放時自動補償
                     const zoom=map.getZoom();
@@ -3845,8 +3881,7 @@ function loop(ts) {
             }}
             // 時間壓力：倒數 60s 以內顯示紅邊特效
             if(uiFrame){
-                const vig=document.getElementById('time-vignette');
-                if(vig) vig.style.display=remaining<=60?'block':'none';
+                if(_timeVigEl) _timeVigEl.style.display=remaining<=60?'block':'none';
             }
             // 相機 lerp k=40：每幀微移（<0.2px）比大跳更滑；noMoveStart 省事件鏈
             {const k=1-Math.exp(-40*dt);
@@ -3886,9 +3921,9 @@ map.on('click', e=>{
 
 // ── 距離工具 ──────────────────────────────────────────────
 function distM(la1,lo1,la2,lo2){
-    const R=6371000,r=Math.PI/180;
-    const a=Math.sin((la2-la1)*r/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin((lo2-lo1)*r/2)**2;
-    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    const dlat=(la2-la1)*111111;
+    const dlon=(lo2-lo1)*111111*Math.cos(la1*0.01745329);
+    return Math.sqrt(dlat*dlat+dlon*dlon);
 }
 function bearingDeg(la1,lo1,la2,lo2){
     const r=Math.PI/180;
@@ -4038,14 +4073,10 @@ async function collect(id, tLat, tLon) {
 
         // 分數浮動文字 + 路線即時更新（略過已收集，defer 避免阻塞主線程）
         showScoreFloat(tLat, tLon, score-prevScore);
-        setTimeout(rebuildOptimalRouteAstar, 50);
+        _scheduleRouteRebuild();
 
         // 分數跳動動畫
-        const scoreEl=document.getElementById('v-score');
-        scoreEl.textContent=score;
-        scoreEl.classList.remove('score-pop');
-        void scoreEl.offsetWidth;
-        scoreEl.classList.add('score-pop');
+        if(_vScoreEl){ _vScoreEl.textContent=score; _vScoreEl.classList.remove('score-pop'); void _vScoreEl.offsetWidth; _vScoreEl.classList.add('score-pop'); }
 
         document.getElementById('v-found').textContent=found;
         document.getElementById('progress').style.width=(found/TOTAL*100)+'%';
@@ -4409,7 +4440,7 @@ window.dbg = (function(){
                 if(ai.fovPoly) map.removeLayer(ai.fovPoly);
                 if(ai.targetMarker) map.removeLayer(ai.targetMarker);
             }
-            aiList.length=0; thiefCount=0;
+            aiList.length=0; thiefCount=0; patrollerCount=0;
             console.log('🗑️ 清除所有 AI');
         },
 

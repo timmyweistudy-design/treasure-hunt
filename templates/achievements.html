@@ -341,10 +341,9 @@ const ACH_TIERS   = {{ ach_tiers | tojson }};
         }
     }
 
-    // Wait for layout
+    // Wait for layout (scroll does not change relative positions inside tree-wrap)
     window.addEventListener('load', drawLines);
     window.addEventListener('resize', drawLines);
-    document.querySelector('.tree-outer')?.addEventListener('scroll', drawLines);
     setTimeout(drawLines, 100);   // fallback
 })();
 </script>

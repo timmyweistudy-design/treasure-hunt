@@ -139,85 +139,98 @@ def compute_new_achievements(existing: dict, game_stats: dict,
             existing[aid] = True
             new_ids.append(aid)
 
+    # ── 常用欄位提前取出，避免大量重複 .get() 呼叫 ──
+    gs               = game_stats
+    item_types       = gs.get("item_types_used") or []
+    max_combo        = gs.get("max_combo") or 0
+    max_simul_hit    = gs.get("max_simul_hit") or 0
+    thief_catch_cnt  = gs.get("thief_catch_count") or 0
+    golden_count     = gs.get("golden_count") or 0
+    max_mine_hit     = gs.get("max_mine_hit") or 0
+    guard_stun_cnt   = gs.get("guard_stun_count") or 0
+    total_stuns      = gs.get("total_stuns") or 0
+    sprint_dist      = gs.get("sprint_total_dist") or 0
+    magnet_max       = gs.get("magnet_max_pickup") or 0
+    ftt              = gs.get("first_treasure_time", -1)   # seconds since game start
+    ltr              = gs.get("last_treasure_remain", -1)  # seconds remaining
+    perfect          = found_count == total
+
     unlock("game_start")
     if found_count > 0:
         unlock("first_treasure")
-    if game_stats.get("ai_encounter"):
+    if gs.get("ai_encounter"):
         unlock("first_encounter")
-    if game_stats.get("item_types_used"):
+    if item_types:
         unlock("first_item")
-    if found_count == total:
+    if perfect:
         unlock("perfect_clear")
-    if game_stats.get("got_combo"):
+    if gs.get("got_combo"):
         unlock("first_combo")
-    if game_stats.get("bomb_hit"):
+    if gs.get("bomb_hit"):
         unlock("first_bomb")
-    if game_stats.get("thief_caught"):
+    if gs.get("thief_caught"):
         unlock("iron_will")
-    if len(game_stats.get("item_types_used") or []) >= 5:
+    if len(item_types) >= 5:
         unlock("all_items")
-    if game_stats.get("portal_used"):
+    if gs.get("portal_used"):
         unlock("first_portal")
-    if found_count == total and elapsed < 180:
+    if perfect and elapsed < 180:
         unlock("lightning")
-    if found_count == total and score >= 15000:
+    if perfect and score >= 15000:
         unlock("high_score")
-    if found_count == total and game_stats.get("all_night"):
+    if perfect and gs.get("all_night"):
         unlock("night_owl")
-    if found_count == total and game_stats.get("no_damage"):
+    if perfect and gs.get("no_damage"):
         unlock("no_damage")
-    if (game_stats.get("max_combo") or 0) >= 5:
+    if max_combo >= 5:
         unlock("combo_master")
-    if (game_stats.get("max_simul_hit") or 0) >= 5:
+    if max_simul_hit >= 5:
         unlock("bomb_expert")
-    if (game_stats.get("thief_catch_count") or 0) >= 5:
+    if thief_catch_cnt >= 5:
         unlock("thief_master")
-    if found_count == total and game_stats.get("all_not_sunny"):
+    if perfect and gs.get("all_not_sunny"):
         unlock("storm_hunter")
-    if found_count == total and score >= 20000:
+    if perfect and score >= 20000:
         unlock("legend_score")
-    if game_stats.get("golden_collected"):
+    if gs.get("golden_collected"):
         unlock("golden_first")
-    if (game_stats.get("golden_count") or 0) >= 3:
+    if golden_count >= 3:
         unlock("golden_fever")
-    if game_stats.get("mine_hit"):
+    if gs.get("mine_hit"):
         unlock("mine_first")
-    if (game_stats.get("max_mine_hit") or 0) >= 3:
+    if max_mine_hit >= 3:
         unlock("mine_ambush")
-    if game_stats.get("decoy_used"):
+    if gs.get("decoy_used"):
         unlock("decoy_first")
-    if found_count == total and game_stats.get("all_in_order"):
+    if perfect and gs.get("all_in_order"):
         unlock("perfect_route")
-    if found_count == total and elapsed <= 120:
+    if perfect and elapsed <= 120:
         unlock("lightning_god")
-    if (game_stats.get("max_combo") or 0) >= 10:
+    if max_combo >= 10:
         unlock("combo_god")
 
-    # ── 新成就（批次新增）──────────────────────────────────────
-    if game_stats.get("sprint_used"):
+    # ── 新成就 ────────────────────────────────────────────────
+    if gs.get("sprint_used"):
         unlock("sprint_first")
-    if (game_stats.get("sprint_total_dist") or 0) >= 5000:
+    if sprint_dist >= 5000:
         unlock("sprint_legend")
-    _ftt = game_stats.get("first_treasure_time", -1)
-    if _ftt is not None and 0 <= _ftt <= 5:
+    if ftt is not None and 0 <= ftt <= 5:
         unlock("lightning_start")
-    _ltr = game_stats.get("last_treasure_remain", -1)
-    if found_count == total and _ltr is not None and 0 <= _ltr <= 30:
+    if perfect and ltr is not None and 0 <= ltr <= 30:
         unlock("last_moment")
-    if game_stats.get("bomb_hit") and game_stats.get("mine_hit") and game_stats.get("decoy_used"):
+    if gs.get("bomb_hit") and gs.get("mine_hit") and gs.get("decoy_used"):
         unlock("all_weapons")
-    if (game_stats.get("got_order_bonus") and game_stats.get("got_combo")
-            and game_stats.get("golden_collected")):
+    if gs.get("got_order_bonus") and gs.get("got_combo") and gs.get("golden_collected"):
         unlock("perfect_concert")
-    if found_count == total and (game_stats.get("guard_stun_count") or 0) >= 10:
+    if perfect and guard_stun_cnt >= 10:
         unlock("iron_guardian")
-    if game_stats.get("quick_catch"):
+    if gs.get("quick_catch"):
         unlock("swift_catch")
-    if (game_stats.get("total_stuns") or 0) >= 20:
+    if total_stuns >= 20:
         unlock("stun_master")
-    if game_stats.get("portal_quick_collect"):
+    if gs.get("portal_quick_collect"):
         unlock("portal_warrior")
-    if (game_stats.get("magnet_max_pickup") or 0) >= 5:
+    if magnet_max >= 5:
         unlock("magnet_master")
 
     return new_ids
@@ -737,6 +750,22 @@ _city_cache: dict = {}
 # 建築物預取協調
 _pf_lock = threading.Lock()
 _pf_events: dict = {}
+
+
+def _cleanup_game_data():
+    """每 5 分鐘清除超過 10 分鐘未被取用的 _game_data 條目，防止記憶體洩漏。"""
+    while True:
+        time.sleep(300)
+        cutoff = time.time() - 600
+        stale = [k for k, v in list(_game_data.items())
+                 if v.get("session_player", {}).get("start_time", 0) < cutoff]
+        for k in stale:
+            _game_data.pop(k, None)
+        if stale:
+            logging.info(f"[cleanup] 清除 {len(stale)} 筆過期 game_data")
+
+
+threading.Thread(target=_cleanup_game_data, daemon=True).start()
 
 
 def _prefetch_buildings(focus_points: list):

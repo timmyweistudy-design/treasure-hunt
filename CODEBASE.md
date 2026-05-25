@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.6）**
+> **最後更新：2026-05-25（v7.7）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -447,11 +447,14 @@ loadBuildingsBackground()
 - `_compassArrowEl/_compassNameEl/_compassDistEl`：羅盤 3 元素快取
 - `_dnCdEl/_dnIconEl/_dnPhaseEl`：日夜徽章快取
 - `tickItems` 的 `item._badgeEl`：道具 badge 快取
+- **v7.7 新增**：HUD 完整快取（36 元素）—— `_chipSpeedEl`, `_sprintFillEl`, `_sprintLblEl`, `_sprintGlowEl`, `_vScoreEl`, `_timeVigEl`, `_chipAiEl`, `_aiDistEl`, `_aiCountTxtEl` 等；`tickEffects` / `tickSprint` / `tickAI` 的 `document.getElementById()` 全部消除
+- **v7.7 新增**：玩家 sprite 快取 —— `_pfsCache`（`.pf` NodeList）、`_pswCache`（`#psw`）在 `pMarker.on('add')` 中建立
 
 ### AI Sprite 系統
 - 所有 AI 類型使用 DOM display 切換（`classList add/remove 'active'`），不用 `img.src` 切換（防空白閃爍）
 - Filter 直接套在 `<img>` 幀而非外層 div（防 GPU 合成層灰框 bug）
 - 縮放公式：`Math.round(52 * Math.pow(2, zoom-17))`，clamp 16–80px
+- **v7.7 新增**：`spawnAI` 生成後立即在 `ai._spr` 快取 NodeLists（`gf/ghurt/gsw`、`cf/churt/cattack/csw`、`tf/thurt/tsw`），`tickAI` sprite 迴圈直接使用，消除每幀 `querySelectorAll`（守衛最多 20 次、追跡者最多 3 次、小偷最多 3 次）
 
 ### 排行榜持久化
 ```
@@ -465,6 +468,29 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.7）效能全面優化
+
+**game.html — 9 項優化：**
+
+1. **`distM()` 改平面近似（最高優先）** — Haversine（`sin²/atan2`，12次三角/開方）→ 平面直角近似（1次 cos + 1次 sqrt）。精度差 < 0.5%（3km 內），遊戲計算全部 < 3km，35+ 個 call site 全受益。
+2. **AI sprite NodeList 快取（`ai._spr`）** — `spawnAI` 生成後立即 `querySelectorAll` 存入 `ai._spr`，`tickAI` 守衛/追跡者/小偷三段各省一次 DOM 遍歷。最多 26 AI 時每 AI frame 省 26 × 3 = 78 次查詢。
+3. **`patrollerCount` 計數器** — 新增 `let patrollerCount=0`，取代 4 處 `aiList.filter(a=>a.type==='patroller').length` O(n) 掃描；`spawnAI` patroller 分支 `patrollerCount++`；`killAll()` 重設為 0。
+4. **HUD 36 個元素完整快取** — `tickEffects` / `tickSprint` / `tickAI` 全部 `getElementById` 改用啟動時建立的 const 快取；每 UI frame（15fps）省約 36 次 DOM 查詢。
+5. **玩家 sprite 快取** — `_pfsCache`/`_pswCache` 在 `pMarker.on('add')` 建立，主迴圈 & `_updateSpriteSize` 優先用快取。
+6. **`_scheduleRouteRebuild()` debounce** — 新增 `clearTimeout` 模式函式；收集寶藏、小偷移位兩個 `setTimeout(rebuildOptimalRouteAstar,50)` 改呼叫此函式，防短時間內雙重排程。
+7. **`tickAI` `chip-ai` 改用快取** — 首幀 init 的 `getElementById('chip-ai')` 改用 `_chipAiEl`。
+8. **`v-score` 3 處改用快取** — `catchWantedThief`、`applyScorePenalty`、`collect()` 全改用 `_vScoreEl`。
+9. **`time-vignette` 改用快取** — 主迴圈每 UI frame 的 `getElementById('time-vignette')` 改用 `_timeVigEl`。
+
+**achievements.html — 1 項優化：**
+- 移除 `.tree-outer` 的 `scroll→drawLines` 監聽器 — SVG 線段位置相對於 `tree-wrap`，水平捲動不改變相對座標，只有 `resize` 才需要重繪。
+
+**app.py — 2 項優化：**
+- `_cleanup_game_data()` 背景線程 — 每 5 分鐘掃描 `_game_data`，清除 `start_time` 超過 10 分鐘的殭屍條目，防止記憶體洩漏。
+- `compute_new_achievements()` 本地變數提前提取 — 12 個常用 `game_stats.get()` 呼叫（`max_combo`、`thief_catch_count` 等）提前到函式頭部存為局部變數，消除重複查詢。
+
+---
 
 ### 2026-05-25（v7.6）11 個新成就 + 追蹤鉤全面擴充
 
@@ -482,7 +508,7 @@ Scoreboard.save_score()
 | `swift_catch` | 神速逮捕 🏃 | 3 | red | 通緝令發出 3 秒內逮捕小偷 |
 | `stun_master` | 暈眩製造者 😵 | 3 | red | 一局讓敵人暈眩累計 20 次 |
 | `portal_warrior` | 傳送奇兵 🌀 | 3 | teal | 傳送後 5 秒內收集寶藏 |
-| `magnet_master` | 磁吸大師 🧲 | 3 | teal | 磁鐵一次吸收 3 個以上道具 |
+| `magnet_master` | 磁吸大師 🧲 | 3 | teal | 磁鐵一次吸收 5 個以上道具 |
 
 **app.py — ACHIEVEMENT_PARENTS 新增：**
 - `sprint_first` → `first_treasure`（amber tier 2）

@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.4）**
+> **最後更新：2026-05-25（v7.5）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -465,6 +465,29 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.5）成就樹排版重整 + 地雷範圍傷害 + 8 新成就 + 雜項修正
+
+**app.py — ACHIEVEMENT_TIERS 重排（按顏色分群）：**
+- Tier 1：amber（💎初獲寶藏）| red（⚔️初遇敵人）| teal（🎒道具嘗鮮）
+- Tier 2：amber×3（完美/連擊/黃金初嚐）| red×3（初試爆破/鋼鐵/地雷）| teal×3（全能/傳送/聲東）
+- Tier 3：amber×8（閃電/高分/夜行…）| red×3（爆破/神探/地雷伏擊）
+- Tier 4：amber×3（極速/黃金神話/狂神）
+- 新增 8 個成就：黃金初嚐🌟 初埋地雷💣 聲東擊西🪤 黃金狂熱✨ 地雷伏擊🕳️ 絕對路線🧭 極速傳說⚡ 連擊狂神🔥
+- 新增 3 個成就（上版）：鐵血神探🕵️ 風雨無阻⛈️ 黃金神話👑
+
+**game.html — 地雷改為範圍傷害：**
+- `tickMines`：移除 `break`，掃描半徑內所有 AI 全數暈眩，顯示命中數量（與手雷同邏輯）
+- 新增追蹤變數：`_achGoldenCollected/Count`、`_achMineHit/MaxMineSimulHit`、`_achDecoyUsed`、`_achWeatherCollect`
+
+**finish.html — 數字截斷修正：**
+- shimmer 動畫移至 `.inner-shimmer` 子層，`.stat` 改 `overflow:visible`
+- `.stat .num` 改 `letter-spacing:0` + `font-size:clamp(1.35rem,4.5vw,2rem)`
+
+**achievements.html — 水平滾動修正：**
+- 加 `.tree-outer`（`overflow-x:auto`）+ `.tree-wrap`（`min-width:max-content`）
+- 修正 `justify-content:center` 在溢出容器左側無法捲到的問題
+- 加第 5 層標籤「傳說層」
 
 ### 2026-05-25（v7.4）成就系統
 

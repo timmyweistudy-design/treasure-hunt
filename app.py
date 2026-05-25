@@ -81,11 +81,23 @@ ACHIEVEMENT_PARENTS = {
 
 # Tier ordering for display
 ACHIEVEMENT_TIERS = [
+    # ── Tier 0 ─────────────────────────────────────────────────
     ["game_start"],
-    ["first_treasure", "first_encounter", "first_item"],
-    ["perfect_clear", "first_combo", "first_bomb", "iron_will", "all_items", "first_portal", "golden_first", "mine_first", "decoy_first"],
-    ["lightning", "high_score", "night_owl", "no_damage", "combo_master", "bomb_expert", "thief_master", "storm_hunter", "golden_fever", "mine_ambush", "perfect_route"],
-    ["legend_score", "lightning_god", "combo_god"],
+    # ── Tier 1 ─── amber | red | teal ──────────────────────────
+    ["first_treasure",
+     "first_encounter",
+     "first_item"],
+    # ── Tier 2 ─── amber (首寶) | red (首敵) | teal (首具) ────
+    ["perfect_clear", "first_combo", "golden_first",   # amber
+     "first_bomb",    "iron_will",   "mine_first",     # red
+     "all_items",     "first_portal","decoy_first"],   # teal
+    # ── Tier 3 ─── amber (8) | red (3) ─────────────────────────
+    ["lightning", "high_score", "night_owl", "no_damage",   # amber ← perfect_clear
+     "storm_hunter", "perfect_route",                       # amber ← perfect_clear
+     "combo_master", "golden_fever",                        # amber ← first_combo / golden_first
+     "bomb_expert", "thief_master", "mine_ambush"],         # red
+    # ── Tier 4 ─── amber ────────────────────────────────────────
+    ["lightning_god", "legend_score", "combo_god"],
 ]
 
 

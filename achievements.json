@@ -30,5 +30,8 @@
   },
   "t": {
     "game_start": true
+  },
+  "T": {
+    "game_start": true
   }
 }

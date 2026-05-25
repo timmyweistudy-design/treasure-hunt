@@ -2732,6 +2732,8 @@ function relocateTreasure(tId) {
     }
     const [nLat,nLon]=nearestWalkable(nLat0,nLon0);
     t.lat=nLat; t.lon=nLon; t.wasMoved=true;
+    // 黃金圈跟著搬走：若此寶藏正是黃金寶藏，同步移動黃色圓圈
+    if(tId===goldenId && goldenRing) goldenRing.setLatLng([nLat, nLon]);
     // 同步更新所有以此寶藏為目標的小偷 🦹 標示位置
     for(const ai of aiList){
         if(ai.type==='thief'&&ai.targetTId===tId&&ai.targetMarker)

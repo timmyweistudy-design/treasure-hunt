@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.7）**
+> **最後更新：2026-05-25（v7.8）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -468,6 +468,19 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.8）Bug 修正：黃金圈殘留 + 成就樹拖拉捲動
+
+**game.html — 黃金寶藏圓圈殘留（已修）：**
+- 根因：`relocateTreasure(tId)` 移動寶藏時，`goldenRing`（Leaflet circle）位置不跟著更新，導致黃色圓圈停在舊位置，直到玩家採集才因 `clearGoldenTreasure` 順帶移除
+- 修法：`relocateTreasure` 更新 `t.lat/t.lon` 後，若 `tId===goldenId` 則立即 `goldenRing.setLatLng([nLat,nLon])`，使圓圈跟隨寶藏移動
+
+**achievements.html — 左鍵拖拉捲動（新增）：**
+- `.tree-outer` 加 `cursor:grab` + `.dragging` class（`cursor:grabbing`）
+- `mousedown/mousemove/mouseup` 事件：拖拉距離 >3px 才算拖拉（保留節點點擊），`scrollLeft` 跟隨滑鼠位移更新
+- 觸碰裝置保留原生觸控行為，不干擾
+
+---
 
 ### 2026-05-25（v7.7）效能全面優化
 

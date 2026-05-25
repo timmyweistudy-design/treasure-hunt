@@ -258,6 +258,7 @@ AI扣分    = 追跡者觸碰 −50 分（8秒冷卻）
 | `_gh_save(scores, sha)` | 把 scores.json 寫回 GitHub（帶 SHA 防競態） |
 | `Scoreboard.save_score(player, city)` | 新增分數，先 GitHub 後本機備份；同名玩家只保留最佳紀錄（分高優先，同分取用時短者） |
 | `Scoreboard.get_top10(city)` | 取得指定城市（或全部）前 10 筆；同名玩家只保留最高分（按名稱去重） |
+| `Scoreboard.get_by_city(top_n)` | 回傳 `[(city, [entries])]`，每城市前 top_n 名，城市依榜首分數降序排列 |
 | `Treasure.to_dict()` | Treasure → 可序列化 dict |
 | `Player.elapsed_time` | property，遊戲已用秒數 |
 | `_gh_ach_load()` | 從 GitHub 讀取 achievements.json → ({data}, sha)，404 時回 ({}, None) |

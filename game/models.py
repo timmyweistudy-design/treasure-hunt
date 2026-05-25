@@ -188,6 +188,23 @@ class Scoreboard:
                 break
         return unique
 
+    def get_by_city(self, top_n: int = 5):
+        """回傳 {city: [top_n entries]}，城市依榜首分數降序排列。"""
+        city_map = {}
+        for s in self.scores:            # scores 已按 -score 排序
+            city = (s.get("city") or "?").strip()
+            if city not in city_map:
+                city_map[city] = []
+            if len(city_map[city]) < top_n:
+                city_map[city].append(s)
+        # 城市順序：榜首分數最高的城市排前面
+        sorted_cities = sorted(
+            city_map.items(),
+            key=lambda kv: kv[1][0]["score"] if kv[1] else 0,
+            reverse=True
+        )
+        return sorted_cities   # list of (city, entries)
+
 
 # ── 成就系統 ───────────────────────────────────────────────────────────
 _GH_ACH_FILE = "achievements.json"

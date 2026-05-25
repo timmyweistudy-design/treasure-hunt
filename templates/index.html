@@ -172,6 +172,21 @@
         td:first-child { font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 700; }
         td b { font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: .5px; color: #D4920A; }
 
+        /* ── 城市排行榜 ── */
+        .city-board { margin-bottom: 4px; }
+        .city-board-hd {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 0 6px;
+        }
+        .city-board-name {
+            font-size: 12px; font-weight: 700; color: #D4920A;
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        .city-divider {
+            height: 1px; background: rgba(255,255,255,.07);
+            margin: 4px 0 12px;
+        }
+
         /* ── 冒險指南 grid ── */
         .guide-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
         .guide-card { background:rgba(56,139,253,.05); border:1px solid rgba(56,139,253,.14);
@@ -264,26 +279,33 @@
             </div>
         </div>
 
-        {% if top10 %}
+        {% if scores_by_city %}
         <div class="card">
-            <h2>🏆 全球冒險排行榜</h2>
-            <table>
-                <thead>
-                    <tr><th>名次</th><th>冒險者</th><th>城市</th><th>分數</th><th>寶藏</th><th>用時</th></tr>
-                </thead>
-                <tbody>
-                {% for s in top10 %}
-                <tr>
-                    <td>{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}{{ loop.index }}{% endif %}</td>
-                    <td>{{ s.name }}</td>
-                    <td><span class="badge">{{ s.city or '?' }}</span></td>
-                    <td><b>{{ s.score }}</b></td>
-                    <td>{{ s.treasures }} 個</td>
-                    <td>{{ s.time }}s</td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            <h2>🏆 城市排行榜</h2>
+            {% for city, entries in scores_by_city %}
+            <div class="city-board">
+                <div class="city-board-hd">
+                    <span class="city-board-name">{{ city }}</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr><th>名次</th><th>冒險者</th><th>分數</th><th>寶藏</th><th>用時</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for s in entries %}
+                    <tr>
+                        <td>{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}{{ loop.index }}{% endif %}</td>
+                        <td>{{ s.name }}</td>
+                        <td><b>{{ s.score }}</b></td>
+                        <td>{{ s.treasures }} 個</td>
+                        <td>{{ s.time }}s</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if not loop.last %}<div class="city-divider"></div>{% endif %}
+            {% endfor %}
         </div>
         {% endif %}
     </div>

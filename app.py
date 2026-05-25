@@ -918,7 +918,7 @@ def achievements():
 
 @app.route("/")
 def index():
-    return render_template("index.html", top10=scoreboard.get_top10())
+    return render_template("index.html", scores_by_city=scoreboard.get_by_city(top_n=5))
 
 
 @app.route("/rules")

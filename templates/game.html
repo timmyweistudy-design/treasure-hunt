@@ -11,6 +11,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'ThenKhung';
+            src: url('/static/fonts/ThenKhung-Regular.ttf') format('truetype');
+            font-weight: normal; font-style: normal;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Noto Sans TC', Arial, sans-serif; height: 100vh;
                display: flex; flex-direction: column; overflow: hidden; }
@@ -22,7 +27,8 @@
               border-bottom: 1px solid rgba(56,139,253,.25); }
         .hd-row1 { display: flex; justify-content: space-between; align-items: center; }
         .hd-title {
-            font-size: 13px; font-weight: bold; letter-spacing: .5px;
+            font-family: 'ThenKhung', 'Noto Sans TC', sans-serif;
+            font-size: 15px; font-weight: bold; letter-spacing: .8px;
             background: linear-gradient(90deg,#FFD700,#F0C000,#64B5F6);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
@@ -37,9 +43,9 @@
         @keyframes blink { 50% { opacity: .25; } }
         /* score pop */
         @keyframes score-pop {
-            0%   { transform: scale(1); }
-            40%  { transform: scale(1.65); color: #ffe082; }
-            100% { transform: scale(1); }
+            0%   { transform: scale(1); filter: none; }
+            40%  { transform: scale(1.65); color: #ffe082; filter: drop-shadow(0 0 12px rgba(255,213,79,.95)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(255,213,79,.25)); }
         }
         .score-pop { animation: score-pop .4s cubic-bezier(.17,.67,.51,1.35); }
         /* score float */
@@ -177,6 +183,10 @@
         .sb { width: 268px; background: rgba(14,20,36,.97); border-left: 1px solid rgba(56,139,253,.2);
               display: flex; flex-direction: column; flex-shrink: 0; }
         .sb-body { flex: 1; overflow-y: auto; padding: 10px; }
+        .sb-body::-webkit-scrollbar { width: 3px; }
+        .sb-body::-webkit-scrollbar-track { background: transparent; }
+        .sb-body::-webkit-scrollbar-thumb { background: rgba(56,139,253,.28); border-radius: 2px; }
+        .sb-body::-webkit-scrollbar-thumb:hover { background: rgba(56,139,253,.55); }
         .sb-foot { padding: 10px; border-top: 1px solid rgba(56,139,253,.15); }
 
         .kbd-box { background: rgba(13,17,23,.85); color: #C9D1D9; border-radius: 10px;
@@ -486,16 +496,29 @@
         }
         /* ── 5 道具槽 ── */
         .slot-box {
-            width:44px;height:42px;border-radius:8px;
-            border:2px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);
+            width:44px;height:42px;border-radius:10px;
+            border:2px solid rgba(255,255,255,.2);
+            background: linear-gradient(145deg, rgba(255,255,255,.1) 0%, rgba(255,255,255,.03) 100%);
+            backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 2px 8px rgba(0,0,0,.4);
             display:flex;flex-direction:column;align-items:center;justify-content:center;
             position:relative;cursor:pointer;
             transition:border-color .15s,background .15s,box-shadow .15s;
             user-select:none;
         }
-        .slot-box.selected { border-color:#ffd54f;background:rgba(255,213,79,.14);box-shadow:0 0 8px rgba(255,213,79,.45); }
-        .slot-box.filled   { border-color:rgba(56,139,253,.55);background:rgba(56,139,253,.1); }
-        .slot-box.selected.filled { border-color:#ffd54f;box-shadow:0 0 10px rgba(255,213,79,.6); }
+        .slot-box.selected {
+            border-color:#ffd54f;
+            background: linear-gradient(145deg, rgba(255,213,79,.22) 0%, rgba(255,213,79,.07) 100%);
+            box-shadow: 0 0 14px rgba(255,213,79,.55), inset 0 1px 0 rgba(255,255,255,.22);
+        }
+        .slot-box.filled {
+            border-color:rgba(56,139,253,.6);
+            background: linear-gradient(145deg, rgba(56,139,253,.18) 0%, rgba(56,139,253,.05) 100%);
+        }
+        .slot-box.selected.filled {
+            border-color:#ffd54f;
+            box-shadow: 0 0 16px rgba(255,213,79,.65), inset 0 1px 0 rgba(255,255,255,.22);
+        }
         .slot-num  { font-size:9px;color:rgba(255,255,255,.38);position:absolute;top:2px;left:4px;
                      font-family:'Orbitron',monospace;font-weight:700; }
         .slot-icon { font-size:20px;line-height:1;margin-top:4px; }

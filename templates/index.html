@@ -48,7 +48,11 @@
             background: linear-gradient(90deg, #FFD700 0%, #F0C000 50%, #64B5F6 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
             letter-spacing: 2px; margin-bottom: 12px;
-            filter: drop-shadow(0 2px 20px rgba(56,139,253,.4));
+            animation: title-float 3.2s ease-in-out infinite;
+        }
+        @keyframes title-float {
+            0%, 100% { filter: drop-shadow(0 2px 18px rgba(56,139,253,.4)); transform: translateY(0); }
+            50%      { filter: drop-shadow(0 6px 28px rgba(255,215,0,.55)); transform: translateY(-7px); }
         }
         .hero p { font-size: 1rem; color: #8B949E; }
 
@@ -81,14 +85,27 @@
             box-shadow: 0 0 0 3px rgba(56,139,253,.18);
         }
         button[type="submit"] {
+            position: relative; overflow: hidden;
             padding: 13px 28px; font-size: 14px; font-weight: bold; font-family: inherit;
-            background: linear-gradient(135deg, #1565C0 0%, #388BFD 100%);
-            color: #fff; border: none; border-radius: 10px; cursor: pointer;
-            box-shadow: 0 4px 16px rgba(56,139,253,.4);
+            background: linear-gradient(135deg, #A0700A 0%, #FFD700 48%, #A0700A 100%);
+            color: #1a0f00; border: none; border-radius: 10px; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255,200,0,.4), 0 0 0 1px rgba(255,215,0,.18);
             transition: transform .15s, box-shadow .15s;
-            white-space: nowrap;
+            white-space: nowrap; letter-spacing: .3px;
         }
-        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(56,139,253,.55); }
+        button[type="submit"]::after {
+            content: '';
+            position: absolute; top: -50%; left: -120%;
+            width: 50%; height: 200%;
+            background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.5) 50%, transparent 65%);
+            animation: btn-shimmer 2.8s ease-in-out infinite;
+        }
+        @keyframes btn-shimmer {
+            0%  { left: -120%; }
+            45% { left: 160%; }
+            100%{ left: 160%; }
+        }
+        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,200,0,.65); }
         button[type="submit"]:active { transform: translateY(0); }
 
         /* ── 錯誤 ── */
@@ -111,6 +128,21 @@
             background: rgba(56,139,253,.08); transition: background .2s, color .2s;
         }
         .rules-link:hover { background: rgba(56,139,253,.18); color: #90CAF9; }
+
+        /* ── 卡片入場動畫 ── */
+        @keyframes card-enter {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .card { animation: card-enter .5s ease-out both; }
+        .card + .card          { animation-delay: .15s; }
+        .card + .card + .card  { animation-delay: .3s; }
+
+        /* ── 自訂滾動條 ── */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(56,139,253,.3); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(56,139,253,.55); }
 
         /* ── 排行榜 ── */
         table { width: 100%; border-collapse: collapse; }

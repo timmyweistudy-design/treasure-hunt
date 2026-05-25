@@ -7,6 +7,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'ThenKhung';
+            src: url('/static/fonts/ThenKhung-Regular.ttf') format('truetype');
+            font-weight: normal; font-style: normal;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Noto Sans TC', Arial, sans-serif; background: #0D1117; color: #E6EDF3; }
 
@@ -37,12 +42,16 @@
             width: 100%;
         }
         .hero h1 {
-            font-family: 'Orbitron', monospace; font-weight: 900;
-            font-size: clamp(1.6rem, 5vw, 2.6rem); letter-spacing: 2px;
+            font-family: 'ThenKhung', 'Noto Serif TC', serif; font-weight: 900;
+            font-size: clamp(1.8rem, 5.5vw, 3rem); letter-spacing: 3px;
             background: linear-gradient(90deg, #FFD700 0%, #F0C000 50%, #64B5F6 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
             margin-bottom: 10px;
-            filter: drop-shadow(0 2px 18px rgba(56,139,253,.4));
+            animation: title-float 3.2s ease-in-out infinite;
+        }
+        @keyframes title-float {
+            0%, 100% { filter: drop-shadow(0 2px 18px rgba(56,139,253,.4)); transform: translateY(0); }
+            50%      { filter: drop-shadow(0 6px 28px rgba(255,215,0,.55)); transform: translateY(-7px); }
         }
         .hero p { font-size: 1rem; color: #8B949E; }
 
@@ -63,7 +72,41 @@
 
         /* ── 統計格 ── */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
-        .stat { text-align: center; padding: 20px 10px; border-radius: 14px; }
+        .stat { text-align: center; padding: 20px 10px; border-radius: 14px;
+                position: relative; overflow: hidden; }
+        .stat::after {
+            content: '';
+            position: absolute; top: 0; left: -100%;
+            width: 50%; height: 100%;
+            background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.15) 50%, transparent 70%);
+            animation: stat-shimmer 2.6s ease-out forwards;
+        }
+        .stat:nth-child(1)::after { animation-delay: .3s; }
+        .stat:nth-child(2)::after { animation-delay: .55s; }
+        .stat:nth-child(3)::after { animation-delay: .8s; }
+        .stat:nth-child(4)::after { animation-delay: 1.05s; }
+        @keyframes stat-shimmer {
+            0%   { left: -100%; }
+            100% { left: 160%; }
+        }
+
+        /* ── Confetti ── */
+        .confetti-piece {
+            position: fixed; pointer-events: none; z-index: 9999;
+            border-radius: 2px; top: -12px;
+            animation: confetti-fall linear forwards;
+        }
+        @keyframes confetti-fall {
+            0%   { transform: translateY(0) rotateZ(0deg); opacity: 1; }
+            80%  { opacity: 1; }
+            100% { transform: translateY(105vh) rotateZ(720deg); opacity: 0; }
+        }
+
+        /* ── 自訂滾動條 ── */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(56,139,253,.3); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(56,139,253,.55); }
         .stat-total   { background: rgba(255,215,0,.1);   border: 1px solid rgba(255,215,0,.28); }
         .stat-treas   { background: rgba(56,139,253,.1);  border: 1px solid rgba(56,139,253,.28); }
         .stat-time-b  { background: rgba(100,181,246,.1); border: 1px solid rgba(100,181,246,.28); }
@@ -208,6 +251,7 @@
 </div>
 
 <script>
+    /* 分數滾動 */
     const el = document.getElementById('final-score');
     const target = parseInt(el.dataset.target, 10);
     const dur = 1200, start = performance.now();
@@ -217,6 +261,29 @@
         if (t < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
+
+    /* 完美通關 Confetti */
+    const isPerfect = {{ (found_count == total) | tojson }};
+    if (isPerfect) {
+        const colors = ['#FFD700','#FF6B6B','#4ECDC4','#A78BFA','#F472B6','#34D399','#60A5FA','#FBBF24'];
+        for (let i = 0; i < 90; i++) {
+            setTimeout(function() {
+                const c = document.createElement('div');
+                c.className = 'confetti-piece';
+                const size = 6 + Math.random() * 7;
+                c.style.cssText = [
+                    'left:' + (Math.random() * 100) + 'vw',
+                    'width:' + size + 'px',
+                    'height:' + size + 'px',
+                    'background:' + colors[Math.floor(Math.random() * colors.length)],
+                    'animation-duration:' + (2.5 + Math.random() * 2) + 's',
+                    'animation-delay:' + (Math.random() * 1.5) + 's'
+                ].join(';');
+                document.body.appendChild(c);
+                setTimeout(function(){ c.remove(); }, 5500);
+            }, i * 28);
+        }
+    }
 </script>
 </body>
 </html>

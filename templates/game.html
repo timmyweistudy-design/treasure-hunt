@@ -2464,9 +2464,10 @@ function useHeldItem() {
 }
 
 // ── 分數扣分輔助 ─────────────────────────────────────────
-function applyScorePenalty(amount, msg) {
+function applyScorePenalty(amount, msg, isCombat=true) {
     score=Math.max(0,score-amount);
-    _achDmgTaken=true; _achAIEncounter=true;
+    _achAIEncounter=true;
+    if(isCombat) _achDmgTaken=true;
     const el=document.getElementById('v-score');
     el.textContent=score;
     el.classList.remove('score-pop'); void el.offsetWidth; el.classList.add('score-pop');
@@ -2828,7 +2829,7 @@ function tickThief(ai,dt,s) {
     if(ai.stealCD<=0&&distM(ai.lat,ai.lon,tgt.lat,tgt.lon)<THIEF_STEAL_R){
         const name=tgt.name;
         relocateTreasure(ai.targetTId);
-        applyScorePenalty(50,`🦹 小偷把「${name}」搬走了！-50分！🚨 ${THIEF_WANTED_DUR}秒內按Space反制！`);
+        applyScorePenalty(50,`🦹 小偷把「${name}」搬走了！-50分！🚨 ${THIEF_WANTED_DUR}秒內按Space反制！`, false);
         playThiefSteal();
         ai.wanted=true; ai.wantedTimer=THIEF_WANTED_DUR; ai.stolenAmt=20;
         ai.marker.getElement()?.querySelectorAll('.tf,.thurt').forEach(img=>img.classList.add('wanted-spr'));

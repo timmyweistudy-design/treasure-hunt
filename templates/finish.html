@@ -233,14 +233,6 @@
             {% else %}💪 繼續磨練！{% endif %}
         </h1>
         <p>{{ player.name }} 的冒險畫上句點</p>
-        <div class="ach-row">
-            {% if found_count == total %}<span class="ach ach-gold">🏆 完美探索家</span>
-            {% elif found_count >= 9 %}<span class="ach ach-silver">🥈 精銳冒險者</span>
-            {% elif found_count >= 8 %}<span class="ach ach-bronze">🥉 初心探索者</span>
-            {% else %}<span class="ach ach-iron">⚔️ 繼續磨練</span>{% endif %}
-            {% if found_count == total and player.elapsed_time|float < 180 %}<span class="ach ach-speed">⚡ 閃電冒險</span>{% endif %}
-            {% if found_count == total and player.score >= 15000 %}<span class="ach ach-rich">💰 高分獵人</span>{% endif %}
-        </div>
     </div>
 </div>
 

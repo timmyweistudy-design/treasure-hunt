@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.10.3）**
+> **最後更新：2026-05-25（v7.10.4）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -469,6 +469,12 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.10.4）排行榜修正
+- **app.py**：`get_by_city(top_n=5)` → `top_n=10`，每城市最多顯示 10 名
+- **finish.html**：`.me td` 移除 `color: #D4920A !important`，只保留背景底色；避免 `!important` 蓋掉金/銀/銅排名色
+
+---
 
 ### 2026-05-25（v7.10.3）排行榜金銀銅全色覆蓋
 - **index.html + finish.html**：前三名加 `td b` color override，確保分數數字也跟著變色；銀色改 `#C0C8D2`（冷調銀），銅色改 `#C8803C`（暖銅）；三名皆加 `font-weight:600`；左側邊線顏色同步飽和

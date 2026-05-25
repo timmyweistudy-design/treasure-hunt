@@ -918,7 +918,7 @@ def achievements():
 
 @app.route("/")
 def index():
-    return render_template("index.html", scores_by_city=scoreboard.get_by_city(top_n=5))
+    return render_template("index.html", scores_by_city=scoreboard.get_by_city(top_n=10))
 
 
 @app.route("/rules")
@@ -1282,7 +1282,7 @@ def finish_game():
                            player=player, city=city,
                            found_count=found_count, total=total,
                            time_bonus=time_bonus,
-                           scores_by_city=scoreboard.get_by_city(top_n=5),
+                           scores_by_city=scoreboard.get_by_city(top_n=10),
                            folium_html=folium_html,
                            new_achievements=new_ach_ids,
                            all_achievements=existing_achs,

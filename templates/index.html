@@ -162,8 +162,20 @@
              text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
         td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px; color: #8B949E; }
         tbody tr:hover { background: rgba(56,139,253,.05); }
-        tbody tr:nth-child(1)    { background: linear-gradient(90deg,rgba(255,215,0,.09),transparent); }
+        tbody tr:nth-child(1)    { background: linear-gradient(90deg,rgba(255,215,0,.09),transparent);
+                                   position: relative; overflow: hidden; }
         tbody tr:nth-child(1) td { color: #FFD700; }
+        tbody tr:nth-child(1)::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,215,0,.22), transparent);
+            animation: rank1-shimmer 3.8s ease-in-out 0.8s infinite;
+            pointer-events: none;
+        }
+        @keyframes rank1-shimmer {
+            0%   { left: -100%; }
+            38%  { left: 160%; }
+            100% { left: 160%; }
+        }
         tbody tr:nth-child(2)    { background: linear-gradient(90deg,rgba(190,210,230,.05),transparent); }
         tbody tr:nth-child(2) td { color: #C9D1D9; }
         tbody tr:nth-child(3)    { background: linear-gradient(90deg,rgba(185,115,55,.07),transparent); }
@@ -175,7 +187,14 @@
         .guide-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
         .guide-card { background:rgba(56,139,253,.05); border:1px solid rgba(56,139,253,.14);
                       border-radius:12px; padding:14px 14px 12px;
-                      transition:background .2s,border-color .2s,transform .18s; }
+                      transition:background .2s,border-color .2s,transform .18s;
+                      border-left-width: 3px; }
+        .guide-card:nth-child(1) { border-left-color: rgba(255,215,0,.65); }
+        .guide-card:nth-child(2) { border-left-color: rgba(56,139,253,.75); }
+        .guide-card:nth-child(3) { border-left-color: rgba(239,83,80,.7); }
+        .guide-card:nth-child(4) { border-left-color: rgba(102,187,106,.7); }
+        .guide-card:nth-child(5) { border-left-color: rgba(255,152,0,.7); }
+        .guide-card:nth-child(6) { border-left-color: rgba(100,181,246,.7); }
         .guide-card:hover { background:rgba(56,139,253,.1); border-color:rgba(56,139,253,.3); transform:translateY(-2px); }
         .guide-icon  { font-size:1.5rem; margin-bottom:6px; }
         .guide-title { font-size:12px; font-weight:bold; color:#F0C000; margin-bottom:4px; letter-spacing:.3px; }

@@ -131,26 +131,40 @@
         }
         .ach-node:hover { transform: translateY(-3px); }
 
+        /* ── 已解鎖節點呼吸光暈 ── */
+        @keyframes ach-breathe-gold {
+            0%,100% { box-shadow: 0 0 18px rgba(255,215,0,.18), 0 4px 16px rgba(0,0,0,.4); }
+            50%     { box-shadow: 0 0 34px rgba(255,215,0,.48), 0 4px 20px rgba(0,0,0,.5); }
+        }
+        @keyframes ach-breathe-red {
+            0%,100% { box-shadow: 0 0 18px rgba(255,80,80,.18), 0 4px 16px rgba(0,0,0,.4); }
+            50%     { box-shadow: 0 0 34px rgba(255,80,80,.48), 0 4px 20px rgba(0,0,0,.5); }
+        }
+        @keyframes ach-breathe-teal {
+            0%,100% { box-shadow: 0 0 18px rgba(0,229,255,.15), 0 4px 16px rgba(0,0,0,.4); }
+            50%     { box-shadow: 0 0 34px rgba(0,229,255,.42), 0 4px 20px rgba(0,0,0,.5); }
+        }
+
         /* Unlocked */
         .ach-node.unlocked {
             background: rgba(255,215,0,.1);
             border: 1.5px solid rgba(255,215,0,.55);
-            box-shadow: 0 0 18px rgba(255,215,0,.18), 0 4px 16px rgba(0,0,0,.4);
+            animation: ach-breathe-gold 2.8s ease-in-out infinite;
         }
         .ach-node.unlocked.branch-red {
             background: rgba(255,80,80,.1);
             border-color: rgba(255,80,80,.55);
-            box-shadow: 0 0 18px rgba(255,80,80,.18), 0 4px 16px rgba(0,0,0,.4);
+            animation: ach-breathe-red 2.8s ease-in-out infinite;
         }
         .ach-node.unlocked.branch-teal {
             background: rgba(0,229,255,.08);
             border-color: rgba(0,229,255,.5);
-            box-shadow: 0 0 18px rgba(0,229,255,.15), 0 4px 16px rgba(0,0,0,.4);
+            animation: ach-breathe-teal 2.8s ease-in-out infinite;
         }
         .ach-node.unlocked.branch-root {
             background: rgba(255,215,0,.13);
             border-color: rgba(255,215,0,.65);
-            box-shadow: 0 0 24px rgba(255,215,0,.28), 0 4px 20px rgba(0,0,0,.5);
+            animation: ach-breathe-gold 2.2s ease-in-out infinite;
         }
 
         /* Locked */
@@ -177,9 +191,14 @@
 
         /* Tier labels */
         .tier-label {
-            text-align: center; font-size: 10px; color: #484F58;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 10px; color: #484F58;
             letter-spacing: .8px; text-transform: uppercase; margin-bottom: 10px;
-            font-weight: bold;
+            font-weight: bold; padding: 0 24px;
+        }
+        .tier-label::before, .tier-label::after {
+            content: ''; flex: 1; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,215,0,.22), transparent);
         }
 
         /* ── Empty state ── */
@@ -331,7 +350,7 @@ const ACH_TIERS   = {{ ach_tiers | tojson }};
             const color = BRANCH_COLORS[branch] || '#888';
             const isUnlocked = cEl.classList.contains('unlocked');
             const strokeColor = isUnlocked ? color : 'rgba(255,255,255,0.12)';
-            const strokeW     = isUnlocked ? 2.2 : 1.4;
+            const strokeW     = isUnlocked ? 2.8 : 1.4;
 
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`);
@@ -339,7 +358,13 @@ const ACH_TIERS   = {{ ach_tiers | tojson }};
             path.setAttribute('stroke-width', strokeW);
             path.setAttribute('fill', 'none');
             path.setAttribute('stroke-linecap', 'round');
-            if (!isUnlocked) path.setAttribute('stroke-dasharray', '4 4');
+            if (isUnlocked) {
+                path.setAttribute('stroke-opacity', '0.88');
+                path.setAttribute('filter', `drop-shadow(0 0 3px ${color}99)`);
+            } else {
+                path.setAttribute('stroke-dasharray', '4 4');
+                path.setAttribute('stroke-opacity', '0.5');
+            }
             svg.appendChild(path);
         }
     }

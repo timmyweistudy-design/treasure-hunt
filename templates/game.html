@@ -31,6 +31,21 @@
             font-size: 15px; font-weight: bold; letter-spacing: .8px;
             background: linear-gradient(90deg,#FFD700,#F0C000,#64B5F6);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            display: inline-block; position: relative; overflow: hidden;
+        }
+        /* ── header title shimmer sweep ── */
+        .hd-title::after {
+            content: '';
+            position: absolute; top: 0; left: -120%;
+            width: 50%; height: 100%;
+            background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%);
+            animation: hd-title-shimmer 3.5s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes hd-title-shimmer {
+            0%   { left: -120%; }
+            35%  { left: 160%; }
+            100% { left: 160%; }
         }
         .hd-right  { display: flex; align-items: center; gap: 14px; }
         .hd-stats  { display: flex; gap: 22px; align-items: center; }
@@ -170,9 +185,23 @@
                         border: 1px solid rgba(255,255,255,.06); }
         .sprint-fill  { height: 100%; width: 100%; border-radius: 6px;
                         background: linear-gradient(90deg,#F0C000,#388BFD);
-                        transition: width .1s linear, background .3s; }
+                        transition: width .1s linear, background .3s;
+                        position: relative; overflow: hidden; }
         .sprint-fill.cooling  { background: linear-gradient(90deg,#e57373,#ef9a9a); }
         .sprint-fill.recharge { background: linear-gradient(90deg,#ffd54f,#fff176); }
+        /* ── sprint 啟動閃光 ── */
+        @keyframes sprint-flash {
+            0%   { left: -60%; opacity: 0; }
+            20%  { opacity: 1; }
+            100% { left: 120%; opacity: 0; }
+        }
+        .sprint-fill.flash::after {
+            content: ''; position: absolute; top: 0; left: -60%;
+            width: 40%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,.8), transparent);
+            animation: sprint-flash .38s ease-out forwards;
+            pointer-events: none;
+        }
         .sprint-hint  { font-size: 10px; color: #484F58; white-space: nowrap; }
 
         /* ── Layout ── */
@@ -202,7 +231,10 @@
                        border: 1.5px solid rgba(56,139,253,.22); box-shadow: 0 2px 10px rgba(0,0,0,.4); }
         .compass-arrow-wrap { width: 44px; height: 44px; border-radius: 50%;
                               background: rgba(56,139,253,.12); display: flex; align-items: center;
-                              justify-content: center; flex-shrink: 0; font-size: 22px; }
+                              justify-content: center; flex-shrink: 0; }
+        /* SVG needle 針式羅盤 */
+        #compass-arrow polygon { transition: fill .3s; }
+        .compass-box.thief-alert #compass-arrow polygon:first-child { fill: #FF9800; }
         .compass-info { flex: 1; min-width: 0; }
         .compass-lbl  { font-size: 10px; color: #484F58; margin-bottom: 2px; }
         .compass-name { font-size: 12px; font-weight: bold; color: #E6EDF3;
@@ -220,15 +252,30 @@
                      box-shadow: inset 0 1px 3px rgba(0,0,0,.4); }
         .prog-fill  { height: 100%; background: linear-gradient(90deg,#F0C000,#388BFD); border-radius: 4px;
                       transition: width .45s cubic-bezier(.4,0,.2,1);
-                      box-shadow: 0 0 6px rgba(56,139,253,.4); }
+                      box-shadow: 0 0 6px rgba(56,139,253,.4);
+                      position: relative; overflow: hidden; }
+        /* ── 進度條流動光紋 ── */
+        .prog-fill::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.32) 50%, transparent 70%);
+            background-size: 200% 100%;
+            animation: prog-flow 2.4s linear infinite;
+        }
+        @keyframes prog-flow {
+            0%   { background-position: -100% 0; }
+            100% { background-position: 200% 0; }
+        }
         .sec-lbl { font-size: 11px; color: #8B949E; font-weight: bold;
                    letter-spacing: .4px; margin-bottom: 8px; }
 
         .tc { background: rgba(13,17,23,.85); border-radius: 8px; padding: 9px 11px; margin-bottom: 7px;
               border-left: 4px solid rgba(56,139,253,.35); box-shadow: 0 2px 8px rgba(0,0,0,.35);
-              transition: all .25s; }
+              transition: all .3s cubic-bezier(.4,0,.2,1);
+              max-height: 180px; overflow: hidden; }
         .tc.near   { border-left-color: #F0C000; background: rgba(255,215,0,.07); }
-        .tc.found  { border-left-color: rgba(100,180,100,.45); opacity: .52; }
+        /* 已收集：折疊卡片並淡出 */
+        .tc.found  { border-left-color: rgba(100,180,100,.45); opacity: .48; max-height: 66px; }
         .tc.found .nm { text-decoration: line-through; color: #484F58; }
         .tc.target { border-left-color: #388BFD; background: rgba(56,139,253,.1); }
         .tc .sq  { font-size: 10.5px; color: #484F58; }
@@ -255,10 +302,15 @@
         .endbtn:hover { background: linear-gradient(135deg,#E53935,#EF5350); }
 
         /* ── Loading overlay ── */
+        @keyframes bg-drift {
+            0%   { background-position: 55% 62%; }
+            100% { background-position: 58% 60%; }
+        }
         #loading-overlay { position: absolute; inset: 0;
                            background: url('/static/bg.png') 55% 62% / cover no-repeat;
                            display: flex; align-items: center; justify-content: center;
-                           z-index: 8000; transition: opacity .35s; }
+                           z-index: 8000; transition: opacity .35s;
+                           animation: bg-drift 18s ease-in-out infinite alternate; }
         #loading-overlay::before { content:''; position:absolute; inset:0;
                            background:rgba(0,8,24,.60);
                            pointer-events:none; }
@@ -391,8 +443,10 @@
             50%    { filter:drop-shadow(0 0 16px rgba(255,215,0,.7)) brightness(1.55) }
         }
         @keyframes ppulse {
-            0%,100%{ filter:drop-shadow(0 2px 8px rgba(21,101,192,.75)) }
-            50%    { filter:drop-shadow(0 2px 4px rgba(21,101,192,.2)) }
+            0%   { filter:drop-shadow(0 2px 10px rgba(21,101,192,.9)); }
+            40%  { filter:drop-shadow(0 2px 6px rgba(56,139,253,.55)); }
+            70%  { filter:drop-shadow(0 2px 9px rgba(144,202,249,.5)); }
+            100% { filter:drop-shadow(0 2px 10px rgba(21,101,192,.9)); }
         }
         .tbadge { width:40px; height:40px; position:relative;
                   display:flex; align-items:center; justify-content:center;
@@ -521,8 +575,14 @@
             position:absolute;bottom:0;left:0;right:268px;
             height:54px;background:rgba(13,17,23,.95);
             backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-            z-index:996;border-top:1px solid rgba(56,139,253,.22);
+            z-index:996;border-top:none;
             display:flex;align-items:center;padding:0 10px;gap:6px;color:#fff;
+        }
+        /* 漸層光邊（取代 1px 實線） */
+        #bottom-hud::before {
+            content:''; position:absolute; top:0; left:0; right:0; height:1px;
+            background:linear-gradient(90deg,transparent,rgba(56,139,253,.5) 25%,rgba(100,181,246,.9) 50%,rgba(56,139,253,.5) 75%,transparent);
+            pointer-events:none;
         }
         .bhud-sep { width:1px;height:30px;background:rgba(255,255,255,.12);flex-shrink:0;margin:0 2px; }
         .bhud-left  { display:flex;align-items:center;gap:5px;flex-shrink:0; }
@@ -547,8 +607,9 @@
                  background:rgba(255,255,255,.16); border:1.5px solid rgba(255,255,255,.26);
                  margin:0 1.5px; vertical-align:middle;
                  transition:background 2.2s ease,border-color 2s ease,box-shadow 1.5s ease; }
-        .c-pip.on { background:rgba(255,255,255,.88); border-color:rgba(255,255,255,.7);
-                    box-shadow:0 0 5px rgba(255,255,255,.55); }
+        .c-pip.on { background:radial-gradient(circle, #fff 20%, rgba(180,220,255,.85) 100%);
+                    border-color:rgba(255,255,255,.88);
+                    box-shadow:0 0 8px rgba(200,230,255,.85), 0 0 3px rgba(255,255,255,.95); }
         body.day .c-pip    { background:rgba(0,0,0,.14); border-color:rgba(0,0,0,.28); box-shadow:none; }
         body.day .c-pip.on { background:rgba(0,0,0,.72); border-color:rgba(0,0,0,.58); box-shadow:0 0 4px rgba(0,0,0,.25); }
         .bhud-chip.bhud-alert {
@@ -564,8 +625,12 @@
             box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 2px 8px rgba(0,0,0,.4);
             display:flex;flex-direction:column;align-items:center;justify-content:center;
             position:relative;cursor:pointer;
-            transition:border-color .15s,background .15s,box-shadow .15s;
+            transition:border-color .15s,background .15s,box-shadow .15s,transform .15s,filter .15s;
             user-select:none;
+        }
+        .slot-box:hover {
+            transform: scale(1.07);
+            filter: brightness(1.22);
         }
         .slot-box.selected {
             border-color:#ffd54f;
@@ -718,6 +783,8 @@
         }
         body.day .compass-box { background: rgba(255,240,180,.82); border-color: rgba(180,120,0,.25); }
         body.day .compass-arrow-wrap { background: rgba(200,140,0,.14); }
+        body.day #compass-arrow polygon:first-child { fill: #c62828; }
+        body.day #compass-arrow polygon:last-child  { fill: rgba(80,50,0,.45); }
         body.day .compass-lbl  { color: #666; }
         body.day .compass-name { color: #111; }
         body.day .compass-dist { color: #C07A00; }
@@ -806,7 +873,11 @@
             <!-- 羅盤 -->
             <div class="compass-box">
                 <div class="compass-arrow-wrap">
-                    <span id="compass-arrow" style="display:inline-block">↑</span>
+                    <svg id="compass-arrow" viewBox="-10 -18 20 36" width="28" height="28" style="display:block;filter:drop-shadow(0 0 4px rgba(56,139,253,.6))">
+                        <polygon points="0,-15 3.5,0 0,3.5 -3.5,0" fill="#ef5350"/>
+                        <polygon points="0,3.5 3.5,0 0,15 -3.5,0" fill="rgba(200,220,255,.65)"/>
+                        <circle cx="0" cy="0" r="2.2" fill="#fff" opacity=".9"/>
+                    </svg>
                 </div>
                 <div class="compass-info">
                     <div class="compass-lbl">🎯 建議下一個</div>
@@ -3606,7 +3677,13 @@ function tickSprint(dt) {
         isSprinting=false;
         if(sprintBar<SPRINT_MAX) sprintBar=Math.min(SPRINT_MAX,sprintBar+dt*.65);
     }
-    if(isSprinting&&!wasSprinting) playSprint();
+    if(isSprinting&&!wasSprinting){
+        playSprint();
+        // 衝刺啟動白光掃過
+        _sprintFillEl.classList.remove('flash');
+        void _sprintFillEl.offsetWidth;
+        _sprintFillEl.classList.add('flash');
+    }
     wasSprinting=isSprinting;
     if(!uiFrame) return; // DOM 降到 15fps
 

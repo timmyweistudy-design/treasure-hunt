@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.8）**
+> **最後更新：2026-05-25（v7.9）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -468,6 +468,38 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.9）視覺美化 — 19 項精緻化
+
+**game.html — 11 項：**
+1. **SVG 針式羅盤**：羅盤指針從文字 `↑` 換成 SVG 菱形針（上紅下白，中心白圓點，藍光 drop-shadow），CSS `rotate()` 依然有效；`.compass-box.thief-alert` 時針尖轉橘色
+2. **標頭標題光掃**：`.hd-title` 加 `display:inline-block` + `::after` 白光掃過動畫（3.5s 循環）
+3. **進度條流動光紋**：`.prog-fill::after` 橫向流動光帶（2.4s linear 循環），光紋被 `overflow:hidden` 限制在填充寬度內
+4. **已收集卡片折疊**：`.tc` 加 `max-height:180px; overflow:hidden`；`.tc.found` 設 `max-height:66px`，收集後卡片以 0.3s cubic-bezier 平滑折疊，隱藏距離列與按鈕
+5. **道具槽 hover 回饋**：`.slot-box:hover` 加 `scale(1.07) + brightness(1.22)`（0.15s transition）
+6. **底部 HUD 漸層光邊**：移除 1px 實線 `border-top`，改用 `#bottom-hud::before` 偽元素繪製左右漸淡藍光帶
+7. **衝刺啟動閃光**：`tickSprint` 在 `isSprinting&&!wasSprinting` 時觸發 `.sprint-fill.flash`（白光掃 0.38s 動畫），`void offsetWidth` 強制重繪確保可重觸發
+8. **載入畫面背景漂移**：`#loading-overlay` 加 `@keyframes bg-drift`（`background-position` 55%62% ↔ 58%60%，18s alternate），等待畫面不再靜止
+9. **充能格增強光暈**：`.c-pip.on` 改為 `radial-gradient` + 雙層 `box-shadow`（白光核心 + 青藍暈）
+10. **玩家脈衝三段色變**：`@keyframes ppulse` 從單色藍改為 `#1565C0 → #388BFD → #90CAF9` 三段色彩呼吸
+11. **日間模式羅盤 SVG 配色**：`body.day #compass-arrow polygon:first-child` 深紅、`:last-child` 深棕半透明
+
+**finish.html — 4 項：**
+12. **計分 easeOutBack 超衝**：`step()` 改用 `easeOutBack(c1=1.70158)` 函式，分數計數超衝 ~10% 後彈回目標值，結束設精確值
+13. **總分格脈衝邊框**：`.stat-total` 加 `total-score-pulse` keyframe animation（2s delay 在 entry shimmer 後啟動，2.4s 循環）
+14. **新成就入場金光**：`@keyframes ach-unlock` 在 75% 處加入 `scale(1.06)` 超衝 + `box-shadow:0 0 26px rgba(255,215,0,.72)`，落定後自然消散
+15. **英雄標題底部光暈**：`.hero h1::after` 偽元素，`radial-gradient(ellipse)` 金色環境光暈置於標題正下方
+
+**achievements.html — 3 項：**
+16. **已解鎖節點呼吸光暈**：三組 keyframes（`ach-breathe-gold/red/teal`）配合各分支顏色，以 2.2~2.8s 循環動態呼吸
+17. **連線強化**：已解鎖路徑 `stroke-width` 提升至 2.8，加 `filter:drop-shadow` 發光；未解鎖路徑 `stroke-opacity:0.5` + 保持虛線
+18. **Tier 分隔標籤裝飾**：`.tier-label` 改 flex 佈局，`::before/::after` 各加金色漸淡橫線
+
+**index.html — 2 項：**
+19. **指南卡片彩色左邊框**：六張指南卡各設 3px 彩色左邊框（金/藍/紅/綠/橘/淡藍，對應卡片主題）
+20. **排行榜冠軍行光掃**：`tbody tr:nth-child(1)::after` 金色光帶 3.8s 循環橫掃第一名行
+
+---
 
 ### 2026-05-25（v7.8）Bug 修正：黃金圈殘留 + 成就樹拖拉捲動
 

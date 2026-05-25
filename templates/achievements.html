@@ -87,11 +87,24 @@
         }
         .player-label b { color: #FFD700; }
 
+        /* ── Tree scroll container ── */
+        /* overflow-x on the OUTER wrapper so min-width:max-content on the inner
+           lets both left & right overflow be reachable by scrolling */
+        .tree-outer {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 24px 0 40px;
+            padding-bottom: 10px;   /* room for horizontal scrollbar */
+        }
+        .tree-outer::-webkit-scrollbar { height: 5px; }
+        .tree-outer::-webkit-scrollbar-thumb { background: rgba(56,139,253,.35); border-radius: 3px; }
+
         /* ── Tree canvas area ── */
         .tree-wrap {
-            position: relative; max-width: 900px; margin: 24px auto 40px;
-            padding: 0 16px 20px;
-            overflow-x: auto;
+            position: relative;
+            min-width: max-content;   /* expands to widest row; no internal overflow */
+            margin: 0 auto;
+            padding: 0 24px 20px;
         }
         .tree-svg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -234,6 +247,7 @@ const ACH_PARENTS = {{ ach_parents | tojson }};
 const ACH_TIERS   = {{ ach_tiers | tojson }};
 </script>
 
+<div class="tree-outer">
 <div class="tree-wrap" id="tree-wrap">
     <svg class="tree-svg" id="tree-svg"></svg>
 
@@ -242,7 +256,8 @@ const ACH_TIERS   = {{ ach_tiers | tojson }};
         {% if loop.index0 == 0 %}起點
         {% elif loop.index0 == 1 %}第一層
         {% elif loop.index0 == 2 %}第二層
-        {% else %}精英層{% endif %}
+        {% elif loop.index0 == 3 %}精英層
+        {% else %}傳說層{% endif %}
     </div>
     <div class="tier-row" id="tier-{{ loop.index0 }}">
         {% for aid in tier_ids %}
@@ -263,18 +278,19 @@ const ACH_TIERS   = {{ ach_tiers | tojson }};
     <div class="tier-spacer"></div>
     {% endif %}
     {% endfor %}
-</div>
+</div><!-- /.tree-wrap -->
+</div><!-- /.tree-outer -->
 
 <script>
 // Draw bezier connector lines between parent → child nodes
 (function() {
     function getCenter(el) {
-        const r = el.getBoundingClientRect();
+        const r  = el.getBoundingClientRect();
         const wr = document.getElementById('tree-wrap').getBoundingClientRect();
         return {
-            x: r.left - wr.left + r.width / 2,
+            x: r.left - wr.left + r.width  / 2,
             y: r.top  - wr.top  + r.height / 2,
-            top:    r.top  - wr.top,
+            top:    r.top    - wr.top,
             bottom: r.bottom - wr.top,
         };
     }
@@ -291,8 +307,8 @@ const ACH_TIERS   = {{ ach_tiers | tojson }};
     function drawLines() {
         const wrap = document.getElementById('tree-wrap');
         const svg  = document.getElementById('tree-svg');
-        svg.setAttribute('width',  wrap.scrollWidth);
-        svg.setAttribute('height', wrap.scrollHeight);
+        svg.setAttribute('width',  wrap.offsetWidth);
+        svg.setAttribute('height', wrap.offsetHeight);
         svg.innerHTML = '';
 
         for (const [childId, parentId] of Object.entries(ACH_PARENTS)) {
@@ -328,6 +344,7 @@ const ACH_TIERS   = {{ ach_tiers | tojson }};
     // Wait for layout
     window.addEventListener('load', drawLines);
     window.addEventListener('resize', drawLines);
+    document.querySelector('.tree-outer')?.addEventListener('scroll', drawLines);
     setTimeout(drawLines, 100);   // fallback
 })();
 </script>

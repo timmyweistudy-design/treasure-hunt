@@ -12,5 +12,8 @@
     "first_portal": true,
     "high_score": true,
     "combo_master": true
+  },
+  "timmy": {
+    "game_start": true
   }
 }

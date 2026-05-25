@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.5）**
+> **最後更新：2026-05-25（v7.6）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -465,6 +465,79 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.6）11 個新成就 + 追蹤鉤全面擴充
+
+**app.py — 新增 11 個成就：**
+
+| ID | 名稱 | Tier | Branch | 解鎖條件 |
+|----|------|------|--------|---------|
+| `sprint_first` | 破風初試 💨 | 2 | amber | 首次使用衝刺 |
+| `lightning_start` | 迅雷開場 ⚡ | 2 | amber | 遊戲開始 5 秒內收集第一個寶藏 |
+| `sprint_legend` | 疾風傳說 🌪️ | 3 | amber | 一局衝刺累計距離 ≥ 5000m |
+| `last_moment` | 最後一刻 ⏱️ | 3 | amber | 剩餘 ≤ 30 秒時收集最後一個寶藏 |
+| `perfect_concert` | 完美協奏 🎵 | 3 | amber | 一局同時獲得順序加分、連擊加分、黃金加分 |
+| `iron_guardian` | 百折不撓 💪 | 3 | amber | 被守衛定身 10 次以上仍完美通關 |
+| `all_weapons` | 全副武裝 ⚔️ | 3 | red | 一局中使用手雷、地雷與誘餌 |
+| `swift_catch` | 神速逮捕 🏃 | 3 | red | 通緝令發出 3 秒內逮捕小偷 |
+| `stun_master` | 暈眩製造者 😵 | 3 | red | 一局讓敵人暈眩累計 20 次 |
+| `portal_warrior` | 傳送奇兵 🌀 | 3 | teal | 傳送後 5 秒內收集寶藏 |
+| `magnet_master` | 磁吸大師 🧲 | 3 | teal | 磁鐵一次吸收 3 個以上道具 |
+
+**app.py — ACHIEVEMENT_PARENTS 新增：**
+- `sprint_first` → `first_treasure`（amber tier 2）
+- `lightning_start` → `first_treasure`
+- `sprint_legend` → `sprint_first`（amber tier 3）
+- `last_moment` → `perfect_clear`
+- `perfect_concert` → `first_combo`
+- `iron_guardian` → `perfect_clear`
+- `all_weapons` → `mine_first`（red tier 3）
+- `swift_catch` → `iron_will`
+- `stun_master` → `first_bomb`
+- `portal_warrior` → `first_portal`（teal tier 3）
+- `magnet_master` → `all_items`
+
+**app.py — ACHIEVEMENT_TIERS 更新：**
+- Tier 2 amber 新增：`sprint_first`、`lightning_start`
+- Tier 3 amber 新增：`sprint_legend`、`last_moment`、`perfect_concert`、`iron_guardian`
+- Tier 3 red 新增：`all_weapons`、`swift_catch`、`stun_master`
+- Tier 3 teal 新增：`portal_warrior`、`magnet_master`
+
+**game.html — 新增 14 個追蹤變數（成就追蹤批次擴充）：**
+| 變數 | 說明 |
+|------|------|
+| `_achSprintUsed` | 是否使用過衝刺 |
+| `_achSprintTotalDist` | 衝刺累計距離（公尺估算，SPRINT_SPD×111111×dt） |
+| `_achFirstTreasureTime` | 第一個寶藏收集時的遊戲已耗時（秒，-1=未收集） |
+| `_achLastTreasureRemain` | 最後寶藏收集時的倒數剩餘（秒） |
+| `_achGuardStunCount` | 被敵人定身次數（chaser + patroller 各自計） |
+| `_achWantedStartTime` | 小偷進入通緝時的 `performance.now()`（ms） |
+| `_achQuickCatch` | 是否在通緝令發出 3 秒內逮捕 |
+| `_achTotalStuns` | 讓敵人暈眩累計次數（手雷+地雷 hit 數） |
+| `_achPortalTime` | 使用傳送門的 `performance.now()`（ms） |
+| `_achPortalQuickCollect` | 傳送後 5 秒內是否收集寶藏 |
+| `_achMagnetPickupCount` | 當次磁鐵已吸收道具數 |
+| `_achMagnetMaxPickup` | 單次磁鐵最多吸收道具數 |
+| `_achGotOrderBonus` | 本局是否獲得至少一次順序加分 |
+
+**game.html — 追蹤鉤注入位置：**
+- 移動區塊 `if(dx||dy)`：`isSprinting` 時累加 `_achSprintTotalDist`，設 `_achSprintUsed`
+- `tickGrenades` `hit>0`：`_achTotalStuns += hit`
+- `tickMines` `mineHit>0`：`_achTotalStuns += mineHit`
+- `tickChaser` stun 觸發：`_achGuardStunCount++`
+- `tickPatroller` stun 觸發：`_achGuardStunCount++`
+- `tickThief` 小偷偷竊後：`_achWantedStartTime = performance.now()`
+- `catchWantedThief`：檢查 3s 差距，設 `_achQuickCatch`，重設 `_achWantedStartTime=-1`
+- `useNearestPortal`：`_achPortalTime = performance.now()`
+- `_activateItem('magnet')`：重設 `_achMagnetPickupCount=0`
+- 主迴圈磁鐵區塊 `pullingItems.set()`：`_achMagnetPickupCount++`，更新 Max
+- `collect()` 成功後：記錄 `_achFirstTreasureTime`、`_achPortalQuickCollect`、`_achGotOrderBonus`
+- `collect()` win 判斷前：`_achLastTreasureRemain = remaining`
+
+**game.html — `_finishGame` payload 新增欄位：**
+`sprint_used`, `sprint_total_dist`, `first_treasure_time`, `last_treasure_remain`, `guard_stun_count`, `quick_catch`, `total_stuns`, `portal_quick_collect`, `magnet_max_pickup`, `got_order_bonus`
+
+---
 
 ### 2026-05-25（v7.5）成就樹排版重整 + 地雷範圍傷害 + 8 新成就 + 雜項修正
 

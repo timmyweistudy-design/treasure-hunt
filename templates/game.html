@@ -1116,6 +1116,21 @@ let _achMineHit        = false;
 let _achMaxMineSimulHit= 0;      // 一個地雷最多同時命中數
 let _achDecoyUsed      = false;
 
+// ── 新增成就追蹤（批次擴充）────────────────────────────────
+let _achSprintUsed         = false;
+let _achSprintTotalDist    = 0;        // 衝刺累計距離（公尺估算）
+let _achFirstTreasureTime  = -1;       // 第一個寶藏收集時的遊戲已耗時（秒）
+let _achLastTreasureRemain = -1;       // 最後寶藏收集時的倒數剩餘（秒）
+let _achGuardStunCount     = 0;        // 被敵人定身次數
+let _achWantedStartTime    = -1;       // 小偷進入通緝時的 performance.now()（ms）
+let _achQuickCatch         = false;    // 通緝令發出 3 秒內逮捕
+let _achTotalStuns         = 0;        // 讓敵人暈眩累計次數（手雷+地雷）
+let _achPortalTime         = -1;       // 使用傳送門的 performance.now()（ms）
+let _achPortalQuickCollect = false;    // 傳送後 5 秒內收集寶藏
+let _achMagnetPickupCount  = 0;        // 當次磁鐵已吸收道具數
+let _achMagnetMaxPickup    = 0;        // 單次磁鐵最多吸收道具數
+let _achGotOrderBonus      = false;    // 本局獲得至少一次順序加分
+
 // ── 音效系統（Web Audio API，無需音效檔）────────────────────
 let audioCtx  = null;
 let masterOut = null;   // GainNode(1.4) → Compressor → destination（全域輸出鏈）
@@ -1648,6 +1663,7 @@ function useNearestPortal() {
             camLat=dest.lat; camLon=dest.lon;
             portalCooldown=PORTAL_CD;
             _achPortalUsed=true;
+            _achPortalTime=performance.now();
             showToast('🌀 任意門！傳送到對角區域！',2200);
             playPortal();
             spawnParticles(dest.lat,dest.lon);
@@ -2173,6 +2189,7 @@ function tickGrenades(dt) {
             if(hit>0){
                 _achBombHit=true;
                 if(hit>_achMaxSimulHit) _achMaxSimulHit=hit;
+                _achTotalStuns+=hit;
                 showToast(`💣 ${directHit?'直接命中！':'手雷爆炸！'}${hit} 隻敵人暈眩 ${GRENADE_STUN_DUR}s！`,2500);
             }
         }
@@ -2226,6 +2243,7 @@ function tickMines(dt) {
         if(mineHit>0){
             _achMineHit=true;
             if(mineHit>_achMaxMineSimulHit) _achMaxMineSimulHit=mineHit;
+            _achTotalStuns+=mineHit;
             showToast(`💥 地雷觸發！${mineHit} 隻敵人暈眩 ${MINE_STUN_DUR}s！`,2500);
             playExplosion();
             _spawnExplosionVfx(m.lat,m.lon,MINE_RADIUS);
@@ -2269,6 +2287,8 @@ function catchWantedThief() {
         invincTimer=Math.max(invincTimer,1.5);  // 抓到小偷 → 1.5s 無敵獎勵
         _achThiefCaught=true;
         _achThiefCatchCount++;
+        if(_achWantedStartTime>=0&&(performance.now()-_achWantedStartTime)<=3000) _achQuickCatch=true;
+        _achWantedStartTime=-1;
         return true;
     }
     return false;
@@ -2416,7 +2436,7 @@ function _activateItem(type) {
     if(type==='speed'){speedBoostTimer=8;showToast('⚡ 加速！速度×2，持續8秒！',2200);playItem();}
     else if(type==='star'){invincTimer=10;showToast('⭐ 無敵星星！速度×1.5+穿牆，持續10秒！',2500);playItem();}
     else if(type==='range'){rangeBoostTimer=10;showToast('🔍 廣域！收集距離×3，持續10秒！',2200);playItem();}
-    else if(type==='magnet'){magnetTimer=8;showToast('🧲 磁鐵！自動收集範圍內寶藏！8秒！',2500);playMagnet();}
+    else if(type==='magnet'){magnetTimer=8;_achMagnetPickupCount=0;showToast('🧲 磁鐵！自動收集範圍內寶藏！8秒！',2500);playMagnet();}
     else{
         aiFrozenTimer=7; freezeVfxTimer=0;
         const mapEl=document.getElementById('map');
@@ -2714,6 +2734,7 @@ function tickChaser(ai,dt,s) {
     const dToP=distM(pLat,pLon,ai.lat,ai.lon);
     if(dToP<STUN_R&&stunCD<=0&&stunTimer<=0&&invincTimer<=0){
         stunCD=STUN_CD; stunTimer=STUN_DURATION;
+        _achGuardStunCount++;
         showToast('⚡ 被追跡者定身了！無法移動 1.5 秒！',1500); playStun();
     }
     if(dToP<AI_ATTACK_R&&ai.attackCD<=0&&invincTimer<=0){
@@ -2771,6 +2792,7 @@ function tickPatroller(ai,dt,s) {
     // ⚡ 定身技能：距離夠近且冷卻好就定身玩家（AI 自身繼續移動）
     if(dToP<STUN_R&&stunCD<=0&&stunTimer<=0&&invincTimer<=0){
         stunCD=STUN_CD; stunTimer=STUN_DURATION;
+        _achGuardStunCount++;
         showToast('⚡ 被巡邏守衛定身了！無法移動 1.5 秒！',1500); playStun();
     }
     return dToP;
@@ -2844,6 +2866,7 @@ function tickThief(ai,dt,s) {
         applyScorePenalty(50,`🦹 小偷把「${name}」搬走了！-50分！🚨 ${THIEF_WANTED_DUR}秒內按Space反制！`, false);
         playThiefSteal();
         ai.wanted=true; ai.wantedTimer=THIEF_WANTED_DUR; ai.stolenAmt=20;
+        _achWantedStartTime=performance.now();
         ai.marker.getElement()?.querySelectorAll('.tf,.thurt').forEach(img=>img.classList.add('wanted-spr'));
         if(ai.targetMarker){map.removeLayer(ai.targetMarker);ai.targetMarker=null;}
         ai.targetTId=null; ai._prevTargetTId=null;
@@ -3763,6 +3786,8 @@ function loop(ts) {
                         pullingItems.set(id,{type:item.type,marker:item.marker,
                             sLat:item.lat,sLon:item.lon,progress:0});
                         delete items[id];
+                        _achMagnetPickupCount++;
+                        if(_achMagnetPickupCount>_achMagnetMaxPickup) _achMagnetMaxPickup=_achMagnetPickupCount;
                     }
                 }
             }
@@ -3785,6 +3810,10 @@ function loop(ts) {
                     const steps=Math.max(1,Math.round(dt/(1/60)));
                     const dtS=dt/steps;
                     for(let s=0;s<steps;s++) tryMove(dx/n*spd*dtS, dy/n*spd*dtS);
+                    if(isSprinting){
+                        _achSprintUsed=true;
+                        _achSprintTotalDist+=SPRINT_SPD*111111*dt;
+                    }
                     pushTrail(dt);
                 }
             }
@@ -3984,7 +4013,7 @@ async function collect(id, tLat, tLon) {
         const data=await res.json();
 
         // 更新順序連鎖
-        if(isOrder){nextOptIdx++;orderStreak++;}
+        if(isOrder){nextOptIdx++;orderStreak++;_achGotOrderBonus=true;}
         else orderStreak=0;
         // 連擊確認
         comboCount=tentativeCount;
@@ -3998,6 +4027,10 @@ async function collect(id, tLat, tLon) {
         if(id===goldenId){ _achGoldenCollected=true; _achGoldenCount++; clearGoldenTreasure(false); }
 
         collected.add(id);
+        // 傳送奇兵：傳送後 5 秒內收集
+        if(_achPortalTime>=0&&(performance.now()-_achPortalTime)<=5000) _achPortalQuickCollect=true;
+        // 迅雷開場：遊戲開始 5 秒內收集第一個寶藏
+        if(collected.size===1&&_achFirstTreasureTime<0) _achFirstTreasureTime=TIME_LIMIT-remaining;
         for(const ai of aiList){if(ai.type==='thief'&&ai.targetTId===id){if(ai.targetMarker){map.removeLayer(ai.targetMarker);ai.targetMarker=null;}ai.targetTId=null;ai._prevTargetTId=null;ai.path=[];ai.pathTimer=0;}}
         inFlight.delete(id);
         const prevScore=score;
@@ -4053,6 +4086,7 @@ async function collect(id, tLat, tLon) {
         if(thiefCount<THIEF_MAX) spawnAI('thief');
 
         if(data.status==='win' || collected.size>=TOTAL){
+            _achLastTreasureRemain=remaining;   // 最後一刻：記錄剩餘秒數
             gameReady=false;
             clearInterval(ticker);
             playWin();
@@ -4260,24 +4294,34 @@ async function _finishGame() {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({
-                ai_encounter:      _achAIEncounter,
-                item_types_used:   [..._achItemTypesUsed],
-                bomb_hit:          _achBombHit,
-                max_simul_hit:     _achMaxSimulHit,
-                portal_used:       _achPortalUsed,
-                thief_caught:      _achThiefCaught,
-                thief_catch_count: _achThiefCatchCount,
-                got_combo:         _achGotCombo,
-                max_combo:         _achMaxComboCount,
-                all_night:         allNight,
-                all_not_sunny:     allNotSunny,
-                no_damage:         !_achDmgTaken,
-                golden_collected:  _achGoldenCollected,
-                golden_count:      _achGoldenCount,
-                mine_hit:          _achMineHit,
-                max_mine_hit:      _achMaxMineSimulHit,
-                decoy_used:        _achDecoyUsed,
-                all_in_order:      nextOptIdx >= TOTAL
+                ai_encounter:         _achAIEncounter,
+                item_types_used:      [..._achItemTypesUsed],
+                bomb_hit:             _achBombHit,
+                max_simul_hit:        _achMaxSimulHit,
+                portal_used:          _achPortalUsed,
+                thief_caught:         _achThiefCaught,
+                thief_catch_count:    _achThiefCatchCount,
+                got_combo:            _achGotCombo,
+                max_combo:            _achMaxComboCount,
+                all_night:            allNight,
+                all_not_sunny:        allNotSunny,
+                no_damage:            !_achDmgTaken,
+                golden_collected:     _achGoldenCollected,
+                golden_count:         _achGoldenCount,
+                mine_hit:             _achMineHit,
+                max_mine_hit:         _achMaxMineSimulHit,
+                decoy_used:           _achDecoyUsed,
+                all_in_order:         nextOptIdx >= TOTAL,
+                sprint_used:          _achSprintUsed,
+                sprint_total_dist:    _achSprintTotalDist,
+                first_treasure_time:  _achFirstTreasureTime,
+                last_treasure_remain: _achLastTreasureRemain,
+                guard_stun_count:     _achGuardStunCount,
+                quick_catch:          _achQuickCatch,
+                total_stuns:          _achTotalStuns,
+                portal_quick_collect: _achPortalQuickCollect,
+                magnet_max_pickup:    _achMagnetMaxPickup,
+                got_order_bonus:      _achGotOrderBonus
             })
         });
     } catch(e) {}

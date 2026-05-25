@@ -43,10 +43,21 @@ ACHIEVEMENT_DEFS = {
     "decoy_first":    {"name": "聲東擊西",   "emoji": "🪤", "desc": "使用誘餌分散敵人注意力",           "tier": 2, "branch": "teal"},
     "golden_fever":   {"name": "黃金狂熱",   "emoji": "✨", "desc": "在一局中收集 3 次黃金寶藏",        "tier": 3, "branch": "amber"},
     "mine_ambush":    {"name": "地雷伏擊",   "emoji": "🕳️", "desc": "一個地雷同時命中 3 名以上敵人",    "tier": 3, "branch": "red"},
-    "perfect_route":  {"name": "絕對路線",   "emoji": "🧭", "desc": "按最優順序收集全部 10 個寶藏",     "tier": 3, "branch": "amber"},
-    "legend_score":   {"name": "黃金神話",   "emoji": "👑", "desc": "完美通關且總分 ≥ 20,000",           "tier": 4, "branch": "amber"},
-    "lightning_god":  {"name": "極速傳說",   "emoji": "⚡", "desc": "完美通關且用時 ≤ 120 秒",           "tier": 4, "branch": "amber"},
-    "combo_god":      {"name": "連擊狂神",   "emoji": "🔥", "desc": "一局達成 10 連擊",                  "tier": 4, "branch": "amber"},
+    "perfect_route":  {"name": "絕對路線",   "emoji": "🧭", "desc": "按最優順序收集全部 10 個寶藏",         "tier": 3, "branch": "amber"},
+    "sprint_first":   {"name": "破風初試",   "emoji": "💨", "desc": "首次使用衝刺",                       "tier": 2, "branch": "amber"},
+    "lightning_start":{"name": "迅雷開場",   "emoji": "⚡", "desc": "遊戲開始 5 秒內收集第一個寶藏",       "tier": 2, "branch": "amber"},
+    "sprint_legend":  {"name": "疾風傳說",   "emoji": "🌪️", "desc": "一局衝刺累計距離 ≥ 5000m",          "tier": 3, "branch": "amber"},
+    "last_moment":    {"name": "最後一刻",   "emoji": "⏱️", "desc": "剩餘 ≤ 30 秒時收集最後一個寶藏",     "tier": 3, "branch": "amber"},
+    "perfect_concert":{"name": "完美協奏",   "emoji": "🎵", "desc": "一局同時獲得順序加分、連擊加分、黃金加分", "tier": 3, "branch": "amber"},
+    "iron_guardian":  {"name": "百折不撓",   "emoji": "💪", "desc": "被守衛定身 10 次以上，仍完美通關",   "tier": 3, "branch": "amber"},
+    "all_weapons":    {"name": "全副武裝",   "emoji": "⚔️", "desc": "一局中使用手雷、地雷與誘餌",         "tier": 3, "branch": "red"},
+    "swift_catch":    {"name": "神速逮捕",   "emoji": "🏃", "desc": "通緝令發出 3 秒內逮捕小偷",          "tier": 3, "branch": "red"},
+    "stun_master":    {"name": "暈眩製造者", "emoji": "😵", "desc": "一局讓敵人暈眩累計 20 次",           "tier": 3, "branch": "red"},
+    "portal_warrior": {"name": "傳送奇兵",   "emoji": "🌀", "desc": "傳送後 5 秒內收集寶藏",              "tier": 3, "branch": "teal"},
+    "magnet_master":  {"name": "磁吸大師",   "emoji": "🧲", "desc": "磁鐵一次吸收 3 個以上道具",          "tier": 3, "branch": "teal"},
+    "legend_score":   {"name": "黃金神話",   "emoji": "👑", "desc": "完美通關且總分 ≥ 20,000",             "tier": 4, "branch": "amber"},
+    "lightning_god":  {"name": "極速傳說",   "emoji": "⚡", "desc": "完美通關且用時 ≤ 120 秒",             "tier": 4, "branch": "amber"},
+    "combo_god":      {"name": "連擊狂神",   "emoji": "🔥", "desc": "一局達成 10 連擊",                    "tier": 4, "branch": "amber"},
 }
 
 ACHIEVEMENT_PARENTS = {
@@ -74,6 +85,17 @@ ACHIEVEMENT_PARENTS = {
     "golden_fever":    "golden_first",
     "mine_ambush":     "mine_first",
     "perfect_route":   "perfect_clear",
+    "sprint_first":    "first_treasure",
+    "lightning_start": "first_treasure",
+    "sprint_legend":   "sprint_first",
+    "last_moment":     "perfect_clear",
+    "perfect_concert": "first_combo",
+    "iron_guardian":   "perfect_clear",
+    "all_weapons":     "mine_first",
+    "swift_catch":     "iron_will",
+    "stun_master":     "first_bomb",
+    "portal_warrior":  "first_portal",
+    "magnet_master":   "all_items",
     "legend_score":    "high_score",
     "lightning_god":   "lightning",
     "combo_god":       "combo_master",
@@ -87,15 +109,20 @@ ACHIEVEMENT_TIERS = [
     ["first_treasure",
      "first_encounter",
      "first_item"],
-    # ── Tier 2 ─── amber (首寶) | red (首敵) | teal (首具) ────
-    ["perfect_clear", "first_combo", "golden_first",   # amber
-     "first_bomb",    "iron_will",   "mine_first",     # red
-     "all_items",     "first_portal","decoy_first"],   # teal
-    # ── Tier 3 ─── amber (8) | red (3) ─────────────────────────
-    ["lightning", "high_score", "night_owl", "no_damage",   # amber ← perfect_clear
-     "storm_hunter", "perfect_route",                       # amber ← perfect_clear
-     "combo_master", "golden_fever",                        # amber ← first_combo / golden_first
-     "bomb_expert", "thief_master", "mine_ambush"],         # red
+    # ── Tier 2 ─── amber (首寶+衝刺) | red (首敵) | teal (首具) ──
+    ["perfect_clear", "first_combo", "golden_first",         # amber
+     "sprint_first",  "lightning_start",                     # amber（新）
+     "first_bomb",    "iron_will",   "mine_first",           # red
+     "all_items",     "first_portal","decoy_first"],         # teal
+    # ── Tier 3 ─── amber | red | teal ─────────────────────────
+    ["lightning", "high_score", "night_owl", "no_damage",    # amber ← perfect_clear
+     "storm_hunter", "perfect_route",                        # amber ← perfect_clear
+     "combo_master", "golden_fever",                         # amber ← first_combo / golden_first
+     "sprint_legend", "last_moment",                         # amber ← sprint_first / perfect_clear（新）
+     "perfect_concert", "iron_guardian",                     # amber ← first_combo / perfect_clear（新）
+     "bomb_expert", "thief_master", "mine_ambush",           # red
+     "all_weapons",  "swift_catch",  "stun_master",          # red（新）
+     "portal_warrior", "magnet_master"],                     # teal（新）
     # ── Tier 4 ─── amber ────────────────────────────────────────
     ["lightning_god", "legend_score", "combo_god"],
 ]
@@ -165,6 +192,33 @@ def compute_new_achievements(existing: dict, game_stats: dict,
         unlock("lightning_god")
     if (game_stats.get("max_combo") or 0) >= 10:
         unlock("combo_god")
+
+    # ── 新成就（批次新增）──────────────────────────────────────
+    if game_stats.get("sprint_used"):
+        unlock("sprint_first")
+    if (game_stats.get("sprint_total_dist") or 0) >= 5000:
+        unlock("sprint_legend")
+    _ftt = game_stats.get("first_treasure_time", -1)
+    if _ftt is not None and 0 <= _ftt <= 5:
+        unlock("lightning_start")
+    _ltr = game_stats.get("last_treasure_remain", -1)
+    if found_count == total and _ltr is not None and 0 <= _ltr <= 30:
+        unlock("last_moment")
+    if game_stats.get("bomb_hit") and game_stats.get("mine_hit") and game_stats.get("decoy_used"):
+        unlock("all_weapons")
+    if (game_stats.get("got_order_bonus") and game_stats.get("got_combo")
+            and game_stats.get("golden_collected")):
+        unlock("perfect_concert")
+    if found_count == total and (game_stats.get("guard_stun_count") or 0) >= 10:
+        unlock("iron_guardian")
+    if game_stats.get("quick_catch"):
+        unlock("swift_catch")
+    if (game_stats.get("total_stuns") or 0) >= 20:
+        unlock("stun_master")
+    if game_stats.get("portal_quick_collect"):
+        unlock("portal_warrior")
+    if (game_stats.get("magnet_max_pickup") or 0) >= 3:
+        unlock("magnet_master")
 
     return new_ids
 

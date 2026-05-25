@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.10.1）**
+> **最後更新：2026-05-25（v7.10.2）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -469,6 +469,11 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.10.2）排行榜 CSS 完全統一
+- **finish.html**：移除多餘的 `td:nth-child(4,5){ color:#484F58 }` 規則，確保表格字色與 index.html 逐行相同；`td:first-child` 屬性順序對齊
+
+---
 
 ### 2026-05-25（v7.10.1）精緻化 14 項收尾
 

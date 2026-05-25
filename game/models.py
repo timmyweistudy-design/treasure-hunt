@@ -142,7 +142,20 @@ class Scoreboard:
             "date": time.strftime("%Y-%m-%d"),
             "city": city
         }
-        self.scores.append(entry)
+        # 同名只保留最佳紀錄（分高者優先；同分取用時短者）
+        name_key = player.name.strip().lower()
+        existing = next(
+            (i for i, s in enumerate(self.scores)
+             if s.get("name", "").strip().lower() == name_key),
+            None
+        )
+        if existing is not None:
+            old = self.scores[existing]
+            if (entry["score"], -entry["time"]) > (old["score"], -old["time"]):
+                self.scores[existing] = entry   # 新紀錄更好，取代
+            # 否則保留舊紀錄，不寫入
+        else:
+            self.scores.append(entry)
         self.scores.sort(key=lambda x: (-x["score"], x["time"]))
         self.scores = self.scores[:100]
         # 先嘗試 GitHub，再本機備份

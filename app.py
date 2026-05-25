@@ -46,7 +46,7 @@ ACHIEVEMENT_DEFS = {
     "perfect_route":  {"name": "絕對路線",   "emoji": "🧭", "desc": "按最優順序收集全部 10 個寶藏",         "tier": 3, "branch": "amber"},
     "sprint_first":   {"name": "破風初試",   "emoji": "💨", "desc": "首次使用衝刺",                       "tier": 2, "branch": "amber"},
     "lightning_start":{"name": "迅雷開場",   "emoji": "⚡", "desc": "遊戲開始 5 秒內收集第一個寶藏",       "tier": 2, "branch": "amber"},
-    "sprint_legend":  {"name": "疾風傳說",   "emoji": "🌪️", "desc": "一局衝刺累計距離 ≥ 5000m",          "tier": 3, "branch": "amber"},
+    "sprint_legend":  {"name": "疾風傳說",   "emoji": "🌪️", "desc": "一局衝刺累計距離 ≥ 10000m",         "tier": 3, "branch": "amber"},
     "last_moment":    {"name": "最後一刻",   "emoji": "⏱️", "desc": "剩餘 ≤ 30 秒時收集最後一個寶藏",     "tier": 3, "branch": "amber"},
     "perfect_concert":{"name": "完美協奏",   "emoji": "🎵", "desc": "一局同時獲得順序加分、連擊加分、黃金加分", "tier": 3, "branch": "amber"},
     "iron_guardian":  {"name": "百折不撓",   "emoji": "💪", "desc": "被守衛定身 10 次以上，仍完美通關",   "tier": 3, "branch": "amber"},
@@ -212,7 +212,7 @@ def compute_new_achievements(existing: dict, game_stats: dict,
     # ── 新成就 ────────────────────────────────────────────────
     if gs.get("sprint_used"):
         unlock("sprint_first")
-    if sprint_dist >= 5000:
+    if sprint_dist >= 10000:
         unlock("sprint_legend")
     if ftt is not None and 0 <= ftt <= 5:
         unlock("lightning_start")

@@ -162,20 +162,8 @@
              text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
         td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px; color: #8B949E; }
         tbody tr:hover { background: rgba(56,139,253,.05); }
-        tbody tr:nth-child(1)    { background: linear-gradient(90deg,rgba(255,215,0,.09),transparent);
-                                   position: relative; overflow: hidden; }
+        tbody tr:nth-child(1)    { background: linear-gradient(90deg,rgba(255,215,0,.09),transparent); }
         tbody tr:nth-child(1) td { color: #FFD700; }
-        tbody tr:nth-child(1)::after {
-            content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,215,0,.22), transparent);
-            animation: rank1-shimmer 3.8s ease-in-out 0.8s infinite;
-            pointer-events: none;
-        }
-        @keyframes rank1-shimmer {
-            0%   { left: -100%; }
-            38%  { left: 160%; }
-            100% { left: 160%; }
-        }
         tbody tr:nth-child(2)    { background: linear-gradient(90deg,rgba(190,210,230,.05),transparent); }
         tbody tr:nth-child(2) td { color: #C9D1D9; }
         tbody tr:nth-child(3)    { background: linear-gradient(90deg,rgba(185,115,55,.07),transparent); }

@@ -1,0 +1,16 @@
+{
+  "Timmy": {
+    "game_start": true,
+    "first_treasure": true,
+    "first_encounter": true,
+    "first_item": true,
+    "perfect_clear": true,
+    "first_combo": true,
+    "first_bomb": true,
+    "iron_will": true,
+    "all_items": true,
+    "first_portal": true,
+    "high_score": true,
+    "combo_master": true
+  }
+}

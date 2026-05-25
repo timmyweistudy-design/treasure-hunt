@@ -55,6 +55,10 @@
             50%      { filter: drop-shadow(0 6px 28px rgba(255,215,0,.55)); transform: translateY(-7px); }
         }
         .hero p { font-size: 1rem; color: #8B949E; }
+        .h-city  { color:#64B5F6; font-weight:700; }
+        .h-treas { color:#FFD700; font-weight:700; }
+        .h-enemy { color:#EF5350; font-weight:700; }
+        .h-rank  { color:#66BB6A; font-weight:700; }
 
         /* ── 內容區 ── */
         .content { background: #0D1117; padding: 0 0 60px; }
@@ -151,11 +155,25 @@
              text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
         td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 14px; color: #8B949E; }
         tbody tr:hover { background: rgba(56,139,253,.05); }
+        tbody tr:nth-child(1)    { background: linear-gradient(90deg,rgba(255,215,0,.09),transparent); }
         tbody tr:nth-child(1) td { color: #FFD700; }
+        tbody tr:nth-child(2)    { background: linear-gradient(90deg,rgba(190,210,230,.05),transparent); }
         tbody tr:nth-child(2) td { color: #C9D1D9; }
-        tbody tr:nth-child(3) td { color: #F0C000; }
+        tbody tr:nth-child(3)    { background: linear-gradient(90deg,rgba(185,115,55,.07),transparent); }
+        tbody tr:nth-child(3) td { color: #CD8C5A; }
         td:first-child { font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 700; }
         td b { font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: .5px; color: #F0C000; }
+
+        /* ── 冒險指南 grid ── */
+        .guide-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
+        .guide-card { background:rgba(56,139,253,.05); border:1px solid rgba(56,139,253,.14);
+                      border-radius:12px; padding:14px 14px 12px;
+                      transition:background .2s,border-color .2s,transform .18s; }
+        .guide-card:hover { background:rgba(56,139,253,.1); border-color:rgba(56,139,253,.3); transform:translateY(-2px); }
+        .guide-icon  { font-size:1.5rem; margin-bottom:6px; }
+        .guide-title { font-size:12px; font-weight:bold; color:#F0C000; margin-bottom:4px; letter-spacing:.3px; }
+        .guide-desc  { font-size:11.5px; color:#8B949E; line-height:1.55; }
+        .guide-desc b { color:#C9D1D9; font-weight:600; }
         .badge {
             display: inline-block;
             background: rgba(56,139,253,.14); color: #64B5F6;
@@ -169,7 +187,7 @@
 <div class="hero">
     <div class="hero-inner">
         <h1>🗺️ 拓樸拾遺錄</h1>
-        <p>踏上真實城市的冒險旅途，尋找寶藏，對抗敵人，挑戰排行榜！</p>
+        <p>踏上<b class="h-city">真實城市</b>的冒險旅途，尋找<b class="h-treas">寶藏</b>，對抗<b class="h-enemy">敵人</b>，挑戰<b class="h-rank">排行榜</b>！</p>
     </div>
 </div>
 
@@ -193,15 +211,39 @@
 
         <div class="card">
             <h2>📜 冒險指南</h2>
-            <ul>
-                <li>在 <b>真實城市地圖</b> 上尋找 10 個寶藏，地點皆為真實存在的咖啡廳、博物館、公園等</li>
-                <li>AI 規劃 <b>最短尋寶路線</b>，分數以寶藏距出生點的 <b>實際公尺數</b> 計算，越遠越值錢</li>
-                <li>限時 <b>10 分鐘</b>，對抗 3 種 AI 敵人：<b>👁️ 巡邏守衛・👾 追跡者・🦹 小偷</b></li>
-                <li>拾取道具（⚡加速・⭐無敵・🔍廣域・❄️冰凍・🧲磁鐵），存入 <b>5 格道具欄</b></li>
-                <li>善用 <b>💣 手雷・💥 地雷・🎯 誘餌</b> 擊退敵人，穿越 <b>傳送門</b> 瞬間移動</li>
-                <li>天氣隨時變幻（☀️晴天・🌫️迷霧・⛈️雷雨），連續收寶觸發 <b>連擊加成</b></li>
-            </ul>
-            <div style="text-align:right">
+            <div class="guide-grid">
+                <div class="guide-card">
+                    <div class="guide-icon">🗺️</div>
+                    <div class="guide-title">真實地圖</div>
+                    <div class="guide-desc">10 個寶藏散布在<b>真實城市</b>，咖啡廳、博物館、公園等實地點位</div>
+                </div>
+                <div class="guide-card">
+                    <div class="guide-icon">📏</div>
+                    <div class="guide-title">距離計分</div>
+                    <div class="guide-desc">距出生點越遠分越高，AI 規劃<b>最短尋寶路線</b></div>
+                </div>
+                <div class="guide-card">
+                    <div class="guide-icon">⏱️</div>
+                    <div class="guide-title">限時 10 分鐘</div>
+                    <div class="guide-desc">對抗 3 種 AI：<b>👁️ 巡邏・👾 追跡・🦹 小偷</b></div>
+                </div>
+                <div class="guide-card">
+                    <div class="guide-icon">🎒</div>
+                    <div class="guide-title">道具欄</div>
+                    <div class="guide-desc">⚡加速 ⭐無敵 🔍廣域 ❄️冰凍 🧲磁鐵，<b>5 格道具欄</b></div>
+                </div>
+                <div class="guide-card">
+                    <div class="guide-icon">💣</div>
+                    <div class="guide-title">戰鬥技能</div>
+                    <div class="guide-desc">手雷・地雷・誘餌擊退敵人，<b>傳送門</b>瞬間移動</div>
+                </div>
+                <div class="guide-card">
+                    <div class="guide-icon">🌦️</div>
+                    <div class="guide-title">天氣連擊</div>
+                    <div class="guide-desc">天氣隨機變幻，連續收寶觸發<b>連擊加成</b>倍增分數</div>
+                </div>
+            </div>
+            <div style="text-align:right;margin-top:4px;">
                 <a href="/rules" class="rules-link">📖 完整規則 & 快捷鍵 →</a>
             </div>
         </div>

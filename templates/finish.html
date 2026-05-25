@@ -127,14 +127,34 @@
 
         /* ── 再出發按鈕 ── */
         .back-btn {
+            position: relative; overflow: hidden;
             display: block; text-align: center; padding: 15px;
-            background: linear-gradient(135deg, #1565C0, #388BFD);
-            color: #fff; text-decoration: none;
+            background: linear-gradient(135deg, #A0700A 0%, #FFD700 48%, #A0700A 100%);
+            color: #1a0f00; text-decoration: none;
             border-radius: 12px; font-size: 15px; font-weight: bold;
-            box-shadow: 0 4px 18px rgba(56,139,253,.4);
+            box-shadow: 0 4px 20px rgba(255,200,0,.4), 0 0 0 1px rgba(255,215,0,.18);
             transition: transform .15s, box-shadow .15s;
+            letter-spacing: .3px;
         }
-        .back-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(56,139,253,.6); }
+        .back-btn::after {
+            content: ''; position: absolute; top: -50%; left: -120%;
+            width: 50%; height: 200%;
+            background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.5) 50%, transparent 65%);
+            animation: btn-shimmer 2.8s ease-in-out infinite;
+        }
+        @keyframes btn-shimmer { 0%{left:-120%} 45%{left:160%} 100%{left:160%} }
+        .back-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,200,0,.65); }
+
+        /* ── 成就徽章 ── */
+        .ach-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:12px; }
+        .ach { display:inline-block; padding:5px 14px; border-radius:20px; font-size:11.5px;
+               font-weight:bold; letter-spacing:.3px; }
+        .ach-gold   { background:rgba(255,215,0,.18);   border:1px solid rgba(255,215,0,.5);   color:#FFD700; }
+        .ach-silver { background:rgba(180,200,220,.13); border:1px solid rgba(180,200,220,.42); color:#B8D0E8; }
+        .ach-bronze { background:rgba(180,110,55,.15);  border:1px solid rgba(180,110,55,.42);  color:#D4956A; }
+        .ach-iron   { background:rgba(100,115,130,.13); border:1px solid rgba(100,115,130,.35); color:#8B949E; }
+        .ach-speed  { background:rgba(255,152,0,.16);   border:1px solid rgba(255,152,0,.45);   color:#FFA020; }
+        .ach-rich   { background:rgba(100,200,100,.14); border:1px solid rgba(100,200,100,.42); color:#6ECB6E; }
 
         /* ── Folium 地圖 ── */
         .map-card {
@@ -177,6 +197,14 @@
             {% else %}💪 繼續磨練！{% endif %}
         </h1>
         <p>{{ player.name }} 的冒險畫上句點</p>
+        <div class="ach-row">
+            {% if found_count == total %}<span class="ach ach-gold">🏆 完美探索家</span>
+            {% elif found_count >= 8 %}<span class="ach ach-silver">🥈 精銳冒險者</span>
+            {% elif found_count >= 5 %}<span class="ach ach-bronze">🥉 初心探索者</span>
+            {% else %}<span class="ach ach-iron">⚔️ 繼續磨練</span>{% endif %}
+            {% if player.elapsed_time|float < 300 %}<span class="ach ach-speed">⚡ 閃電冒險</span>{% endif %}
+            {% if player.score >= 5000 %}<span class="ach ach-rich">💰 高分獵人</span>{% endif %}
+        </div>
     </div>
 </div>
 

@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.2）**
+> **最後更新：2026-05-25（v7.3）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -454,6 +454,28 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.3）視覺精緻化 Round 3
+
+**game.html：**
+- 讀取 spinner：border spinner → 彗星光弧 + 同心圓光暈
+- 讀取城市標題：ThenKhung + 金藍漸層
+- 進度條：加 prog-header（標籤+Orbitron 數字 x/10），高度 5→7px，glow 填充
+- 結束遊戲按鈕：加危險紅光脈動動畫
+- 迷你地圖：加外發光 glow
+- 天氣 chip：依天氣類型套色（sunny/fog/storm），JS 改用 className 不用 inline style
+- 連擊 chip：金色 + 脈動 glow 動畫
+- 充能格子：●● 改為 CSS `.c-pip` 圓形格子（filled/empty 各自樣式）
+- 已收集寶藏卡：`.tc.found .nm` 加刪除線
+
+**index.html：**
+- 冒險指南：ul 重排為 2×3 icon card grid（hover 浮起）
+- 排行榜前3名：各加金/銀/銅漸層行背景
+- Hero 副標題關鍵詞配色（真實城市=藍、寶藏=金、敵人=紅、排行榜=綠）
+
+**finish.html：**
+- 再次出發按鈕：藍色→金色 + shimmer，與首頁出發按鈕統一
+- 結算成就徽章：完美探索家/精銳冒險者/初心探索者/繼續磨練 + 閃電冒險 + 高分獵人
 
 ### 2026-05-25（v7.2）視覺精緻化 Round 2
 

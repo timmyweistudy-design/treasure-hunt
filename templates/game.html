@@ -213,8 +213,14 @@
                       padding: 6px 10px; margin-bottom: 10px; font-size: 11px; color: #C9B840; }
         .order-hint b { color: #F0C000; }
 
-        .prog-wrap { height: 5px; background: rgba(255,255,255,.08); border-radius: 3px; margin-bottom: 10px; }
-        .prog-fill  { height: 100%; background: linear-gradient(90deg,#F0C000,#388BFD); border-radius: 3px; transition: width .4s; }
+        .prog-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+        .prog-label  { font-size:9.5px; color:#484F58; text-transform:uppercase; letter-spacing:.5px; }
+        .prog-count  { font-family:'Orbitron',monospace; font-size:11.5px; color:#F0C000; font-weight:700; }
+        .prog-wrap { height: 7px; background: rgba(255,255,255,.07); border-radius: 4px; margin-bottom: 10px;
+                     box-shadow: inset 0 1px 3px rgba(0,0,0,.4); }
+        .prog-fill  { height: 100%; background: linear-gradient(90deg,#F0C000,#388BFD); border-radius: 4px;
+                      transition: width .45s cubic-bezier(.4,0,.2,1);
+                      box-shadow: 0 0 6px rgba(56,139,253,.4); }
         .sec-lbl { font-size: 11px; color: #8B949E; font-weight: bold;
                    letter-spacing: .4px; margin-bottom: 8px; }
 
@@ -222,7 +228,8 @@
               border-left: 4px solid rgba(56,139,253,.35); box-shadow: 0 2px 8px rgba(0,0,0,.35);
               transition: all .25s; }
         .tc.near   { border-left-color: #F0C000; background: rgba(255,215,0,.07); }
-        .tc.found  { border-left-color: rgba(100,180,100,.5); opacity: .42; }
+        .tc.found  { border-left-color: rgba(100,180,100,.45); opacity: .52; }
+        .tc.found .nm { text-decoration: line-through; color: #484F58; }
         .tc.target { border-left-color: #388BFD; background: rgba(56,139,253,.1); }
         .tc .sq  { font-size: 10.5px; color: #484F58; }
         .tc .nm  { font-size: 13px; font-weight: bold; margin: 2px 0 3px; color: #E6EDF3; }
@@ -239,7 +246,12 @@
         .cbtn:disabled { background: rgba(80,140,80,.6); cursor: default; }
         .endbtn { width: 100%; padding: 10px; background: linear-gradient(135deg,#C62828,#E53935); color: #fff;
                   border: none; border-radius: 6px; cursor: pointer;
-                  font-size: 14px; font-weight: bold; box-shadow: 0 3px 12px rgba(198,40,40,.4); }
+                  font-size: 14px; font-weight: bold;
+                  animation: endbtn-pulse 2.8s ease-in-out infinite; }
+        @keyframes endbtn-pulse {
+            0%,100% { box-shadow: 0 3px 12px rgba(198,40,40,.4); }
+            50%     { box-shadow: 0 4px 22px rgba(239,83,80,.75), 0 0 0 2px rgba(239,83,80,.18); }
+        }
         .endbtn:hover { background: linear-gradient(135deg,#E53935,#EF5350); }
 
         /* ── Loading overlay ── */
@@ -257,11 +269,26 @@
                    border: 1px solid rgba(56,139,253,.25);
                    box-shadow: 0 16px 52px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.04);
                    backdrop-filter: blur(18px); }
-        .ld-title { font-size: 18px; font-weight: bold; margin-bottom: 24px; letter-spacing: .5px;
-                    color: #F0C000; }
-        .ld-spin  { width: 48px; height: 48px; border: 4px solid rgba(56,139,253,.18);
-                    border-top-color: #388BFD; border-radius: 50%;
-                    animation: spin .8s linear infinite; margin: 0 auto 18px; }
+        .ld-title { font-family: 'ThenKhung', 'Noto Serif TC', serif;
+                    font-size: 26px; font-weight: bold; margin-bottom: 22px; letter-spacing: 2px;
+                    background: linear-gradient(135deg, #FFD700, #F0C000, #64B5F6);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+                    filter: drop-shadow(0 0 8px rgba(255,215,0,.25)); }
+        .ld-spin  { width: 54px; height: 54px; border-radius: 50%; position: relative;
+                    margin: 0 auto 22px; }
+        .ld-spin::before {
+            content: ''; position: absolute; inset: -1px; border-radius: 50%;
+            border: 1px solid rgba(56,139,253,.15);
+            box-shadow: 0 0 0 8px rgba(56,139,253,.06), 0 0 0 18px rgba(56,139,253,.025);
+        }
+        .ld-spin::after {
+            content: ''; position: absolute; inset: -3px; border-radius: 50%;
+            border: 3.5px solid transparent;
+            border-top-color: #64B5F6;
+            border-right-color: rgba(100,181,246,.38);
+            filter: drop-shadow(0 0 8px rgba(56,139,253,.8));
+            animation: spin .9s linear infinite;
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
         .ld-step  { font-size: 14px; color: #F0C000; margin-bottom: 6px; min-height: 22px; }
         .ld-sub   { font-size: 11.5px; color: #8B949E; margin-bottom: 20px; min-height: 18px; }
@@ -315,8 +342,8 @@
         /* ── Mini-map ── */
         #mini-map { position: absolute; bottom: 64px; left: 10px;
                     width: 130px; height: 130px; border-radius: 12px;
-                    border: 2px solid rgba(56,139,253,.55);
-                    box-shadow: 0 4px 16px rgba(0,0,0,.5), 0 0 0 1px rgba(56,139,253,.15);
+                    border: 2px solid rgba(56,139,253,.6);
+                    box-shadow: 0 4px 16px rgba(0,0,0,.5), 0 0 16px rgba(56,139,253,.38), 0 0 0 1px rgba(56,139,253,.2);
                     z-index: 995; overflow: hidden; opacity: .9; cursor: pointer;
                     transition: opacity .2s, transform .2s; }
         #mini-map:hover { opacity: 1; transform: scale(1.05); }
@@ -507,6 +534,20 @@
             border:1px solid rgba(255,255,255,.1);white-space:nowrap;
         }
         .bhud-chip.danger { background:rgba(198,40,40,.55)!important;border-color:rgba(255,82,82,.4)!important; }
+        /* 天氣 chip 配色 */
+        #chip-weather.chip-sunny { background:rgba(80,160,255,.18); border-color:rgba(80,160,255,.42); color:#82CFFF; }
+        #chip-weather.chip-fog   { background:rgba(140,150,180,.2);  border-color:rgba(140,150,180,.42); color:#B0B8D0; }
+        #chip-weather.chip-storm { background:rgba(40,70,160,.25);   border-color:rgba(80,110,220,.5);   color:#8899EE; }
+        /* 連擊 chip */
+        #chip-combo { background:rgba(255,140,0,.2); border:1.5px solid rgba(255,140,0,.52); color:#FFAA00;
+                      animation:combo-glow .75s ease-in-out infinite; }
+        @keyframes combo-glow { 0%,100%{box-shadow:0 0 4px rgba(255,140,0,.35)} 50%{box-shadow:0 0 14px rgba(255,140,0,.8)} }
+        /* 充能格子 */
+        .c-pip { display:inline-block; width:7px; height:7px; border-radius:50%;
+                 background:rgba(255,255,255,.16); border:1.5px solid rgba(255,255,255,.26);
+                 margin:0 1.5px; vertical-align:middle; transition:background .2s,box-shadow .2s; }
+        .c-pip.on { background:rgba(255,255,255,.88); border-color:rgba(255,255,255,.7);
+                    box-shadow:0 0 5px rgba(255,255,255,.55); }
         .bhud-chip.bhud-alert {
             background:rgba(198,40,40,.6)!important;border-color:rgba(255,82,82,.5)!important;
             animation:wanted-flash .5s ease-in-out infinite;
@@ -777,6 +818,10 @@
             </div>
 
             <!-- 進度條 -->
+            <div class="prog-header">
+                <span class="prog-label">寶藏進度</span>
+                <span class="prog-count" id="prog-count">0 / {{ total }}</span>
+            </div>
             <div class="prog-wrap">
                 <div class="prog-fill" id="progress" style="width:0"></div>
             </div>
@@ -1460,17 +1505,15 @@ function setWeather(type) {
     _stopAmbient();
     document.getElementById('weather-fog').style.display   = type==='fog'   ? 'block':'none';
     document.getElementById('weather-storm').style.display = type==='storm' ? 'block':'none';
+    if(_chipWeatherEl) _chipWeatherEl.className='bhud-chip chip-'+type;
     if(type==='sunny'){
-        if(_chipWeatherEl) _chipWeatherEl.style.background='';
         playWeatherChange('sunny');
         birdTimer=8+Math.random()*10;
     } else if(type==='fog'){
-        if(_chipWeatherEl) _chipWeatherEl.style.background='rgba(180,190,210,.55)';
         showToast('🌫️ 大霧降臨！守衛視野大幅縮短！',3000);
         playWeatherChange('fog');
         _startAmbient(80, 2200, 0.18);
     } else {
-        if(_chipWeatherEl) _chipWeatherEl.style.background='rgba(20,50,120,.55)';
         showToast('⛈️ 雷雨來了！AI 加速、玩家變慢！',3000);
         playWeatherChange('storm');
         _startAmbient(600, 6000, 0.42);
@@ -3132,12 +3175,13 @@ function tickEffects(dt) {
     // 手雷 chip（常駐）
     const gChr=document.getElementById('grenade-chr');
     const gCdTxt=document.getElementById('grenade-cd-txt');
-    if(gChr) gChr.textContent='●'.repeat(grenadeCharges)+'○'.repeat(GRENADE_CHARGES-grenadeCharges);
+    function _pips(n,max){return Array.from({length:max},(_,i)=>`<span class="c-pip${i<n?' on':''}"></span>`).join('');}
+    if(gChr) gChr.innerHTML=_pips(grenadeCharges,GRENADE_CHARGES);
     if(gCdTxt) gCdTxt.textContent=grenadeRechargeCooldown>0?`(${Math.ceil(grenadeRechargeCooldown)}s)`:'';
     // 地雷 chip（常駐）
     const mChr=document.getElementById('mine-chr');
     const mCdTxt=document.getElementById('mine-cd-txt');
-    if(mChr) mChr.textContent='●'.repeat(mineCharges)+'○'.repeat(MINE_CHARGES-mineCharges);
+    if(mChr) mChr.innerHTML=_pips(mineCharges,MINE_CHARGES);
     if(mCdTxt) mCdTxt.textContent=mineRechargeCooldown>0?`(${Math.ceil(mineRechargeCooldown)}s)`:'';
     // 通緝 chip
     const wChip=document.getElementById('chip-wanted');
@@ -3931,6 +3975,8 @@ async function collect(id, tLat, tLon) {
 
         document.getElementById('v-found').textContent=found;
         document.getElementById('progress').style.width=(found/TOTAL*100)+'%';
+        const _pcEl=document.getElementById('prog-count');
+        if(_pcEl) _pcEl.textContent=found+' / '+TOTAL;
 
         const {card,dEl}=_tDomCache[id]||{};
         if(card) card.className='tc found';

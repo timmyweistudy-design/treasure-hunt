@@ -331,14 +331,16 @@
 
         /* ── Toast ── */
         .toast { position: fixed; top: 76px; left: 50%;
-                 transform: translateX(-50%) translateY(-14px);
+                 transform: translateX(-50%) translateY(-28px) scale(.88);
                  background: rgba(13,17,23,.95); color: #E6EDF3; padding: 9px 22px;
                  border-radius: 24px; font-size: 13px; z-index: 9999;
                  opacity: 0; pointer-events: none; white-space: nowrap;
                  border: 1px solid rgba(56,139,253,.25); backdrop-filter: blur(10px);
                  box-shadow: 0 4px 24px rgba(0,0,0,.5), 0 0 0 1px rgba(56,139,253,.08);
-                 transition: opacity .22s ease, transform .3s cubic-bezier(.17,.67,.35,1.25); }
-        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+                 transition: opacity .22s ease,
+                             transform .38s cubic-bezier(.17,.67,.3,1.5),
+                             background 2.2s ease, border-color 2s ease, color 1.8s ease; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 
         /* ── Leaflet icons — Player sprite ── */
         .player-dot {
@@ -555,7 +557,7 @@
         .leaflet-marker-icon:focus,
         .leaflet-marker-icon:focus-visible { outline: none !important; box-shadow: none !important; }
 
-        /* ── Leaflet 縮放控制件暗色主題 ── */
+        /* ── Leaflet 縮放控制件 — 夜間 ── */
         .leaflet-bar {
             border: 1px solid rgba(56,139,253,.38) !important;
             box-shadow: 0 4px 18px rgba(0,0,0,.6), 0 0 0 1px rgba(56,139,253,.1) !important;
@@ -581,12 +583,30 @@
             color: rgba(100,181,246,.25) !important;
             cursor: default !important;
         }
+        /* ── Leaflet 縮放控制件 — 白天 ── */
+        body.day .leaflet-bar {
+            border-color: rgba(180,130,0,.4) !important;
+            box-shadow: 0 4px 14px rgba(0,0,0,.2), 0 0 0 1px rgba(180,130,0,.1) !important;
+        }
+        body.day .leaflet-bar a {
+            background: rgba(255,248,220,.97) !important;
+            color: #7A4800 !important;
+            border-bottom-color: rgba(180,130,0,.2) !important;
+        }
+        body.day .leaflet-bar a:hover {
+            background: rgba(255,235,160,.99) !important;
+            color: #4A2800 !important;
+        }
+        body.day .leaflet-bar a.leaflet-disabled {
+            background: rgba(255,248,220,.55) !important;
+            color: rgba(122,72,0,.28) !important;
+        }
 
         /* ── 日夜系統 ── */
         /* 平滑過渡（不影響動畫用的 transform/opacity） */
         .hd, .sb, #bottom-hud, .kbd-box, .compass-box, .compass-arrow-wrap,
         .tc, .order-hint, .slot-box, .bhud-chip, .eff-chip, .kbd-toggle,
-        #mute-btn, .sprint-track, .endbtn, .toast, #daynight-badge,
+        #mute-btn, .sprint-track, .endbtn, #daynight-badge,
         .prog-fill, .sec-lbl, .compass-lbl, .compass-name, .compass-dist,
         .key, .kbd-box b, .order-hint b {
             transition: background 2.2s ease, background-color 2.2s ease,

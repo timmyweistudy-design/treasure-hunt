@@ -14,7 +14,8 @@
     "combo_master": true,
     "golden_first": true,
     "mine_first": true,
-    "decoy_first": true
+    "decoy_first": true,
+    "perfect_route": true
   },
   "timmy": {
     "game_start": true

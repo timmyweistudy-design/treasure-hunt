@@ -27,5 +27,8 @@
   },
   "timmy": {
     "game_start": true
+  },
+  "t": {
+    "game_start": true
   }
 }

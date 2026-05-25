@@ -72,19 +72,24 @@
 
         /* ── 統計格 ── */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
-        .stat { text-align: center; padding: 20px 10px; border-radius: 14px;
-                position: relative; overflow: hidden; }
-        .stat::after {
+        .stat { text-align: center; padding: 20px 6px; border-radius: 14px;
+                position: relative; overflow: visible; }
+        /* shimmer 用獨立的 inner-shimmer div 隔離，不影響數字溢出 */
+        .stat .inner-shimmer {
+            position: absolute; inset: 0; border-radius: 14px; overflow: hidden;
+            pointer-events: none;
+        }
+        .stat .inner-shimmer::after {
             content: '';
             position: absolute; top: 0; left: -100%;
             width: 50%; height: 100%;
             background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.15) 50%, transparent 70%);
             animation: stat-shimmer 2.6s ease-out forwards;
         }
-        .stat:nth-child(1)::after { animation-delay: .3s; }
-        .stat:nth-child(2)::after { animation-delay: .55s; }
-        .stat:nth-child(3)::after { animation-delay: .8s; }
-        .stat:nth-child(4)::after { animation-delay: 1.05s; }
+        .stat:nth-child(1) .inner-shimmer::after { animation-delay: .3s; }
+        .stat:nth-child(2) .inner-shimmer::after { animation-delay: .55s; }
+        .stat:nth-child(3) .inner-shimmer::after { animation-delay: .8s; }
+        .stat:nth-child(4) .inner-shimmer::after { animation-delay: 1.05s; }
         @keyframes stat-shimmer {
             0%   { left: -100%; }
             100% { left: 160%; }
@@ -114,7 +119,7 @@
 
         .stat .num {
             font-family: 'Orbitron', monospace; font-weight: 900;
-            font-size: 2rem; line-height: 1; letter-spacing: 1px;
+            font-size: clamp(1.35rem, 4.5vw, 2rem); line-height: 1; letter-spacing: 0;
         }
         .stat-total   .num { color: #FFD700; }
         .stat-treas   .num { color: #64B5F6; }
@@ -241,18 +246,22 @@
         <div class="card">
             <div class="stats">
                 <div class="stat stat-total">
+                    <div class="inner-shimmer"></div>
                     <div class="num" id="final-score" data-target="{{ player.score }}">0</div>
                     <div class="label">總分</div>
                 </div>
                 <div class="stat stat-treas">
+                    <div class="inner-shimmer"></div>
                     <div class="num">{{ found_count }}/{{ total }}</div>
                     <div class="label">寶藏</div>
                 </div>
                 <div class="stat stat-time-b">
+                    <div class="inner-shimmer"></div>
                     <div class="num" style="font-size:1.5rem">+{{ time_bonus }}</div>
                     <div class="label">時間獎勵</div>
                 </div>
                 <div class="stat stat-elapsed">
+                    <div class="inner-shimmer"></div>
                     <div class="num" style="font-size:1.5rem">{{ player.elapsed_time | round(0) | int }}s</div>
                     <div class="label">用時</div>
                 </div>

@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.1）**
+> **最後更新：2026-05-25（v7.2）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -454,6 +454,11 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.2）視覺精緻化 Round 2
+
+- `game.html`：Toast 滑入 + 彈跳動畫、效果 Chip 各色彩徽章（夜/日雙模式）、Leaflet 縮放按鈕暗色主題覆寫
+- `rules.html`：ThenKhung 標題、浮動動畫、section 卡片入場 + hover 發光、item-card hover 浮起、自訂滾動條
 
 ### 2026-05-25（v7.1）標題字型換為 ThenKhung
 

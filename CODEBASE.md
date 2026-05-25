@@ -28,7 +28,7 @@
 | 框架 | Flask（後端）+ Leaflet.js 1.9.4（地圖前端） |
 | 外部 API | Nominatim（地理編碼）、Overpass（3鏡像並行，POI/建築）、OSRM（路線規劃） |
 | 演算法 | TSP Brute-force（≤8點）+ Nearest-Neighbor + **2-opt 改善**（>8點）、Haversine、Ray-Casting 多邊形碰撞、A* 路徑規劃 |
-| 字型 | Ma Shan Zheng（標題）、Orbitron（數字/計時）、Noto Sans TC（中文內文） |
+| 字型 | ThenKhung（標題，本地字型）、Orbitron（數字/計時）、Noto Sans TC（中文內文） |
 | 部署 | Render.com（免費方案，15分鐘無人使用後睡眠，冷啟動 30-50s） |
 | 排行榜持久化 | GitHub Contents API（`scores.json` 存 repo，繞過 Render ephemeral 磁碟） |
 
@@ -455,10 +455,11 @@ Scoreboard.save_score()
 
 ## 9. 更新日誌
 
-### 2026-05-25（v7.1）標題字型換為 Ma Shan Zheng
+### 2026-05-25（v7.1）標題字型換為 ThenKhung
 
-- `templates/index.html`：`.hero h1` 字型由 Orbitron 改為 Ma Shan Zheng（Google Fonts 毛筆楷書）
-- Google Fonts 載入字串新增 `family=Ma+Shan+Zheng`
+- `static/fonts/ThenKhung-Regular.ttf`：新增本地字型（來源：github.com/MoonlitOwen/ThenKhung）
+- `templates/index.html`：`@font-face` 載入 ThenKhung，`.hero h1` 套用此字型，fallback 為 Noto Serif TC
+- 移除 Ma Shan Zheng（不支援繁體字）
 
 ### 2026-05-24（v7.0）Bug 修正：Popup DOM 快取 + 小偷標示位置
 

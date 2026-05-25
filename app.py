@@ -38,7 +38,15 @@ ACHIEVEMENT_DEFS = {
     "bomb_expert":    {"name": "爆破專家",   "emoji": "💣", "desc": "一顆炸彈同時命中 5 名敵人",         "tier": 3, "branch": "red"},
     "thief_master":   {"name": "鐵血神探",   "emoji": "🕵️", "desc": "在一局中逮捕小偷 5 次",            "tier": 3, "branch": "red"},
     "storm_hunter":   {"name": "風雨無阻",   "emoji": "⛈️", "desc": "完美通關且所有寶藏在非晴天收集",   "tier": 3, "branch": "amber"},
+    "golden_first":   {"name": "黃金初嚐",   "emoji": "🌟", "desc": "收集一次黃金寶藏",                 "tier": 2, "branch": "amber"},
+    "mine_first":     {"name": "初埋地雷",   "emoji": "💣", "desc": "用地雷命中一名敵人",               "tier": 2, "branch": "red"},
+    "decoy_first":    {"name": "聲東擊西",   "emoji": "🪤", "desc": "使用誘餌分散敵人注意力",           "tier": 2, "branch": "teal"},
+    "golden_fever":   {"name": "黃金狂熱",   "emoji": "✨", "desc": "在一局中收集 3 次黃金寶藏",        "tier": 3, "branch": "amber"},
+    "mine_ambush":    {"name": "地雷伏擊",   "emoji": "🕳️", "desc": "一個地雷同時命中 3 名以上敵人",    "tier": 3, "branch": "red"},
+    "perfect_route":  {"name": "絕對路線",   "emoji": "🧭", "desc": "按最優順序收集全部 10 個寶藏",     "tier": 3, "branch": "amber"},
     "legend_score":   {"name": "黃金神話",   "emoji": "👑", "desc": "完美通關且總分 ≥ 20,000",           "tier": 4, "branch": "amber"},
+    "lightning_god":  {"name": "極速傳說",   "emoji": "⚡", "desc": "完美通關且用時 ≤ 120 秒",           "tier": 4, "branch": "amber"},
+    "combo_god":      {"name": "連擊狂神",   "emoji": "🔥", "desc": "一局達成 10 連擊",                  "tier": 4, "branch": "amber"},
 }
 
 ACHIEVEMENT_PARENTS = {
@@ -60,16 +68,24 @@ ACHIEVEMENT_PARENTS = {
     "bomb_expert":     "first_bomb",
     "thief_master":    "iron_will",
     "storm_hunter":    "perfect_clear",
+    "golden_first":    "first_treasure",
+    "mine_first":      "first_encounter",
+    "decoy_first":     "first_item",
+    "golden_fever":    "golden_first",
+    "mine_ambush":     "mine_first",
+    "perfect_route":   "perfect_clear",
     "legend_score":    "high_score",
+    "lightning_god":   "lightning",
+    "combo_god":       "combo_master",
 }
 
 # Tier ordering for display
 ACHIEVEMENT_TIERS = [
     ["game_start"],
     ["first_treasure", "first_encounter", "first_item"],
-    ["perfect_clear", "first_combo", "first_bomb", "iron_will", "all_items", "first_portal"],
-    ["lightning", "high_score", "night_owl", "no_damage", "combo_master", "bomb_expert", "thief_master", "storm_hunter"],
-    ["legend_score"],
+    ["perfect_clear", "first_combo", "first_bomb", "iron_will", "all_items", "first_portal", "golden_first", "mine_first", "decoy_first"],
+    ["lightning", "high_score", "night_owl", "no_damage", "combo_master", "bomb_expert", "thief_master", "storm_hunter", "golden_fever", "mine_ambush", "perfect_route"],
+    ["legend_score", "lightning_god", "combo_god"],
 ]
 
 
@@ -121,6 +137,22 @@ def compute_new_achievements(existing: dict, game_stats: dict,
         unlock("storm_hunter")
     if found_count == total and score >= 20000:
         unlock("legend_score")
+    if game_stats.get("golden_collected"):
+        unlock("golden_first")
+    if (game_stats.get("golden_count") or 0) >= 3:
+        unlock("golden_fever")
+    if game_stats.get("mine_hit"):
+        unlock("mine_first")
+    if (game_stats.get("max_mine_hit") or 0) >= 3:
+        unlock("mine_ambush")
+    if game_stats.get("decoy_used"):
+        unlock("decoy_first")
+    if found_count == total and game_stats.get("all_in_order"):
+        unlock("perfect_route")
+    if found_count == total and elapsed <= 120:
+        unlock("lightning_god")
+    if (game_stats.get("max_combo") or 0) >= 10:
+        unlock("combo_god")
 
     return new_ids
 

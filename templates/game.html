@@ -1110,6 +1110,11 @@ let _achGotCombo       = false;
 let _achMaxComboCount  = 0;
 let _achNightCollect   = {};     // {treasureId: bool (true=collected at night)}
 let _achWeatherCollect = {};     // {treasureId: 'sunny'|'fog'|'storm'}
+let _achGoldenCollected= false;
+let _achGoldenCount    = 0;      // 累計黃金寶藏次數
+let _achMineHit        = false;
+let _achMaxMineSimulHit= 0;      // 一個地雷最多同時命中數
+let _achDecoyUsed      = false;
 
 // ── 音效系統（Web Audio API，無需音效檔）────────────────────
 let audioCtx  = null;
@@ -1932,6 +1937,7 @@ function dropDecoy() {
             className:'',iconSize:[30,30],iconAnchor:[15,15]
         }),zIndexOffset:800,interactive:false
     }).addTo(map);
+    _achDecoyUsed=true;
     for(const ai of aiList){ai.pathTimer=0;ai._astarPending=false;}
     showToast('🎯 誘餌投出！AI 轉而追逐誘餌！',2500);
     playDecoy();
@@ -2209,19 +2215,22 @@ function tickMines(dt) {
         // 自動到期
         m.life=Math.max(0,m.life-dt);
         if(m.life<=0){ map.removeLayer(m.marker); if(m.circle) map.removeLayer(m.circle); mines.splice(i,1); continue; }
-        let triggered=false;
+        let mineHit=0;
         for(const ai of aiList){
             if(ai.combatStun>0) continue;
             if(distM(m.lat,m.lon,ai.lat,ai.lon)<=MINE_RADIUS){
                 _stunAI(ai,MINE_STUN_DUR);
-                showToast(`💥 地雷觸發！${ai.type==='chaser'?'👾追跡者':ai.type==='patroller'?'👁️巡邏守衛':'🦹小偷'}暈眩 ${MINE_STUN_DUR}s！`,2500);
-                playExplosion();
-                _spawnExplosionVfx(m.lat,m.lon,MINE_RADIUS);
-                triggered=true;
-                break;
+                mineHit++;
             }
         }
-        if(triggered){ map.removeLayer(m.marker); if(m.circle) map.removeLayer(m.circle); mines.splice(i,1); }
+        if(mineHit>0){
+            _achMineHit=true;
+            if(mineHit>_achMaxMineSimulHit) _achMaxMineSimulHit=mineHit;
+            showToast(`💥 地雷觸發！${mineHit} 隻敵人暈眩 ${MINE_STUN_DUR}s！`,2500);
+            playExplosion();
+            _spawnExplosionVfx(m.lat,m.lon,MINE_RADIUS);
+            map.removeLayer(m.marker); if(m.circle) map.removeLayer(m.circle); mines.splice(i,1);
+        }
     }
     // recharge
     if(mineRechargeQueue>0&&mineCharges<MINE_CHARGES){
@@ -3985,8 +3994,8 @@ async function collect(id, tLat, tLon) {
         if(comboCount>=2) _achGotCombo=true;
         _achNightCollect[id]=!_isDaytime;
         _achWeatherCollect[id]=weatherType;
-        // 黃金收集
-        if(id===goldenId) clearGoldenTreasure(false);
+        // 黃金收集 & 成就追蹤
+        if(id===goldenId){ _achGoldenCollected=true; _achGoldenCount++; clearGoldenTreasure(false); }
 
         collected.add(id);
         for(const ai of aiList){if(ai.type==='thief'&&ai.targetTId===id){if(ai.targetMarker){map.removeLayer(ai.targetMarker);ai.targetMarker=null;}ai.targetTId=null;ai._prevTargetTId=null;ai.path=[];ai.pathTimer=0;}}
@@ -4262,7 +4271,13 @@ async function _finishGame() {
                 max_combo:         _achMaxComboCount,
                 all_night:         allNight,
                 all_not_sunny:     allNotSunny,
-                no_damage:         !_achDmgTaken
+                no_damage:         !_achDmgTaken,
+                golden_collected:  _achGoldenCollected,
+                golden_count:      _achGoldenCount,
+                mine_hit:          _achMineHit,
+                max_mine_hit:      _achMaxMineSimulHit,
+                decoy_used:        _achDecoyUsed,
+                all_in_order:      nextOptIdx >= TOTAL
             })
         });
     } catch(e) {}

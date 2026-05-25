@@ -11,7 +11,10 @@
     "all_items": true,
     "first_portal": true,
     "high_score": true,
-    "combo_master": true
+    "combo_master": true,
+    "golden_first": true,
+    "mine_first": true,
+    "decoy_first": true
   },
   "timmy": {
     "game_start": true

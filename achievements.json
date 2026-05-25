@@ -15,7 +15,9 @@
     "golden_first": true,
     "mine_first": true,
     "decoy_first": true,
-    "perfect_route": true
+    "perfect_route": true,
+    "sprint_first": true,
+    "lightning_start": true
   },
   "timmy": {
     "game_start": true

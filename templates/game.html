@@ -545,9 +545,12 @@
         /* 充能格子 */
         .c-pip { display:inline-block; width:7px; height:7px; border-radius:50%;
                  background:rgba(255,255,255,.16); border:1.5px solid rgba(255,255,255,.26);
-                 margin:0 1.5px; vertical-align:middle; transition:background .2s,box-shadow .2s; }
+                 margin:0 1.5px; vertical-align:middle;
+                 transition:background 2.2s ease,border-color 2s ease,box-shadow 1.5s ease; }
         .c-pip.on { background:rgba(255,255,255,.88); border-color:rgba(255,255,255,.7);
                     box-shadow:0 0 5px rgba(255,255,255,.55); }
+        body.day .c-pip    { background:rgba(0,0,0,.14); border-color:rgba(0,0,0,.28); box-shadow:none; }
+        body.day .c-pip.on { background:rgba(0,0,0,.72); border-color:rgba(0,0,0,.58); box-shadow:0 0 4px rgba(0,0,0,.25); }
         .bhud-chip.bhud-alert {
             background:rgba(198,40,40,.6)!important;border-color:rgba(255,82,82,.5)!important;
             animation:wanted-flash .5s ease-in-out infinite;

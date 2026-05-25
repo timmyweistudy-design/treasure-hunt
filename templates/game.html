@@ -867,7 +867,7 @@
 
         </div>
         <div class="sb-foot">
-            <button class="endbtn" onclick="if(confirm('確定結束？'))location.href='/finish'">
+            <button class="endbtn" onclick="if(confirm('確定結束？'))_finishGame()">
                 🏁 結束遊戲
             </button>
         </div>
@@ -1096,6 +1096,18 @@ let countdownStarted = false;
 let nextOptIdx  = 0;
 let orderStreak = 0;
 let nearbyRing  = null;
+
+// ── 成就追蹤 ──────────────────────────────────────────────
+let _achAIEncounter    = false;
+let _achDmgTaken       = false;
+let _achItemTypesUsed  = new Set();
+let _achBombHit        = false;
+let _achMaxSimulHit    = 0;
+let _achPortalUsed     = false;
+let _achThiefCaught    = false;
+let _achGotCombo       = false;
+let _achMaxComboCount  = 0;
+let _achNightCollect   = {};     // {treasureId: bool (true=collected at night)}
 
 // ── 音效系統（Web Audio API，無需音效檔）────────────────────
 let audioCtx  = null;
@@ -1628,6 +1640,7 @@ function useNearestPortal() {
             pLat=dest.lat; pLon=dest.lon;
             camLat=dest.lat; camLon=dest.lon;
             portalCooldown=PORTAL_CD;
+            _achPortalUsed=true;
             showToast('🌀 任意門！傳送到對角區域！',2200);
             playPortal();
             spawnParticles(dest.lat,dest.lon);
@@ -2149,7 +2162,11 @@ function tickGrenades(dt) {
             for(const ai of aiList){
                 if(distM(eLat,eLon,ai.lat,ai.lon)<=GRENADE_RADIUS){ _stunAI(ai,GRENADE_STUN_DUR); hit++; }
             }
-            if(hit>0) showToast(`💣 ${directHit?'直接命中！':'手雷爆炸！'}${hit} 隻敵人暈眩 ${GRENADE_STUN_DUR}s！`,2500);
+            if(hit>0){
+                _achBombHit=true;
+                if(hit>_achMaxSimulHit) _achMaxSimulHit=hit;
+                showToast(`💣 ${directHit?'直接命中！':'手雷爆炸！'}${hit} 隻敵人暈眩 ${GRENADE_STUN_DUR}s！`,2500);
+            }
         }
     }
     // recharge
@@ -2239,6 +2256,7 @@ function catchWantedThief() {
         thiefCount=Math.max(0,thiefCount-1);
         wantedMaxTimer=0;
         invincTimer=Math.max(invincTimer,1.5);  // 抓到小偷 → 1.5s 無敵獎勵
+        _achThiefCaught=true;
         return true;
     }
     return false;
@@ -2382,6 +2400,7 @@ function tickItems(dt) {
 const _ITEM_ICONS = {speed:'⚡',star:'⭐',range:'🔍',magnet:'🧲',freeze:'❄️'};
 const _ITEM_NAMES = {speed:'加速',star:'無敵星星',range:'廣域',magnet:'磁鐵',freeze:'冰凍炸彈'};
 function _activateItem(type) {
+    _achItemTypesUsed.add(type);
     if(type==='speed'){speedBoostTimer=8;showToast('⚡ 加速！速度×2，持續8秒！',2200);playItem();}
     else if(type==='star'){invincTimer=10;showToast('⭐ 無敵星星！速度×1.5+穿牆，持續10秒！',2500);playItem();}
     else if(type==='range'){rangeBoostTimer=10;showToast('🔍 廣域！收集距離×3，持續10秒！',2200);playItem();}
@@ -2447,6 +2466,7 @@ function useHeldItem() {
 // ── 分數扣分輔助 ─────────────────────────────────────────
 function applyScorePenalty(amount, msg) {
     score=Math.max(0,score-amount);
+    _achDmgTaken=true; _achAIEncounter=true;
     const el=document.getElementById('v-score');
     el.textContent=score;
     el.classList.remove('score-pop'); void el.offsetWidth; el.classList.add('score-pop');
@@ -3956,6 +3976,10 @@ async function collect(id, tLat, tLon) {
         // 連擊確認
         comboCount=tentativeCount;
         comboTimer=COMBO_WINDOW;
+        // 成就追蹤：連擊 & 夜間收集
+        if(comboCount>_achMaxComboCount) _achMaxComboCount=comboCount;
+        if(comboCount>=2) _achGotCombo=true;
+        _achNightCollect[id]=!_isDaytime;
         // 黃金收集
         if(id===goldenId) clearGoldenTreasure(false);
 
@@ -4019,7 +4043,7 @@ async function collect(id, tLat, tLon) {
             clearInterval(ticker);
             playWin();
             showToast('🎉 全部收集完成！計算獎勵…',3000);
-            setTimeout(()=>location.href='/finish',2800);
+            setTimeout(_finishGame,2800);
         }
     } catch(e) {
         inFlight.delete(id);
@@ -4078,7 +4102,7 @@ async function startCountdown(){
             gameReady=false;
             clearInterval(ticker);
             showToast('⏰ 時間到！',2000);
-            setTimeout(()=>location.href='/finish',2000);
+            setTimeout(_finishGame,2000);
         }
     },1000);
 
@@ -4205,6 +4229,36 @@ function doLoad(){
     }
 }
 doLoad();
+
+// ── 成就統計送出 & 跳轉 ─────────────────────────────────────
+let _finishStarted = false;
+async function _finishGame() {
+    if(_finishStarted) return;
+    _finishStarted = true;
+    gameReady = false;
+    if(ticker){ clearInterval(ticker); ticker=null; }
+    const allNight = collected.size>0 &&
+                     [...collected].every(id=>_achNightCollect[id]===true);
+    try {
+        await fetch('/game_stats', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                ai_encounter:     _achAIEncounter,
+                item_types_used:  [..._achItemTypesUsed],
+                bomb_hit:         _achBombHit,
+                max_simul_hit:    _achMaxSimulHit,
+                portal_used:      _achPortalUsed,
+                thief_caught:     _achThiefCaught,
+                got_combo:        _achGotCombo,
+                max_combo:        _achMaxComboCount,
+                all_night:        allNight,
+                no_damage:        !_achDmgTaken
+            })
+        });
+    } catch(e) {}
+    location.href = '/finish';
+}
 
 // ══════════════════════════════════════════════════════════════════════
 //  DEBUG CONSOLE  —  在瀏覽器 F12 Console 輸入 dbg.help() 查看所有指令

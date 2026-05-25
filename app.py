@@ -8,7 +8,7 @@ import logging
 import threading
 import folium
 from flask import Flask, render_template, request, session, jsonify, redirect, url_for, make_response
-from game.models import Player, Scoreboard, Treasure
+from game.models import Player, Scoreboard, Treasure, AchievementStore
 from game.map_api import MapAPI
 from game.pathfinder import solve_tsp_exact, calculate_total_distance, haversine
 from config import GAME_CONFIG
@@ -16,6 +16,100 @@ from config import GAME_CONFIG
 app = Flask(__name__)
 app.secret_key = "treasure-hunt-fixed-key-2026"
 scoreboard = Scoreboard()
+ach_store  = AchievementStore()
+
+# ── 成就定義 ──────────────────────────────────────────────────────────
+ACHIEVEMENT_DEFS = {
+    "game_start":     {"name": "冒險初啟",   "emoji": "🗺️", "desc": "完成一場冒險",                 "tier": 0, "branch": "root"},
+    "first_treasure": {"name": "初獲寶藏",   "emoji": "💎", "desc": "收集第一個寶藏",               "tier": 1, "branch": "amber"},
+    "first_encounter":{"name": "初遇敵人",   "emoji": "⚔️", "desc": "第一次被 AI 敵人扣分",         "tier": 1, "branch": "red"},
+    "first_item":     {"name": "道具嘗鮮",   "emoji": "🎒", "desc": "使用一次道具",                 "tier": 1, "branch": "teal"},
+    "perfect_clear":  {"name": "完美探索家", "emoji": "🏆", "desc": "收集全部 10 個寶藏",           "tier": 2, "branch": "amber"},
+    "first_combo":    {"name": "連擊初嘗",   "emoji": "🔥", "desc": "觸發一次連擊加分",             "tier": 2, "branch": "amber"},
+    "first_bomb":     {"name": "初試爆破",   "emoji": "💣", "desc": "用炸彈命中敵人",               "tier": 2, "branch": "red"},
+    "iron_will":      {"name": "鋼鐵意志",   "emoji": "🛡️", "desc": "抓住通緝小偷，找回寶藏",       "tier": 2, "branch": "red"},
+    "all_items":      {"name": "全能冒険者", "emoji": "🌈", "desc": "一局用完 5 種不同道具",         "tier": 2, "branch": "teal"},
+    "first_portal":   {"name": "傳送初體驗", "emoji": "🌀", "desc": "使用任意門傳送一次",           "tier": 2, "branch": "teal"},
+    "lightning":      {"name": "閃電冒険",   "emoji": "⚡", "desc": "完美通關且用時 ≤ 180 秒",      "tier": 3, "branch": "amber"},
+    "high_score":     {"name": "高分獵人",   "emoji": "💰", "desc": "完美通關且總分 ≥ 15,000",      "tier": 3, "branch": "amber"},
+    "night_owl":      {"name": "夜行俠",     "emoji": "🌙", "desc": "完美通關且所有寶藏在夜間收集", "tier": 3, "branch": "amber"},
+    "no_damage":      {"name": "無傷通關",   "emoji": "👻", "desc": "完美通關且未被 AI 扣分",       "tier": 3, "branch": "amber"},
+    "combo_master":   {"name": "連擊狂熱",   "emoji": "🔥", "desc": "一局達成 5 連擊",             "tier": 3, "branch": "amber"},
+    "bomb_expert":    {"name": "爆破專家",   "emoji": "💣", "desc": "一顆炸彈同時命中 5 名敵人",    "tier": 3, "branch": "red"},
+}
+
+ACHIEVEMENT_PARENTS = {
+    "game_start":      None,
+    "first_treasure":  "game_start",
+    "first_encounter": "game_start",
+    "first_item":      "game_start",
+    "perfect_clear":   "first_treasure",
+    "first_combo":     "first_treasure",
+    "first_bomb":      "first_encounter",
+    "iron_will":       "first_encounter",
+    "all_items":       "first_item",
+    "first_portal":    "first_item",
+    "lightning":       "perfect_clear",
+    "high_score":      "perfect_clear",
+    "night_owl":       "perfect_clear",
+    "no_damage":       "perfect_clear",
+    "combo_master":    "first_combo",
+    "bomb_expert":     "first_bomb",
+}
+
+# Tier ordering for display
+ACHIEVEMENT_TIERS = [
+    ["game_start"],
+    ["first_treasure", "first_encounter", "first_item"],
+    ["perfect_clear", "first_combo", "first_bomb", "iron_will", "all_items", "first_portal"],
+    ["lightning", "high_score", "night_owl", "no_damage", "combo_master", "bomb_expert"],
+]
+
+
+def compute_new_achievements(existing: dict, game_stats: dict,
+                              score: int, found_count: int,
+                              total: int, elapsed: float) -> list:
+    """計算本局新解鎖的成就，回傳 id 列表，同時 in-place 更新 existing。"""
+    new_ids = []
+
+    def unlock(aid):
+        if not existing.get(aid):
+            existing[aid] = True
+            new_ids.append(aid)
+
+    unlock("game_start")
+    if found_count > 0:
+        unlock("first_treasure")
+    if game_stats.get("ai_encounter"):
+        unlock("first_encounter")
+    if game_stats.get("item_types_used"):
+        unlock("first_item")
+    if found_count == total:
+        unlock("perfect_clear")
+    if game_stats.get("got_combo"):
+        unlock("first_combo")
+    if game_stats.get("bomb_hit"):
+        unlock("first_bomb")
+    if game_stats.get("thief_caught"):
+        unlock("iron_will")
+    if len(game_stats.get("item_types_used") or []) >= 5:
+        unlock("all_items")
+    if game_stats.get("portal_used"):
+        unlock("first_portal")
+    if found_count == total and elapsed < 180:
+        unlock("lightning")
+    if found_count == total and score >= 15000:
+        unlock("high_score")
+    if found_count == total and game_stats.get("all_night"):
+        unlock("night_owl")
+    if found_count == total and game_stats.get("no_damage"):
+        unlock("no_damage")
+    if (game_stats.get("max_combo") or 0) >= 5:
+        unlock("combo_master")
+    if (game_stats.get("max_simul_hit") or 0) >= 5:
+        unlock("bomb_expert")
+
+    return new_ids
 
 
 TREASURE_TIERS = [
@@ -658,6 +752,30 @@ def _bg_prepare(req_id: str, player_name: str, city: str):
         _pending[req_id] = {"status": "error", "message": str(e)}
 
 
+@app.route("/game_stats", methods=["POST"])
+def game_stats_submit():
+    """遊戲結束時前端提交追蹤統計，存入 session。"""
+    body = request.get_json(silent=True) or {}
+    session["game_stats"] = body
+    return jsonify({"status": "ok"})
+
+
+@app.route("/achievements")
+def achievements():
+    player_name = request.args.get("player", "").strip()
+    player_achs = {}
+    if player_name:
+        player_achs = ach_store.get_player(player_name)
+    return render_template(
+        "achievements.html",
+        player_name=player_name,
+        player_achs=player_achs,
+        ach_defs=ACHIEVEMENT_DEFS,
+        ach_parents=ACHIEVEMENT_PARENTS,
+        ach_tiers=ACHIEVEMENT_TIERS,
+    )
+
+
 @app.route("/")
 def index():
     return render_template("index.html", top10=scoreboard.get_top10())
@@ -981,6 +1099,7 @@ def _build_finish_map(player_data: dict, treasures_data: list, optimal_order: li
 def finish_game():
     player_data = session.get("player", {})
     treasures_data = session.get("treasures", [])
+    game_stats = session.pop("game_stats", {})   # 讀後清除，防止重複計算
     if not player_data:
         return redirect(url_for("index"))
     city = player_data.get("city", "")
@@ -996,18 +1115,37 @@ def finish_game():
     time_bonus = max(0, int((GAME_CONFIG["time_limit"] - elapsed) * GAME_CONFIG["time_bonus_rate"]))
     player.score += time_bonus
     scoreboard.save_score(player, city)
+
     found = [t for t in treasures_data if t["found"]]
+    found_count = len(found)
+    total = len(treasures_data)
+
+    # ── 成就計算 ──────────────────────────────────────────
+    existing_achs = ach_store.get_player(player.name)
+    new_ach_ids = compute_new_achievements(
+        existing_achs, game_stats, player.score, found_count, total, elapsed
+    )
+    if new_ach_ids:
+        try:
+            ach_store.save_player(player.name, existing_achs)
+        except Exception as e:
+            logging.warning("Achievement save failed: %s", e)
+
     optimal_order = session.get("optimal_order", [])
     try:
         folium_html = _build_finish_map(player_data, treasures_data, optimal_order)
     except Exception as e:
         logging.warning("Folium map generation failed: %s", e)
         folium_html = None
+
     return render_template("finish.html",
                            player=player, city=city,
-                           found_count=len(found), total=len(treasures_data),
+                           found_count=found_count, total=total,
                            time_bonus=time_bonus, top10=scoreboard.get_top10(city),
-                           folium_html=folium_html)
+                           folium_html=folium_html,
+                           new_achievements=new_ach_ids,
+                           all_achievements=existing_achs,
+                           ach_defs=ACHIEVEMENT_DEFS)
 
 
 @app.route("/health")

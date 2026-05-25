@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.3）**
+> **最後更新：2026-05-25（v7.4）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -31,6 +31,7 @@
 | 字型 | ThenKhung（標題，本地字型）、Orbitron（數字/計時）、Noto Sans TC（中文內文） |
 | 部署 | Render.com（免費方案，15分鐘無人使用後睡眠，冷啟動 30-50s） |
 | 排行榜持久化 | GitHub Contents API（`scores.json` 存 repo，繞過 Render ephemeral 磁碟） |
+| 成就持久化   | GitHub Contents API（`achievements.json` 存 repo，按玩家名稱分組） |
 
 ### 遊戲流程
 ```
@@ -64,11 +65,12 @@ timmy-agent/
 ├── fly.toml                # Fly.io 設定（備用，目前部署在 Render）
 ├── requirements.txt        # pip 依賴
 ├── data/
-│   └── scores.json         # 排行榜本機備份（Render 重部署後清空，以 GitHub 為主）
+│   ├── scores.json         # 排行榜本機備份（Render 重部署後清空，以 GitHub 為主）
+│   └── achievements.json   # 成就本機備份（同上，以 GitHub 為主）
 ├── game/
 │   ├── __init__.py
 │   ├── map_api.py          # 所有外部 API 呼叫 + 伺服器端快取
-│   ├── models.py           # Treasure / Player / Scoreboard dataclass + GitHub 持久化
+│   ├── models.py           # Treasure / Player / Scoreboard / AchievementStore + GitHub 持久化
 │   └── pathfinder.py       # TSP + 2-opt + Haversine
 ├── static/
 │   ├── bg.png              # 背景圖（地中海風格寶箱水彩）
@@ -80,9 +82,10 @@ timmy-agent/
 │       ├── chaser/         # Crun1-6.png（跑步）、Churt1-2.png（受傷）、Cattack1-5.png（攻擊）
 │       └── thief/          # Trun1-8.png（跑步）、Thurt1-3.png（受傷）
 ├── templates/
-│   ├── index.html          # 首頁（輸入表單 + 排行榜）
-│   ├── game.html           # 遊戲主畫面（4046行，含全部遊戲邏輯）
-│   ├── finish.html         # 結算畫面（分數滾動動畫）
+│   ├── index.html          # 首頁（輸入表單 + 排行榜 + 成就入口）
+│   ├── game.html           # 遊戲主畫面（含成就追蹤 JS + _finishGame）
+│   ├── finish.html         # 結算畫面（新解鎖成就展示 + 成就頁連結）
+│   ├── achievements.html   # 成就樹視覺頁（SVG 連線 + 玩家查詢 + 進度條）
 │   └── rules.html          # 規則說明頁
 └── venv/                   # Python 虛擬環境
 ```
@@ -211,7 +214,9 @@ AI扣分    = 追跡者觸碰 −50 分（8秒冷卻）
 | POST | `/collect/<id>` | 收集寶藏，JSON `{"order_bonus": N}`（含順序+連擊+黃金獎勵合併） |
 | POST | `/penalty` | AI 攻擊扣分，JSON `{"amount": N}` |
 | POST | `/score_add` | 加分（用於逮捕小偷獎勵等），JSON `{"bonus": N}` |
-| GET  | `/finish` | 結算，計算時間獎勵，存排行榜 |
+| POST | `/game_stats` | 前端送出本局成就統計（ai_encounter/bomb_hit 等），暫存於 session |
+| GET  | `/finish` | 結算，計算時間獎勵，運算成就解鎖，存排行榜 + 成就 |
+| GET  | `/achievements` | 成就樹頁面，`?player=名稱` 查詢玩家進度 |
 | GET  | `/health` | 健康檢查（Render ping 用） |
 
 ---
@@ -255,6 +260,11 @@ AI扣分    = 追跡者觸碰 −50 分（8秒冷卻）
 | `Scoreboard.get_top10(city)` | 取得指定城市（或全部）前 10 筆 |
 | `Treasure.to_dict()` | Treasure → 可序列化 dict |
 | `Player.elapsed_time` | property，遊戲已用秒數 |
+| `_gh_ach_load()` | 從 GitHub 讀取 achievements.json → ({data}, sha)，404 時回 ({}, None) |
+| `_gh_ach_save(achs, sha)` | 寫回 GitHub achievements.json（帶 SHA 防競態） |
+| `AchievementStore.get_player(name)` | 取得指定玩家成就字典（副本） |
+| `AchievementStore.save_player(name, achievements)` | 更新玩家成就，先 GitHub 後本機備份 |
+| `AchievementStore.get_all_players()` | 取得全部玩家成就資料 |
 
 ### templates/game.html（前端 JS）
 
@@ -281,11 +291,12 @@ AI扣分    = 追跡者觸碰 −50 分（8秒冷卻）
 | 函式 | 說明 |
 |------|------|
 | `collectNearest()` | Space 鍵：傳送門→逮捕小偷→撿道具→收集寶藏 |
-| `collect(id, lat, lon)` | async，POST /collect/<id>，更新分數+視覺 |
-| `applyScorePenalty(amt, msg)` | 扣分並同步後端 /penalty |
+| `collect(id, lat, lon)` | async，POST /collect/<id>，更新分數+視覺；記錄夜間收集 & 連擊成就 |
+| `applyScorePenalty(amt, msg)` | 扣分並同步後端 /penalty；同時設定 `_achDmgTaken=_achAIEncounter=true` |
 | `effectiveR()` | 當前有效收集半徑（廣域道具啟用時 ×3） |
-| `useNearestPortal()` | 傳送玩家至最近傳送門的配對出口 |
+| `useNearestPortal()` | 傳送玩家至最近傳送門的配對出口；設 `_achPortalUsed=true` |
 | `updateDistances()` | 更新羅盤/HUD 距離；**全DOM元素皆快取**（不在每幀 getElementById） |
+| `_finishGame()` | async，送出 `/game_stats` POST（含所有成就追蹤數據），再 `location.href='/finish'`；防雙重呼叫 |
 
 #### DOM 快取（啟動時建立，避免每幀查詢）
 | 快取 | 內容 |
@@ -454,6 +465,40 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.4）成就系統
+
+**game/models.py：**
+- 新增 `_gh_ach_load/save()`：同 Scoreboard 模式，讀寫 GitHub `achievements.json`
+- 新增 `AchievementStore` 類別：per-player 成就字典 `{player_name: {ach_id: bool}}`，GitHub 優先 + 本機備份
+
+**app.py：**
+- 新增 `ACHIEVEMENT_DEFS`（16 成就定義：名稱/emoji/描述/tier/branch）
+- 新增 `ACHIEVEMENT_PARENTS`（parent→child 樹狀依賴）、`ACHIEVEMENT_TIERS`（4 層排列）
+- 新增 `compute_new_achievements(existing, game_stats, ...)`：依本局統計解鎖成就，回傳新解鎖 ID 列表
+- 新增路由 `POST /game_stats`：接收前端遊戲統計，暫存至 `session["game_stats"]`
+- 新增路由 `GET /achievements`：渲染成就樹頁（`?player=名稱` 查詢）
+- 修改 `/finish`：讀取並清除 `session["game_stats"]`，計算並儲存成就，傳 `new_achievements`/`ach_defs` 給模板
+
+**templates/game.html：**
+- 新增 11 個成就追蹤變數（`_achAIEncounter/DmgTaken/ItemTypesUsed/BombHit/MaxSimulHit/PortalUsed/ThiefCaught/GotCombo/MaxComboCount/NightCollect`）
+- 6 個函式注入追蹤鉤：`applyScorePenalty`、`_activateItem`、`tickGrenades`（炸彈命中計數）、`useNearestPortal`、`catchWantedThief`、`collect`（連擊/夜間收集）
+- 新增 `_finishGame()` async 函式：POST stats → await → redirect；防雙送旗標 `_finishStarted`
+- 所有遊戲結束跳轉（勝利/時間到/結束按鈕）改呼叫 `_finishGame()`
+
+**templates/finish.html：**
+- 新增成就卡區塊 CSS（`ach-unlock` 彈入動畫）
+- 若有新解鎖成就：展示每個成就的 emoji+名稱+描述卡（依次延遲彈入）
+- 底部加「查看完整成就樹」/ 「查看成就進度」連結
+
+**templates/index.html：**
+- 規則連結旁新增「🏅 成就」導覽連結（`.ach-nav-link` 金色樣式）
+
+**templates/achievements.html（新建）：**
+- 深色主題成就樹頁面：玩家名稱搜尋表單、進度條（X/16）
+- 4 層 tier row + flexbox 節點卡（unlocked/locked 各色 glow/灰度）
+- JS 在 load 後以 SVG bezier 曲線繪製 parent→child 連線（已解鎖彩色實線/未解鎖灰色虛線）
+- 支援行動裝置（水平捲動）
 
 ### 2026-05-25（v7.3）視覺精緻化 Round 3
 

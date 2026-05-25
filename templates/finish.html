@@ -156,6 +156,42 @@
         .ach-speed  { background:rgba(255,152,0,.16);   border:1px solid rgba(255,152,0,.45);   color:#FFA020; }
         .ach-rich   { background:rgba(100,200,100,.14); border:1px solid rgba(100,200,100,.42); color:#6ECB6E; }
 
+        /* ── 新解鎖成就 ── */
+        .new-ach-section { margin-bottom: 22px; }
+        .new-ach-title {
+            font-size: 13px; font-weight: bold; color: #F0C000;
+            letter-spacing: .5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+        }
+        .new-ach-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+        .new-ach-card {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(255,215,0,.08); border: 1px solid rgba(255,215,0,.35);
+            border-radius: 12px; padding: 10px 14px;
+            animation: ach-unlock .55s cubic-bezier(.17,.67,.3,1.35) both;
+        }
+        .new-ach-card:nth-child(1) { animation-delay: .15s; }
+        .new-ach-card:nth-child(2) { animation-delay: .3s; }
+        .new-ach-card:nth-child(3) { animation-delay: .45s; }
+        .new-ach-card:nth-child(4) { animation-delay: .6s; }
+        .new-ach-card:nth-child(5) { animation-delay: .75s; }
+        .new-ach-card:nth-child(6) { animation-delay: .9s; }
+        @keyframes ach-unlock {
+            0%   { opacity:0; transform:scale(.7) translateY(14px); }
+            100% { opacity:1; transform:scale(1) translateY(0); }
+        }
+        .new-ach-emoji { font-size: 26px; line-height:1; }
+        .new-ach-info  { min-width: 0; }
+        .new-ach-name  { font-size: 13px; font-weight: bold; color: #FFD700; }
+        .new-ach-desc  { font-size: 11px; color: #8B949E; margin-top: 2px; }
+        .ach-view-btn {
+            display: inline-block; margin-top: 14px;
+            padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: bold;
+            background: rgba(255,215,0,.12); border: 1px solid rgba(255,215,0,.35);
+            color: #FFD700; text-decoration: none;
+            transition: background .18s, box-shadow .18s;
+        }
+        .ach-view-btn:hover { background: rgba(255,215,0,.22); box-shadow: 0 0 12px rgba(255,215,0,.3); }
+
         /* ── Folium 地圖 ── */
         .map-card {
             background: #161B2E;
@@ -232,6 +268,35 @@
             <p class="hint">寶藏分（距出生點公尺數，約 200~1000m）＋ 順序 +50 ／ 連擊加成 ＋ 時間獎勵（剩餘秒 ×1，最多 +600）</p>
             <a href="/" class="back-btn">🗺️ 再次出發</a>
         </div>
+
+        {% if new_achievements %}
+        <div class="card new-ach-section" style="text-align:center;">
+            <div class="new-ach-title" style="justify-content:center;">
+                🏅 本次解鎖成就 <span style="font-size:11px;color:#8B949E;font-weight:normal">{{ new_achievements|length }} 項</span>
+            </div>
+            <div class="new-ach-list">
+                {% for aid in new_achievements %}
+                {% set a = ach_defs[aid] %}
+                <div class="new-ach-card">
+                    <div class="new-ach-emoji">{{ a.emoji }}</div>
+                    <div class="new-ach-info">
+                        <div class="new-ach-name">{{ a.name }}</div>
+                        <div class="new-ach-desc">{{ a.desc }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <a class="ach-view-btn" href="/achievements?player={{ player.name | urlencode }}">
+                🌳 查看完整成就樹
+            </a>
+        </div>
+        {% else %}
+        <div style="text-align:center;margin-bottom:18px;">
+            <a class="ach-view-btn" href="/achievements?player={{ player.name | urlencode }}">
+                🏅 查看成就進度
+            </a>
+        </div>
+        {% endif %}
 
         {% if folium_html %}
         <div class="map-card">

@@ -164,3 +164,88 @@ class Scoreboard:
             filtered = [s for s in self.scores if s.get("city", "").lower() == city.lower()]
             return filtered[:10]
         return self.scores[:10]
+
+
+# ── 成就系統 ───────────────────────────────────────────────────────────
+_GH_ACH_FILE = "achievements.json"
+_GH_ACH_API  = f"https://api.github.com/repos/{_GH_REPO}/contents/{_GH_ACH_FILE}"
+
+
+def _gh_ach_load():
+    """從 GitHub 讀取成就資料，失敗或不存在回傳 ({}, None)。"""
+    if not _GH_TOKEN:
+        return None
+    try:
+        import requests
+        r = requests.get(_GH_ACH_API, headers=_GH_HEADS, timeout=5)
+        if r.status_code == 404:
+            return {}, None
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        return json.loads(base64.b64decode(data["content"]).decode()), data["sha"]
+    except Exception:
+        return None
+
+
+def _gh_ach_save(achs: dict, sha):
+    """把成就資料寫回 GitHub，失敗靜默。"""
+    if not _GH_TOKEN:
+        return
+    try:
+        import requests
+        content = base64.b64encode(
+            json.dumps(achs, ensure_ascii=False, indent=2).encode()
+        ).decode()
+        payload = {
+            "message": "update achievements",
+            "content": content,
+        }
+        if sha:
+            payload["sha"] = sha
+        requests.put(_GH_ACH_API, headers=_GH_HEADS, timeout=8, json=payload)
+    except Exception:
+        pass
+
+
+class AchievementStore:
+    def __init__(self, filepath="data/achievements.json"):
+        self.filepath = filepath
+        self._sha = None
+        self._data = self._load()   # {player_name: {ach_id: bool}}
+
+    def _load(self):
+        result = _gh_ach_load()
+        if result is not None:
+            data, self._sha = result
+            return data if isinstance(data, dict) else {}
+        try:
+            with open(self.filepath, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def get_player(self, name: str) -> dict:
+        """取得玩家的成就字典（副本），若無記錄回傳 {}。"""
+        return dict(self._data.get(name, {}))
+
+    def save_player(self, name: str, achievements: dict):
+        """儲存/更新玩家成就。"""
+        self._data[name] = achievements
+        _gh_ach_save(self._data, self._sha)
+        # 刷新 SHA 供下次寫入
+        result = _gh_ach_load()
+        if result is not None:
+            _, self._sha = result
+        # 本機備份
+        dirp = os.path.dirname(self.filepath)
+        if dirp:
+            os.makedirs(dirp, exist_ok=True)
+        try:
+            with open(self.filepath, "w", encoding="utf-8") as f:
+                json.dump(self._data, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def get_all_players(self) -> dict:
+        return dict(self._data)

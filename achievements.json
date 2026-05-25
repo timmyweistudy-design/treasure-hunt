@@ -17,7 +17,10 @@
     "decoy_first": true,
     "perfect_route": true,
     "sprint_first": true,
-    "lightning_start": true
+    "lightning_start": true,
+    "mine_ambush": true,
+    "sprint_legend": true,
+    "swift_catch": true
   },
   "timmy": {
     "game_start": true

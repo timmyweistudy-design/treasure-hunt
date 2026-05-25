@@ -22,7 +22,8 @@
     "sprint_legend": true,
     "swift_catch": true,
     "bomb_expert": true,
-    "magnet_master": true
+    "magnet_master": true,
+    "perfect_concert": true
   },
   "timmy": {
     "game_start": true

@@ -4594,6 +4594,23 @@ window.dbg = (function(){
             })));
         },
 
+        // ── 排行榜 ──────────────────────────────────────
+        /** 重新從 GitHub 拉取最新排行榜  dbg.refreshScores() */
+        refreshScores: async ()=>{
+            _assertReady();
+            console.log('%c🔄 重新拉取排行榜…','color:#64B5F6');
+            const r = await fetch('/debug/refresh_scores');
+            const d = await r.json();
+            if(d.ok){
+                console.log('%c✅ 排行榜已更新','color:#5A9E6A;font-weight:bold');
+                console.table(d.cities);
+                console.log(`共 ${d.total} 筆紀錄`);
+            } else {
+                console.warn('❌ 排行榜更新失敗', d);
+            }
+            return d;
+        },
+
         // ── 狀態查詢 ──────────────────────────────────────
         /** 印出當前遊戲狀態快照 */
         status: ()=>{
@@ -4656,7 +4673,10 @@ AI
   dbg.listTreasures()   列出所有寶藏狀態
 
 查詢
-  dbg.status()          顯示遊戲狀態快照`, 'color:#8B949E;font-family:monospace');
+  dbg.status()          顯示遊戲狀態快照
+
+排行榜
+  dbg.refreshScores()   重新從 GitHub 拉取最新排行榜`, 'color:#8B949E;font-family:monospace');
         },
     };
     return D;

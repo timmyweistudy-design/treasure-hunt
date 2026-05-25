@@ -1294,6 +1294,18 @@ def health():
     return "ok", 200
 
 
+@app.route("/debug/refresh_scores")
+def debug_refresh_scores():
+    """Debug 用：重新從 GitHub 拉取最新排行榜資料。"""
+    scoreboard.scores = scoreboard._load()
+    by_city = scoreboard.get_by_city(top_n=10)
+    return jsonify({
+        "ok": True,
+        "total": len(scoreboard.scores),
+        "cities": [{"city": c, "count": len(e)} for c, e in by_city]
+    })
+
+
 @app.errorhandler(404)
 def not_found(e):
     return render_template("index.html", error="頁面不存在"), 404

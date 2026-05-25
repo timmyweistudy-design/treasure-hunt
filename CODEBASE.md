@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.10）**
+> **最後更新：2026-05-25（v7.10.1）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -468,6 +468,32 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.10.1）精緻化 14 項收尾
+
+**game.html — 7 項：**
+1. **標題漸層色對齊新色盤** — `.hd-title` 漸層 `#FFD700→#F0C000→#64B5F6` 改 `#C8920A→#D4920A→#3A7FD5`
+2. **Header 底邊中性化** — `border-bottom rgba(56,139,253,.25)` 改 `rgba(255,255,255,.08)`
+3. **Header stat 間格線** — `.hd-stats gap:22px` 改為 `gap:0` + 每個 `.stat` 加左側 `border-left: 1px solid rgba(255,255,255,.1)` + padding
+4. **道具槽 selected 去外發光** — 改用 `border-bottom: 2px solid #D4920A` 底線指示 + inset 頂部反光，移除 `box-shadow: 0 0 14px` 外發光；移除 `backdrop-filter:blur`；`border-radius 10→6px`
+5. **Leaflet popup 圓角** — `12px → 8px`；border 改中性 `rgba(255,255,255,.1)`
+6. **Loading 卡片** — `border-radius 20px → 14px`；border 改中性 `rgba(255,255,255,.1)`
+7. **card h2 顏色** — `#F0C000 → #D4920A`（index.html + finish.html，與新色盤統一）
+
+**achievements.html — 2 項：**
+8. **進度條移除 glow** — `.prog-fill box-shadow` 刪除；漸層改 `#C8920A→#D4920A→#3A7FD5`
+9. **節點完成標記** — `.ach-badge` 移除 `box-shadow: 0 0 8px`，改 `border: 1.5px solid rgba(255,215,0,.55)`；背景色改 `#D4920A`
+
+**finish.html — 3 項：**
+10. **hero p font-weight 300** — 與 index.html 統一
+11. **新成就卡片 + 徽章圓角** — `.new-ach-card 12→8px`；`.ach 20→10px`
+12. **計分說明 hint** — 加 `border-left` 左邊線 + 淡底色，視覺層次感（出處注釋風格）
+
+**index.html — 2 項：**
+13. **guide-card hover 修正** — `:hover` 不再跑回藍色；只加深背景，各卡左邊框主題色保持
+14. **排行榜前三名左邊線** — `tbody tr:nth-child(1/2/3)` 改用 `border-left: 3px solid [金/銀/銅色]` 指示，對齊整體「邊線語言」；同步套用至 finish.html
+
+---
 
 ### 2026-05-25（v7.10）美術方向重塑 — 去 AI 感，回歸大型遊戲手繪質感
 

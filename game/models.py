@@ -160,10 +160,20 @@ class Scoreboard:
             pass
 
     def get_top10(self, city: str = None):
+        pool = self.scores
         if city:
-            filtered = [s for s in self.scores if s.get("city", "").lower() == city.lower()]
-            return filtered[:10]
-        return self.scores[:10]
+            pool = [s for s in pool if s.get("city", "").lower() == city.lower()]
+        # 同名只保留最高分那筆（scores 已按 -score 排序，故第一次出現即最高）
+        seen = set()
+        unique = []
+        for s in pool:
+            key = s.get("name", "").strip().lower()
+            if key not in seen:
+                seen.add(key)
+                unique.append(s)
+            if len(unique) >= 10:
+                break
+        return unique
 
 
 # ── 成就系統 ───────────────────────────────────────────────────────────

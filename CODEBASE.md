@@ -1,6 +1,6 @@
 # 拓樸拾遺錄 — 完整程式碼文件
 
-> **最後更新：2026-05-25（v7.9.1）**
+> **最後更新：2026-05-25（v7.10）**
 > **公開網址：https://treasure-hunt-lew0.onrender.com**
 > **GitHub：https://github.com/timmyweistudy-design/treasure-hunt**（push master → Render 自動部署 2-3 分鐘）
 > 每次修改任何檔案後，必須同步更新此文件。
@@ -468,6 +468,36 @@ Scoreboard.save_score()
 ---
 
 ## 9. 更新日誌
+
+### 2026-05-25（v7.10）美術方向重塑 — 去 AI 感，回歸大型遊戲手繪質感
+
+**設計原則：** 消除過度發光特效，採用「沉穩暗色 + 暖金 + 導航藍」三色節制用色；白天/夜晚呈現完全不同的排版結構感，而非僅換色。
+
+**game.html — 10 項：**
+1. **色盤重整**：黃金色從 `#FFD700/#F0C000` 統一收斂至 `#D4920A`；藍色從 `#388BFD` 收斂至 `#3A7FD5`；剔除多餘發光 box-shadow
+2. **Sidebar 面板質感**：`.sb` 改為 `rgba(14,20,36,.97)` 深藍底 + `rgba(255,255,255,.06)` 微邊；滾動條細化至 3px；`.sb-foot` / `.kbd-box` 同步調整邊框
+3. **鍵盤 key 樣式**：`.key` 使用半透明底 + 雙層邊框（底邊略厚），模擬實體按鍵立體感
+4. **SVG 針式羅盤擴展**：viewBox 從 `-10 -18 20 36` 擴展為 `-22 -22 44 44`（寬 40px），加外圈 + N/S/E/W 四條刻度線；移除 `filter:drop-shadow`
+5. **寶藏卡片角切設計**：`.tc` 改 `clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)` 左上角斜切；漸層從上至下；移除 `box-shadow`；`.tc.found` 以 `max-height:66px` 折疊
+6. **效果 Chip 系統化**：`.eff-chip` 改暗底 + 左側色條（`border-left: 3px solid var(--ca)`）；每個 chip 以 CSS 變數 `--ca` 設定顏色，白天模式直接 override 變數
+7. **sec-lbl 雙模式排版**：夜晚 = 底線分隔（技術感）；白天 = `border-left:3px solid` 左側邊線（野帳/日誌感），結構上的版式差異
+8. **Toast 消除藍光**：`border-radius: 24px → 16px`；移除 `0 0 0 1px rgba(56,139,253,.08)` 藍色外輪廓
+9. **日夜徽章收斂**：`border-radius: 20px → 10px`，與整體圓角風格統一
+10. **白天模式卡片加重**：`body.day .tc .nm` font-weight 升至 900（反差對比，模擬手寫標注感）；`.eff-chip` 白天改為暖紙色底 + 各色文字
+
+**finish.html — 3 項：**
+11. **卡片圓角收斂**：`.card`、`.map-card` 從 `20px → 16px`；統一視覺語言
+12. **統計格圓角收斂**：`.stat`（及 `.inner-shimmer`）從 `14px → 10px`
+13. **總分字型層級**：`.stat-total .num` 放大至 `clamp(1.8rem, 5.5vw, 2.4rem)`；其餘三格收窄至 `1.5rem`，形成明確視覺主次
+
+**achievements.html — 2 項：**
+14. **根節點八角形**：`.ach-node.branch-root` 加 `clip-path: polygon(14% 0%,86% 0%,100% 14%,100% 86%,86% 100%,14% 100%,0% 86%,0% 14%)`，根節點呈八角形，區隔於普通方形節點
+15. **節點圓角收斂**：`.ach-node` 從 `14px → 10px`
+
+**index.html — 1 項：**
+16. **Hero 副標 font-weight**：`.hero p` 加 `font-weight: 300`，關鍵字（`.h-city/.h-treas/.h-enemy/.h-rank`）保持 700，形成輕重對比
+
+---
 
 ### 2026-05-25（v7.9.1）小修正
 - **index.html**：移除排行榜冠軍行光掃動畫（item 20）

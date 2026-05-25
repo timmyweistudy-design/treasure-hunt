@@ -72,7 +72,7 @@
         .card {
             background: #161B2E;
             border: 1px solid rgba(56,139,253,.2);
-            border-radius: 20px; padding: 28px 32px;
+            border-radius: 16px; padding: 28px 32px;
             box-shadow: 0 6px 36px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.04);
             margin-bottom: 22px;
         }
@@ -81,11 +81,11 @@
 
         /* ── 統計格 ── */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
-        .stat { text-align: center; padding: 20px 6px; border-radius: 14px;
+        .stat { text-align: center; padding: 20px 6px; border-radius: 10px;
                 position: relative; overflow: visible; }
         /* shimmer 用獨立的 inner-shimmer div 隔離，不影響數字溢出 */
         .stat .inner-shimmer {
-            position: absolute; inset: 0; border-radius: 14px; overflow: hidden;
+            position: absolute; inset: 0; border-radius: 10px; overflow: hidden;
             pointer-events: none;
         }
         .stat .inner-shimmer::after {
@@ -133,9 +133,9 @@
 
         .stat .num {
             font-family: 'Orbitron', monospace; font-weight: 900;
-            font-size: clamp(1.35rem, 4.5vw, 2rem); line-height: 1; letter-spacing: 0;
+            font-size: clamp(1.35rem, 4.5vw, 1.5rem); line-height: 1; letter-spacing: 0;
         }
-        .stat-total   .num { color: #FFD700; }
+        .stat-total   .num { color: #FFD700; font-size: clamp(1.8rem, 5.5vw, 2.4rem); }
         .stat-treas   .num { color: #64B5F6; }
         .stat-time-b  .num { color: #90CAF9; }
         .stat-elapsed .num { color: #C9D1D9; }
@@ -216,7 +216,7 @@
         .map-card {
             background: #161B2E;
             border: 1px solid rgba(56,139,253,.2);
-            border-radius: 20px; overflow: hidden;
+            border-radius: 16px; overflow: hidden;
             box-shadow: 0 6px 36px rgba(0,0,0,.4);
             margin-bottom: 22px;
         }
@@ -272,12 +272,12 @@
                 </div>
                 <div class="stat stat-time-b">
                     <div class="inner-shimmer"></div>
-                    <div class="num" style="font-size:1.5rem">+{{ time_bonus }}</div>
+                    <div class="num">+{{ time_bonus }}</div>
                     <div class="label">時間獎勵</div>
                 </div>
                 <div class="stat stat-elapsed">
                     <div class="inner-shimmer"></div>
-                    <div class="num" style="font-size:1.5rem">{{ player.elapsed_time | round(0) | int }}s</div>
+                    <div class="num">{{ player.elapsed_time | round(0) | int }}s</div>
                     <div class="label">用時</div>
                 </div>
             </div>

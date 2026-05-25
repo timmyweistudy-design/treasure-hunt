@@ -124,10 +124,15 @@
         /* ── Node card ── */
         .ach-node {
             width: 130px; flex-shrink: 0;
-            border-radius: 14px; padding: 14px 10px 12px;
+            border-radius: 10px; padding: 14px 10px 12px;
             text-align: center; position: relative;
             transition: transform .2s, box-shadow .2s;
             cursor: default;
+        }
+        /* Root node: octagon shape */
+        .ach-node.branch-root {
+            clip-path: polygon(14% 0%, 86% 0%, 100% 14%, 100% 86%, 86% 100%, 14% 100%, 0% 86%, 0% 14%);
+            border-radius: 0;
         }
         .ach-node:hover { transform: translateY(-3px); }
 

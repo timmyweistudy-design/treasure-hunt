@@ -1105,9 +1105,11 @@ let _achBombHit        = false;
 let _achMaxSimulHit    = 0;
 let _achPortalUsed     = false;
 let _achThiefCaught    = false;
+let _achThiefCatchCount= 0;      // 累計逮捕小偷次數
 let _achGotCombo       = false;
 let _achMaxComboCount  = 0;
 let _achNightCollect   = {};     // {treasureId: bool (true=collected at night)}
+let _achWeatherCollect = {};     // {treasureId: 'sunny'|'fog'|'storm'}
 
 // ── 音效系統（Web Audio API，無需音效檔）────────────────────
 let audioCtx  = null;
@@ -2257,6 +2259,7 @@ function catchWantedThief() {
         wantedMaxTimer=0;
         invincTimer=Math.max(invincTimer,1.5);  // 抓到小偷 → 1.5s 無敵獎勵
         _achThiefCaught=true;
+        _achThiefCatchCount++;
         return true;
     }
     return false;
@@ -3977,10 +3980,11 @@ async function collect(id, tLat, tLon) {
         // 連擊確認
         comboCount=tentativeCount;
         comboTimer=COMBO_WINDOW;
-        // 成就追蹤：連擊 & 夜間收集
+        // 成就追蹤：連擊 & 夜間收集 & 天氣
         if(comboCount>_achMaxComboCount) _achMaxComboCount=comboCount;
         if(comboCount>=2) _achGotCombo=true;
         _achNightCollect[id]=!_isDaytime;
+        _achWeatherCollect[id]=weatherType;
         // 黃金收集
         if(id===goldenId) clearGoldenTreasure(false);
 
@@ -4240,21 +4244,25 @@ async function _finishGame() {
     if(ticker){ clearInterval(ticker); ticker=null; }
     const allNight = collected.size>0 &&
                      [...collected].every(id=>_achNightCollect[id]===true);
+    const allNotSunny = collected.size>0 &&
+                        [...collected].every(id=>_achWeatherCollect[id]!=='sunny');
     try {
         await fetch('/game_stats', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({
-                ai_encounter:     _achAIEncounter,
-                item_types_used:  [..._achItemTypesUsed],
-                bomb_hit:         _achBombHit,
-                max_simul_hit:    _achMaxSimulHit,
-                portal_used:      _achPortalUsed,
-                thief_caught:     _achThiefCaught,
-                got_combo:        _achGotCombo,
-                max_combo:        _achMaxComboCount,
-                all_night:        allNight,
-                no_damage:        !_achDmgTaken
+                ai_encounter:      _achAIEncounter,
+                item_types_used:   [..._achItemTypesUsed],
+                bomb_hit:          _achBombHit,
+                max_simul_hit:     _achMaxSimulHit,
+                portal_used:       _achPortalUsed,
+                thief_caught:      _achThiefCaught,
+                thief_catch_count: _achThiefCatchCount,
+                got_combo:         _achGotCombo,
+                max_combo:         _achMaxComboCount,
+                all_night:         allNight,
+                all_not_sunny:     allNotSunny,
+                no_damage:         !_achDmgTaken
             })
         });
     } catch(e) {}

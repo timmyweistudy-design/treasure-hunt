@@ -30,12 +30,15 @@ ACHIEVEMENT_DEFS = {
     "iron_will":      {"name": "鋼鐵意志",   "emoji": "🛡️", "desc": "抓住通緝小偷，找回寶藏",       "tier": 2, "branch": "red"},
     "all_items":      {"name": "全能冒険者", "emoji": "🌈", "desc": "一局用完 5 種不同道具",         "tier": 2, "branch": "teal"},
     "first_portal":   {"name": "傳送初體驗", "emoji": "🌀", "desc": "使用任意門傳送一次",           "tier": 2, "branch": "teal"},
-    "lightning":      {"name": "閃電冒険",   "emoji": "⚡", "desc": "完美通關且用時 ≤ 180 秒",      "tier": 3, "branch": "amber"},
-    "high_score":     {"name": "高分獵人",   "emoji": "💰", "desc": "完美通關且總分 ≥ 15,000",      "tier": 3, "branch": "amber"},
-    "night_owl":      {"name": "夜行俠",     "emoji": "🌙", "desc": "完美通關且所有寶藏在夜間收集", "tier": 3, "branch": "amber"},
-    "no_damage":      {"name": "無傷通關",   "emoji": "👻", "desc": "完美通關且未被 AI 扣分",       "tier": 3, "branch": "amber"},
-    "combo_master":   {"name": "連擊狂熱",   "emoji": "🔥", "desc": "一局達成 5 連擊",             "tier": 3, "branch": "amber"},
-    "bomb_expert":    {"name": "爆破專家",   "emoji": "💣", "desc": "一顆炸彈同時命中 5 名敵人",    "tier": 3, "branch": "red"},
+    "lightning":      {"name": "閃電冒険",   "emoji": "⚡", "desc": "完美通關且用時 ≤ 180 秒",           "tier": 3, "branch": "amber"},
+    "high_score":     {"name": "高分獵人",   "emoji": "💰", "desc": "完美通關且總分 ≥ 15,000",           "tier": 3, "branch": "amber"},
+    "night_owl":      {"name": "夜行俠",     "emoji": "🌙", "desc": "完美通關且所有寶藏在夜間收集",      "tier": 3, "branch": "amber"},
+    "no_damage":      {"name": "無傷通關",   "emoji": "👻", "desc": "完美通關且未被 AI 扣分",            "tier": 3, "branch": "amber"},
+    "combo_master":   {"name": "連擊狂熱",   "emoji": "🔥", "desc": "一局達成 5 連擊",                  "tier": 3, "branch": "amber"},
+    "bomb_expert":    {"name": "爆破專家",   "emoji": "💣", "desc": "一顆炸彈同時命中 5 名敵人",         "tier": 3, "branch": "red"},
+    "thief_master":   {"name": "鐵血神探",   "emoji": "🕵️", "desc": "在一局中逮捕小偷 5 次",            "tier": 3, "branch": "red"},
+    "storm_hunter":   {"name": "風雨無阻",   "emoji": "⛈️", "desc": "完美通關且所有寶藏在非晴天收集",   "tier": 3, "branch": "amber"},
+    "legend_score":   {"name": "黃金神話",   "emoji": "👑", "desc": "完美通關且總分 ≥ 20,000",           "tier": 4, "branch": "amber"},
 }
 
 ACHIEVEMENT_PARENTS = {
@@ -55,6 +58,9 @@ ACHIEVEMENT_PARENTS = {
     "no_damage":       "perfect_clear",
     "combo_master":    "first_combo",
     "bomb_expert":     "first_bomb",
+    "thief_master":    "iron_will",
+    "storm_hunter":    "perfect_clear",
+    "legend_score":    "high_score",
 }
 
 # Tier ordering for display
@@ -62,7 +68,8 @@ ACHIEVEMENT_TIERS = [
     ["game_start"],
     ["first_treasure", "first_encounter", "first_item"],
     ["perfect_clear", "first_combo", "first_bomb", "iron_will", "all_items", "first_portal"],
-    ["lightning", "high_score", "night_owl", "no_damage", "combo_master", "bomb_expert"],
+    ["lightning", "high_score", "night_owl", "no_damage", "combo_master", "bomb_expert", "thief_master", "storm_hunter"],
+    ["legend_score"],
 ]
 
 
@@ -108,6 +115,12 @@ def compute_new_achievements(existing: dict, game_stats: dict,
         unlock("combo_master")
     if (game_stats.get("max_simul_hit") or 0) >= 5:
         unlock("bomb_expert")
+    if (game_stats.get("thief_catch_count") or 0) >= 5:
+        unlock("thief_master")
+    if found_count == total and game_stats.get("all_not_sunny"):
+        unlock("storm_hunter")
+    if found_count == total and score >= 20000:
+        unlock("legend_score")
 
     return new_ids
 

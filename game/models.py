@@ -172,6 +172,27 @@ class Scoreboard:
         except Exception:
             pass
 
+    def delete_score(self, name: str) -> bool:
+        """刪除指定玩家的所有紀錄，存回 GitHub + 本機。回傳是否有刪到資料。"""
+        name_key = name.strip().lower()
+        before = len(self.scores)
+        self.scores = [s for s in self.scores
+                       if s.get("name", "").strip().lower() != name_key]
+        deleted = len(self.scores) < before
+        if deleted:
+            if self._sha:
+                _gh_save(self.scores, self._sha)
+                result = _gh_load()
+                if result:
+                    _, self._sha = result
+            os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
+            try:
+                with open(self.filepath, "w", encoding="utf-8") as f:
+                    json.dump(self.scores, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+        return deleted
+
     def get_top10(self, city: str = None):
         pool = self.scores
         if city:

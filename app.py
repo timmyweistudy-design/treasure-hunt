@@ -1306,6 +1306,22 @@ def debug_refresh_scores():
     })
 
 
+@app.route("/debug/delete_score")
+def debug_delete_score():
+    """Debug 用：刪除指定玩家的排行榜紀錄。?name=玩家名稱"""
+    name = request.args.get("name", "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "缺少 ?name= 參數"}), 400
+    deleted = scoreboard.delete_score(name)
+    return jsonify({
+        "ok": True,
+        "deleted": deleted,
+        "name": name,
+        "total": len(scoreboard.scores),
+        "msg": f"✅ 已刪除 {name}" if deleted else f"⚠️ 找不到 {name}，未刪除任何紀錄"
+    })
+
+
 @app.errorhandler(404)
 def not_found(e):
     return render_template("index.html", error="頁面不存在"), 404

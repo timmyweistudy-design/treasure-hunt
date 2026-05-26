@@ -4611,6 +4611,23 @@ window.dbg = (function(){
             return d;
         },
 
+        /** 刪除指定玩家的排行榜紀錄  dbg.deleteScore("名字") */
+        deleteScore: async (name)=>{
+            _assertReady();
+            if(!name){ console.warn('用法：dbg.deleteScore("玩家名稱")'); return; }
+            console.log(`%c🗑 刪除排行榜：${name}…`,'color:#FCA5A5');
+            const r = await fetch(`/debug/delete_score?name=${encodeURIComponent(name)}`);
+            const d = await r.json();
+            if(d.ok){
+                const color = d.deleted ? '#5A9E6A' : '#F0C000';
+                console.log(`%c${d.msg}`,'color:'+color+';font-weight:bold');
+                console.log(`剩餘紀錄：${d.total} 筆`);
+            } else {
+                console.warn('❌ 刪除失敗', d);
+            }
+            return d;
+        },
+
         // ── 狀態查詢 ──────────────────────────────────────
         /** 印出當前遊戲狀態快照 */
         status: ()=>{
@@ -4676,7 +4693,8 @@ AI
   dbg.status()          顯示遊戲狀態快照
 
 排行榜
-  dbg.refreshScores()   重新從 GitHub 拉取最新排行榜`, 'color:#8B949E;font-family:monospace');
+  dbg.refreshScores()        重新從 GitHub 拉取最新排行榜
+  dbg.deleteScore("名字")   刪除指定玩家的排行榜紀錄`, 'color:#8B949E;font-family:monospace');
         },
     };
     return D;
